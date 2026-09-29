@@ -62,7 +62,7 @@ data class SessionLoggerState(
     val dateEpochDay: Long = LocalDate.now(ZoneId.systemDefault()).toEpochDay(),
     val startedAtMillis: Long = 0L,
     /** Wall-clock of the last set marked completed. Drives the rest timer (time since last set).
-     *  In-memory only — a fresh resume starts with no rest clock until the next set is logged. */
+     *  Persisted in the draft so the rest clock keeps running while the logger is closed. */
     val lastSetCompletedAtMillis: Long = 0L,
     val groups: List<ExerciseGroup> = emptyList(),
     val saving: Boolean = false,
@@ -163,6 +163,7 @@ class SessionLoggerViewModel(
                 planName = payload.planName,
                 dateEpochDay = payload.dateEpochDay,
                 startedAtMillis = draft.startedAtMillis,
+                lastSetCompletedAtMillis = payload.lastSetCompletedAtMillis,
                 groups = groups,
                 weightUnit = unit,
                 initialized = true,
@@ -174,6 +175,7 @@ class SessionLoggerViewModel(
         val payload = SessionDraftPayload(
             planName = snapshot.planName,
             dateEpochDay = snapshot.dateEpochDay,
+            lastSetCompletedAtMillis = snapshot.lastSetCompletedAtMillis,
             groups = snapshot.groups.map { g ->
                 SessionDraftGroup(
                     exerciseId = g.exerciseId,

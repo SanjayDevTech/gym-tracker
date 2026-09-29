@@ -39,6 +39,8 @@ data class SessionDraftPayload(
     val planName: String? = null,
     val dateEpochDay: Long,
     val groups: List<SessionDraftGroup>,
+    // Wall-clock of the last completed set, so the rest timer survives leaving the logger.
+    val lastSetCompletedAtMillis: Long = 0L,
 )
 
 @Serializable

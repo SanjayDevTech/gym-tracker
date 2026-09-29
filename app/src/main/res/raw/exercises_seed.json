@@ -1,5 +1,5 @@
 {
-  "seedVersion": 6,
+  "seedVersion": 7,
   "exercises": [
     { "clientUuid": "490d1d33-df0e-5b35-be11-07edc2a6c40f", "name": "Barbell Bench Press", "movementType": "Compound", "primaryMuscles": ["Chest"], "secondaryMuscles": ["FrontDelts", "Triceps"], "equipment": "Barbell", "cues": "Retract scapula; bar to lower chest; press to lockout." },
     { "clientUuid": "416b2a7d-cf58-5e2b-8082-aaac9705cb5a", "name": "Incline Barbell Bench Press", "movementType": "Compound", "primaryMuscles": ["Chest", "FrontDelts"], "secondaryMuscles": ["Triceps"], "equipment": "Barbell", "cues": "Bench at 30 deg; bar to upper chest; press straight up." },
@@ -74,6 +74,7 @@
     { "clientUuid": "dfa0634c-649d-5827-baf8-467ce4ebe29d", "name": "Front Squat", "movementType": "Compound", "primaryMuscles": ["Quads"], "secondaryMuscles": ["Glutes", "Abs"], "equipment": "Barbell", "cues": "Elbows up; torso vertical; full depth." },
     { "clientUuid": "282ae6d9-12e4-561d-bbcb-c562c6a241a4", "name": "Smith Machine Squat", "movementType": "Compound", "primaryMuscles": ["Quads"], "secondaryMuscles": ["Hamstrings", "Glutes"], "equipment": "Machine", "cues": "Feet slightly forward; brace; sit straight down; full depth." },
     { "clientUuid": "c2b02fc0-515b-56fb-82a3-07d71c2a012b", "name": "Hack Squat", "movementType": "Compound", "primaryMuscles": ["Quads"], "secondaryMuscles": ["Hamstrings", "Glutes"], "equipment": "Machine", "cues": "Back flat on pad; full depth; drive through whole foot." },
+    { "clientUuid": "f4cf7360-7f30-5aef-aabe-328270b0f147", "name": "Reverse Hack Squat", "movementType": "Compound", "primaryMuscles": ["Glutes", "Quads"], "secondaryMuscles": ["Hamstrings"], "equipment": "Machine", "cues": "Face the back pad, chest on pad; hips back as you descend; drive through heels to stand." },
     { "clientUuid": "01c68704-1e34-5ce8-9a4d-39bc99a49005", "name": "Belt Squat", "movementType": "Compound", "primaryMuscles": ["Quads", "Glutes"], "secondaryMuscles": ["Hamstrings"], "equipment": "Machine", "cues": "Hip-loaded; upright torso; spares the spine." },
     { "clientUuid": "e8c8e47e-2db4-5638-aa7c-55cde4930651", "name": "Goblet Squat", "movementType": "Compound", "primaryMuscles": ["Quads"], "secondaryMuscles": ["Glutes", "Abs"], "equipment": "Dumbbell", "cues": "Hold the dumbbell at chest; elbows inside knees at the bottom." },
     { "clientUuid": "39ab3889-de62-5e82-a95f-3d84111ff34e", "name": "Box Squat", "movementType": "Compound", "primaryMuscles": ["Glutes", "Hamstrings"], "secondaryMuscles": ["Quads", "LowerBack"], "equipment": "Barbell", "cues": "Sit back to box; pause briefly; drive up explosively." },

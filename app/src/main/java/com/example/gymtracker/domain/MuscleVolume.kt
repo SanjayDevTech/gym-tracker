@@ -23,12 +23,15 @@ data class ExerciseMuscleMap(
 )
 
 object MuscleVolume {
+    /** Share of a set's volume credited to each secondary muscle (primary muscles get 1.0). */
+    const val SECONDARY_WEIGHT = 0.3f
+
     /**
      * Per-muscle volume over completed working sets within the window, measured by [metric]:
      *
-     * - [VolumeMetric.Sets]: each completed working set contributes 1.0 (primary) / 0.3 (secondary),
+     * - [VolumeMetric.Sets]: each completed working set contributes 1.0 (primary) / [SECONDARY_WEIGHT] (secondary),
      *   regardless of load — so bodyweight work counts fully.
-     * - [VolumeMetric.Tonnage]: each set contributes repsDone × weightKg × (1.0 | 0.3); sets with a
+     * - [VolumeMetric.Tonnage]: each set contributes repsDone × weightKg × (1.0 | [SECONDARY_WEIGHT]); sets with a
      *   null repsDone or null weightKg (bodyweight) contribute 0 and are surfaced separately via
      *   [bodyweightSetCountsForWindow].
      *
@@ -56,7 +59,7 @@ object MuscleVolume {
                     }
                 }
                 map.primary.forEach { m -> acc[m] = (acc[m] ?: 0f) + value }
-                map.secondary.forEach { m -> acc[m] = (acc[m] ?: 0f) + value * 0.3f }
+                map.secondary.forEach { m -> acc[m] = (acc[m] ?: 0f) + value * SECONDARY_WEIGHT }
             }
         }
         return acc

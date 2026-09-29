@@ -39,7 +39,7 @@ class MuscleVolumeTest {
 
         val sets = MuscleVolume.computeForWindow(sessions, window, muscleMap, VolumeMetric.Sets)
         assertEquals(1f, sets[Muscle.Lats]!!, 0.001f)        // primary
-        assertEquals(0.5f, sets[Muscle.Biceps]!!, 0.001f)    // secondary
+        assertEquals(MuscleVolume.SECONDARY_WEIGHT, sets[Muscle.Biceps]!!, 0.001f)    // secondary
     }
 
     @Test
@@ -56,8 +56,8 @@ class MuscleVolumeTest {
             day(2, set(exerciseId = 2, weight = 100f)),         // heavy row
         )
         val sets = MuscleVolume.computeForWindow(sessions, window, muscleMap, VolumeMetric.Sets)
-        // Lats = pull-up primary (1.0) + row secondary (0.5) = 1.5
-        assertEquals(1.5f, sets[Muscle.Lats]!!, 0.001f)
+        // Lats = pull-up primary (1.0) + row secondary
+        assertEquals(1f + MuscleVolume.SECONDARY_WEIGHT, sets[Muscle.Lats]!!, 0.001f)
         assertEquals(1f, sets[Muscle.UpperBack]!!, 0.001f)
     }
 
@@ -85,7 +85,7 @@ class MuscleVolumeTest {
         val sessions = listOf(day(1, set(exerciseId = 2, reps = 5, weight = 100f)))
         val t = MuscleVolume.computeForWindow(sessions, window, muscleMap, VolumeMetric.Tonnage)
         assertEquals(500f, t[Muscle.UpperBack]!!, 0.001f)   // primary 1.0
-        assertEquals(250f, t[Muscle.Lats]!!, 0.001f)        // secondary 0.5
+        assertEquals(500f * MuscleVolume.SECONDARY_WEIGHT, t[Muscle.Lats]!!, 0.001f)        // secondary
     }
 
     @Test

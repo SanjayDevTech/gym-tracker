@@ -50,7 +50,9 @@ fun BodyDiagram(
                     x = (tap.x - vp.offsetX) / vp.scale,
                     y = (tap.y - vp.offsetY) / vp.scale,
                 )
-                val hit = regions.entries.firstOrNull { (_, r) -> r.contains(local) }
+                // Hit-test topmost first (reverse draw order) so overlaid regions like Adductors,
+                // drawn over the inner Quads, win the tap instead of the region beneath them.
+                val hit = regions.entries.lastOrNull { (_, r) -> r.contains(local) }
                 if (hit != null) {
                     haptics.light()
                     onMuscleTap(hit.key)
