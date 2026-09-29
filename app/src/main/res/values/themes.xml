@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base activity theme. Compose owns the actual visual surface; the window background is
+         black so AMOLED screen transitions never flash the (previously white) window through. -->
+    <style name="Theme.GymTracker" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+
+    <!--
+      Splash-screen theme applied to the launcher activity. Android 12+ uses these
+      attributes natively; core-splashscreen backports the same behavior to older APIs.
+      `postSplashScreenTheme` is what we switch to right after onCreate.
+    -->
+    <style name="Theme.GymTracker.SplashScreen" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.GymTracker</item>
+    </style>
+</resources>
