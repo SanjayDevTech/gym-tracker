@@ -42,7 +42,7 @@ import com.example.gymtracker.ui.AppViewModelFactory
 import com.example.gymtracker.ui.LocalAppContainer
 import com.example.gymtracker.ui.components.RunningDraft
 import com.example.gymtracker.ui.components.SessionGuardSheet
-import com.example.gymtracker.ui.screens.analytics.AnalyticsScreen
+import com.example.gymtracker.ui.screens.analytics.ProgressScreen
 import com.example.gymtracker.ui.screens.data.DataScreen
 import com.example.gymtracker.ui.screens.history.HistoryScreen
 import com.example.gymtracker.ui.screens.history.SessionDetailScreen
@@ -212,7 +212,7 @@ fun AppNav() {
             }
 
             composable<ProgressRoute> {
-                AnalyticsScreen(onOpenExercises = { nav.navigate(ExercisesRoute) })
+                ProgressScreen(onOpenExercises = { nav.navigate(ExercisesRoute) })
             }
 
             // ---- Leaf pages -----------------------------------------------------------------

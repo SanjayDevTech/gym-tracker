@@ -104,4 +104,24 @@ class MuscleVolumeTest {
         assertEquals(0.5f, n[Muscle.Biceps]!!, 0.001f)
         assertFalse(n.containsKey(Muscle.Quads))
     }
+
+    // --- Weekly working sets + the 10–20 band (decision 11) ---
+
+    @Test
+    fun `weekly working sets divide window volume by its length in weeks`() {
+        val sessions = (0L until 14L).map { day(it, set(exerciseId = 2, weight = 60f)) }
+        val oneWeek = MuscleVolume.weeklyWorkingSets(sessions, 0L..6L, muscleMap)
+        assertEquals(7f, oneWeek[Muscle.UpperBack]!!, 0.001f)
+        val twoWeeks = MuscleVolume.weeklyWorkingSets(sessions, 0L..13L, muscleMap)
+        assertEquals(7f, twoWeeks[Muscle.UpperBack]!!, 0.001f)
+        assertEquals(7f * MuscleVolume.SECONDARY_WEIGHT, twoWeeks[Muscle.Lats]!!, 0.001f)
+    }
+
+    @Test
+    fun `guideline judges the rounded figure against 10 to 20`() {
+        assertEquals(MuscleVolume.Guideline.Below, MuscleVolume.guideline(9.4f))
+        assertEquals(MuscleVolume.Guideline.Within, MuscleVolume.guideline(9.6f))
+        assertEquals(MuscleVolume.Guideline.Within, MuscleVolume.guideline(20f))
+        assertEquals(MuscleVolume.Guideline.Above, MuscleVolume.guideline(20.6f))
+    }
 }

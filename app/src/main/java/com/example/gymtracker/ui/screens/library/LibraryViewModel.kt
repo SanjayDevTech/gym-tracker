@@ -2,67 +2,52 @@ package com.example.gymtracker.ui.screens.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.gymtracker.data.Equipment
 import com.example.gymtracker.data.GymRepository
-import com.example.gymtracker.data.MovementType
-import com.example.gymtracker.data.Muscle
 import com.example.gymtracker.data.db.ExerciseEntity
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import com.example.gymtracker.ui.components.ExerciseFilters
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
-
-data class LibraryFilters(
-    val query: String = "",
-    val movementType: MovementType? = null,
-    val equipment: Equipment? = null,
-    val muscle: Muscle? = null,
-)
 
 data class LibraryState(
-    val filters: LibraryFilters = LibraryFilters(),
-    val exercises: List<ExerciseEntity> = emptyList(),
+    val filters: ExerciseFilters,
+    val exercises: List<ExerciseEntity>,
+    /** Every exercise in the library, before search and filters. */
+    val total: Int,
 )
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class LibraryViewModel(
-    private val repository: GymRepository,
+    repository: GymRepository,
 ) : ViewModel() {
-    private val _filters = MutableStateFlow(LibraryFilters())
-    val filters: StateFlow<LibraryFilters> = _filters.asStateFlow()
+    /** Bound to the search field synchronously so the cursor never jumps (state lags a frame). */
+    private val _query = MutableStateFlow("")
+    val query: StateFlow<String> = _query.asStateFlow()
 
-    val state: StateFlow<LibraryState> = _filters
-        .flatMapLatest { f ->
-            combine(
-                repository.searchExercises(f.query.trim()),
-                MutableStateFlow(f),
-            ) { rows, filt ->
-                LibraryState(
-                    filters = filt,
-                    exercises = rows.filter { row ->
-                        (filt.movementType == null || row.movementType == filt.movementType) &&
-                            (filt.equipment == null || row.equipment == filt.equipment) &&
-                            (filt.muscle == null ||
-                                filt.muscle in row.primaryMuscles ||
-                                filt.muscle in row.secondaryMuscles)
-                    },
-                )
-            }
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = LibraryState(),
+    private val filters = MutableStateFlow(ExerciseFilters())
+
+    /** Null until the first Room emission (house rule 8). */
+    val state: StateFlow<LibraryState?> = combine(
+        repository.observeExercises(),
+        _query,
+        filters,
+    ) { all, q, f ->
+        val needle = q.trim()
+        LibraryState(
+            filters = f,
+            exercises = all.filter { f.matches(it) && (needle.isEmpty() || it.name.contains(needle, ignoreCase = true)) },
+            total = all.size,
         )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    fun setQuery(q: String) = _filters.update { it.copy(query = q) }
-    fun setMovementType(value: MovementType?) = _filters.update { it.copy(movementType = value) }
-    fun setEquipment(value: Equipment?) = _filters.update { it.copy(equipment = value) }
-    fun setMuscle(value: Muscle?) = _filters.update { it.copy(muscle = value) }
-    fun clearFilters() = _filters.update { LibraryFilters(query = it.query) }
+    fun setQuery(q: String) { _query.value = q }
+    fun setFilters(value: ExerciseFilters) { filters.value = value }
+
+    /** The empty state's action: back to the whole library. */
+    fun clearFilters() {
+        _query.value = ""
+        filters.value = ExerciseFilters()
+    }
 }

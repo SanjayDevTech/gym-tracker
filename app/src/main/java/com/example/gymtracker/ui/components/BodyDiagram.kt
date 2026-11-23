@@ -6,39 +6,44 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import com.example.gymtracker.data.Muscle
+import com.example.gymtracker.ui.components.atoms.heatColor
 import com.example.gymtracker.ui.rememberAppHaptics
 import kotlin.math.min
-import kotlin.math.pow
 
 enum class BodyView { Front, Back }
 
+/**
+ * §2 `BodyDiagram` (revised): regions filled from [fills] (callers use the heat ramp —
+ * [heatFill]); a muscle not in the map is the empty `outlineVariant`. Region edges in `outline`,
+ * the selected muscle outlined `onSurface` 1.5. The back view has its own silhouette (issue 33).
+ * Hit-testing is unchanged: topmost region wins.
+ */
 @Composable
 fun BodyDiagram(
     view: BodyView,
-    volumes: Map<Muscle, Float>,
+    fills: Map<Muscle, Color>,
     modifier: Modifier = Modifier,
     selectedMuscle: Muscle? = null,
     onMuscleTap: ((Muscle) -> Unit)? = null,
 ) {
-    // Cold (untrained) → warm (high volume) ramp. The empty state is a faint, clearly-cold fill
-    // so the figure always reads as a body; trained muscles climb toward the warm accent.
-    val emptyColor = MaterialTheme.colorScheme.surfaceContainerHighest
-    val coldColor = MaterialTheme.colorScheme.surfaceVariant
-    val hotColor = MaterialTheme.colorScheme.primary
+    val emptyColor = MaterialTheme.colorScheme.outlineVariant
     val outlineColor = MaterialTheme.colorScheme.outline
-    val silhouetteColor = MaterialTheme.colorScheme.outlineVariant
     val selectedColor = MaterialTheme.colorScheme.onSurface
     val haptics = rememberAppHaptics()
 
     val regions = when (view) {
         BodyView.Front -> BodyDiagramPaths.FrontRegions
         BodyView.Back -> BodyDiagramPaths.BackRegions
+    }
+    val silhouette = when (view) {
+        BodyView.Front -> BodySilhouette.Front
+        BodyView.Back -> BodySilhouette.Back
     }
 
     Canvas(
@@ -63,33 +68,28 @@ fun BodyDiagram(
         val vp = computeViewport(size.width, size.height)
         translate(vp.offsetX, vp.offsetY) {
             scale(scaleX = vp.scale, scaleY = vp.scale, pivot = Offset.Zero) {
-                drawPath(
-                    path = BodySilhouette.Front,
-                    color = silhouetteColor,
-                    style = Stroke(width = 1f),
-                )
                 regions.forEach { (muscle, region) ->
-                    val raw = (volumes[muscle] ?: 0f).coerceIn(0f, 1f)
-                    val path = region.path
-                    val fill = if (raw <= 0f) {
-                        emptyColor
-                    } else {
-                        // Ease so mid-volume muscles separate visibly instead of bunching dark.
-                        lerp(coldColor, hotColor, raw.pow(0.65f))
-                    }
-                    drawPath(path, fill)
-                    drawPath(path, outlineColor, style = Stroke(width = 0.4f))
+                    drawPath(region.path, fills[muscle] ?: emptyColor)
+                    drawPath(region.path, outlineColor, style = Stroke(width = 0.4f))
                 }
-                // Draw the selected muscle's outline last so it sits on top of its neighbours.
+                // Silhouette over the fills so the back view's spine and blade lines stay visible.
+                drawPath(path = silhouette, color = outlineColor, style = Stroke(width = 1f))
                 if (selectedMuscle != null) {
                     regions[selectedMuscle]?.let { region ->
-                        drawPath(region.path, selectedColor, style = Stroke(width = 1.6f))
+                        drawPath(region.path, selectedColor, style = Stroke(width = 1.5f))
                     }
                 }
             }
         }
     }
 }
+
+/**
+ * Heat-ramp fills for 0..1 volume levels. Any trained muscle starts a quarter of the way up the
+ * ramp so a light week never reads as untrained; zero/absent stays the empty colour.
+ */
+fun heatFill(levels: Map<Muscle, Float>): Map<Muscle, Color> =
+    levels.filterValues { it > 0f }.mapValues { heatColor(0.25f + 0.75f * it.value.coerceIn(0f, 1f)) }
 
 private data class Viewport(val scale: Float, val offsetX: Float, val offsetY: Float)
 

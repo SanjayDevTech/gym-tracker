@@ -5,91 +5,126 @@ import androidx.lifecycle.viewModelScope
 import com.example.gymtracker.data.GymRepository
 import com.example.gymtracker.data.SetType
 import com.example.gymtracker.data.db.ExerciseEntity
+import com.example.gymtracker.data.db.ExerciseSetWithDate
 import com.example.gymtracker.data.db.LoggedSetEntity
 import com.example.gymtracker.data.db.PlannedExerciseEntity
 import com.example.gymtracker.domain.ExerciseProgress
 import com.example.gymtracker.domain.LoggedSetSample
-import com.example.gymtracker.domain.PersonalRecords
 import com.example.gymtracker.domain.ProgressMetric
 import com.example.gymtracker.domain.ProgressPoint
 import com.example.gymtracker.domain.ProgressionRule
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 
+/** A record's value and the first day it was reached. */
+data class RecordFigure(val value: Float, val dateEpochDay: Long)
+
+/** One logged set as the RECENT list shows it. */
+data class RecentSet(val repsDone: Int?, val weightKg: Float?, val setType: SetType)
+
+/** One session's completed sets for this exercise (issue 25: grouped by session, dated). */
+data class RecentSession(val dateEpochDay: Long, val sets: List<RecentSet>)
+
 data class ExerciseDetailState(
-    val exercise: ExerciseEntity? = null,
-    val recentSets: List<LoggedSetEntity> = emptyList(),
-    val readyToProgress: Boolean = false,
-    val records: PersonalRecords = PersonalRecords(),
-    val seriesByMetric: Map<ProgressMetric, List<ProgressPoint>> = emptyMap(),
-    val sessionCount: Int = 0,
-    val hasWeightedHistory: Boolean = false,
+    /** Null when the exercise does not exist (deleted); the page then shows its top bar only. */
+    val exercise: ExerciseEntity?,
+    /** Any completed scoring set at all — false shows the empty state (§4.11). */
+    val hasHistory: Boolean,
+    /** Any completed working set with load: weight metrics are offered, hero = est. 1RM. */
+    val weighted: Boolean,
+    val series: Map<ProgressMetric, List<ProgressPoint>>,
+    val records: Map<ProgressMetric, RecordFigure>,
+    val sessionCount: Int,
+    val recent: List<RecentSession>,
+    val readyToProgress: Boolean,
+    /** The plan target's rep range when the exercise is in exactly one plan; else no band. */
+    val repTarget: IntRange?,
 )
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class ExerciseDetailViewModel(
-    private val repository: GymRepository,
+    repository: GymRepository,
     private val exerciseId: Long,
 ) : ViewModel() {
 
-    private val idFlow = MutableStateFlow(exerciseId)
+    /**
+     * One history query, with dates, feeds everything: charts, records, the grouped RECENT list
+     * and the progression check. Null until the first emission (house rule 8).
+     */
+    val state: StateFlow<ExerciseDetailState?> = combine(
+        repository.observeExercise(exerciseId),
+        repository.observeExerciseSetsWithDate(exerciseId),
+        repository.observeAllPlanned(),
+    ) { exercise, history, planned -> build(exercise, history, planned) }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    val state: StateFlow<ExerciseDetailState> = idFlow
-        .flatMapLatest { id ->
-            combine(
-                repository.observeExercise(id),
-                flow { emit(repository.recentSetsForExercise(id, limit = 60)) },
-                repository.observeExerciseSetsWithDate(id),
-            ) { exercise, sets, history ->
-                val samples = history.map {
-                    LoggedSetSample(
-                        dateEpochDay = it.dateEpochDay,
-                        repsDone = it.repsDone,
-                        weightKg = it.weightKg,
-                        isCompleted = it.isCompleted,
-                        setType = it.setType,
+    private fun build(
+        exercise: ExerciseEntity?,
+        history: List<ExerciseSetWithDate>,
+        planned: List<PlannedExerciseEntity>,
+    ): ExerciseDetailState {
+        val samples = history.map {
+            LoggedSetSample(
+                dateEpochDay = it.dateEpochDay,
+                repsDone = it.repsDone,
+                weightKg = it.weightKg,
+                isCompleted = it.isCompleted,
+                setType = it.setType,
+            )
+        }
+        val series = ProgressMetric.entries.associateWith { ExerciseProgress.series(samples, it) }
+        // A record's date is the first day the series reached its maximum.
+        val records = series.mapNotNull { (metric, points) ->
+            val best = points.maxOfOrNull { it.value } ?: return@mapNotNull null
+            metric to RecordFigure(best, points.first { it.value == best }.dateEpochDay)
+        }.toMap()
+
+        // History is ascending by date, then log time, then set index: grouping keeps both orders.
+        val bySession = history.groupBy { it.sessionId }
+        val recent = bySession.values.reversed().mapNotNull { sets ->
+            val done = sets.filter { it.isCompleted }
+            if (done.isEmpty()) null
+            else RecentSession(done.first().dateEpochDay, done.map { RecentSet(it.repsDone, it.weightKg, it.setType) })
+        }.take(RECENT_SESSIONS)
+
+        val plans = planned.filter { it.exerciseId == exerciseId }
+        val target = plans.firstOrNull()?.takeIf { plans.map { p -> p.planId }.distinct().size == 1 }
+        val ready = target != null && ProgressionRule.readyToProgress(
+            plan = target,
+            recentSetsBySession = bySession.values.reversed().map { sets ->
+                sets.mapIndexed { i, s ->
+                    LoggedSetEntity(
+                        sessionId = s.sessionId,
+                        exerciseId = exerciseId,
+                        setIndex = i,
+                        repsDone = s.repsDone,
+                        weightKg = s.weightKg,
+                        isCompleted = s.isCompleted,
+                        setType = s.setType,
                     )
                 }
-                val series = ProgressMetric.entries.associateWith { ExerciseProgress.series(samples, it) }
-                ExerciseDetailState(
-                    exercise = exercise,
-                    recentSets = sets,
-                    readyToProgress = computeReady(sets),
-                    records = ExerciseProgress.records(samples),
-                    seriesByMetric = series,
-                    sessionCount = history.map { it.sessionId }.distinct().size,
-                    hasWeightedHistory = samples.any {
-                        it.isCompleted && it.setType != SetType.Warmup && (it.weightKg ?: 0f) > 0f
-                    },
-                )
-            }
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = ExerciseDetailState(),
+            },
+            n = 2,
         )
 
-    /** Group flat sets by session, newest first; pass last N to ProgressionRule. */
-    private fun computeReady(sets: List<LoggedSetEntity>): Boolean {
-        if (sets.isEmpty()) return false
-        val grouped = sets.groupBy { it.sessionId }.values.toList()
-        // Use a default plan: targetRepsHigh = 12 (the library doesn't carry a plan natively).
-        val syntheticPlan = PlannedExerciseEntity(
-            id = 0L,
-            planId = 0L,
-            exerciseId = exerciseId,
-            sortIndex = 0,
-            targetSets = grouped.firstOrNull()?.size ?: 3,
-            targetRepsLow = 8,
-            targetRepsHigh = 12,
+        return ExerciseDetailState(
+            exercise = exercise,
+            hasHistory = series.getValue(ProgressMetric.Reps).isNotEmpty(),
+            weighted = series.getValue(ProgressMetric.OneRepMax).isNotEmpty(),
+            series = series,
+            records = records,
+            sessionCount = bySession.size,
+            recent = recent,
+            readyToProgress = ready,
+            repTarget = target?.let { it.targetRepsLow..it.targetRepsHigh },
         )
-        return ProgressionRule.readyToProgress(syntheticPlan, grouped, n = 2)
+    }
+
+    private companion object {
+        const val RECENT_SESSIONS = 5
     }
 }

@@ -3,23 +3,24 @@ package com.example.gymtracker.domain
 import java.time.LocalDate
 import java.time.ZoneId
 
-enum class AnalyticsWindow(val label: String) {
-    Session("Session"),
-    Week("Week"),
-    Month("Month"),
-    ThreeMonth("3M"),
-    Year("Year"),
+/** The Progress range selector (§4.12). Rolling windows ending today; "Today" was "Session". */
+enum class AnalyticsWindow(val label: String, val days: Int) {
+    Today("Today", 1),
+    Week("Week", 7),
+    Month("Month", 30),
+    ThreeMonth("3M", 90),
+    Year("Year", 365),
 }
 
-/** Returns the inclusive epoch-day range [start..today] for this window, anchored at today. */
-fun AnalyticsWindow.rangeEpochDays(today: LocalDate = LocalDate.now(ZoneId.systemDefault())): ClosedRange<Long> {
-    val end = today.toEpochDay()
-    val start = when (this) {
-        AnalyticsWindow.Session -> end                          // today only
-        AnalyticsWindow.Week -> today.minusDays(6).toEpochDay()
-        AnalyticsWindow.Month -> today.minusDays(29).toEpochDay()
-        AnalyticsWindow.ThreeMonth -> today.minusDays(89).toEpochDay()
-        AnalyticsWindow.Year -> today.minusDays(364).toEpochDay()
-    }
-    return start..end
+/**
+ * The inclusive epoch-day range of this window, [offset] whole periods back from the one that
+ * ends [today] (0 = the current period, 1 = the one before it, …). Periods are back-to-back:
+ * `Week` offset 1 ends the day before offset 0 starts. Negative offsets clamp to 0.
+ */
+fun AnalyticsWindow.rangeEpochDays(
+    today: LocalDate = LocalDate.now(ZoneId.systemDefault()),
+    offset: Int = 0,
+): ClosedRange<Long> {
+    val end = today.toEpochDay() - offset.coerceAtLeast(0).toLong() * days
+    return (end - (days - 1))..end
 }

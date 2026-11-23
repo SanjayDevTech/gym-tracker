@@ -85,6 +85,42 @@ object MuscleVolume {
         return acc
     }
 
+    /**
+     * The weekly-volume guideline band (decision 11): 10–20 working sets per muscle per week.
+     * Shown on Progress only when the range is WEEK.
+     */
+    const val GUIDELINE_LOW_SETS = 10
+    const val GUIDELINE_HIGH_SETS = 20
+
+    /**
+     * Working sets per muscle per week over [windowEpochDays] — [VolumeMetric.Sets] volume
+     * (secondary muscles credited [SECONDARY_WEIGHT]) divided by the window's length in weeks.
+     * For a 7-day window this is simply that week's working sets, the figure the 10–20 band
+     * reads against.
+     */
+    fun weeklyWorkingSets(
+        sessions: List<SessionWindow>,
+        windowEpochDays: ClosedRange<Long>,
+        muscleMap: Map<Long, ExerciseMuscleMap>,
+    ): Map<Muscle, Float> {
+        val days = (windowEpochDays.endInclusive - windowEpochDays.start + 1).coerceAtLeast(1L)
+        val weeks = days / 7f
+        return computeForWindow(sessions, windowEpochDays, muscleMap, VolumeMetric.Sets)
+            .mapValues { it.value / weeks }
+    }
+
+    /** Where a weekly set count sits against the 10–20 band, judged on the rounded figure shown. */
+    fun guideline(weeklySets: Float): Guideline {
+        val shown = kotlin.math.round(weeklySets).toInt()
+        return when {
+            shown < GUIDELINE_LOW_SETS -> Guideline.Below
+            shown > GUIDELINE_HIGH_SETS -> Guideline.Above
+            else -> Guideline.Within
+        }
+    }
+
+    enum class Guideline { Below, Within, Above }
+
     /** Normalize values to 0..1 by dividing by the max in the map. */
     fun normalize(values: Map<Muscle, Float>): Map<Muscle, Float> {
         val max = values.values.maxOrNull() ?: 0f

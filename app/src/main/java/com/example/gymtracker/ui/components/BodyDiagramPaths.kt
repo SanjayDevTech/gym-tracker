@@ -95,7 +95,24 @@ object BodySilhouette {
         close()
     }
 
-    val Back: Path = Front // mirror is visually identical for the silhouette
+    /**
+     * The back view's own path (issue 33): the same outline, plus the spine and the gluteal
+     * cleft, so the two figures no longer read as identical twins.
+     */
+    val Back: Path = Path().apply {
+        addPath(Front)
+        // Spine, neck to sacrum.
+        moveTo(50f, 30f)
+        lineTo(50f, 110f)
+        // Gluteal cleft.
+        moveTo(50f, 114f)
+        lineTo(50f, 136f)
+        // Shoulder-blade ridges.
+        moveTo(36f, 48f)
+        lineTo(44f, 62f)
+        moveTo(64f, 48f)
+        lineTo(56f, 62f)
+    }
 }
 
 object BodyDiagramPaths {
