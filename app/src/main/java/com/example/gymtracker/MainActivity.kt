@@ -1,19 +1,14 @@
 package com.example.gymtracker
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Color as AndroidColor
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
@@ -25,10 +20,6 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
-    private val notificationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { /* ignore result — service runs either way, notification visibility depends on grant */ }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         // Must run BEFORE super.onCreate so the splash window installs correctly.
         installSplashScreen()
@@ -39,7 +30,6 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(AndroidColor.TRANSPARENT),
         )
         WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
-        maybeRequestNotificationPermission()
         val container = (application as GymTrackerApp).container
         handleResumeIntent(intent)
         handleImportIntent(intent)
@@ -102,15 +92,6 @@ class MainActivity : ComponentActivity() {
         } else if (!sharedText.isNullOrBlank()) {
             container.requestImportPlan(sharedText)
         }
-    }
-
-    private fun maybeRequestNotificationPermission() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-        val granted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.POST_NOTIFICATIONS,
-        ) == PackageManager.PERMISSION_GRANTED
-        if (!granted) notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 
     private companion object {

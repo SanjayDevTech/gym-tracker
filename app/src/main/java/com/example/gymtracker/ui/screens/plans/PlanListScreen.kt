@@ -19,14 +19,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.DeleteOutline
-import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FitnessCenter
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.LocalLibrary
-import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
@@ -35,8 +30,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
@@ -46,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -67,6 +61,7 @@ import com.example.gymtracker.data.db.SessionDraftEntity
 import com.example.gymtracker.domain.DateUtil
 import com.example.gymtracker.ui.components.atoms.AppButton
 import com.example.gymtracker.ui.components.atoms.AppFab
+import com.example.gymtracker.ui.components.atoms.AppSnackbarHost
 import com.example.gymtracker.ui.components.atoms.AppTextButton
 import com.example.gymtracker.ui.components.atoms.AppTopBar
 import com.example.gymtracker.ui.components.atoms.ConfirmSheet
@@ -80,59 +75,27 @@ import com.example.gymtracker.ui.theme.Radius
 @Composable
 fun PlanListScreen(
     viewModel: PlanListViewModel,
-    onLibrary: () -> Unit,
-    onQuickLog: () -> Unit,
-    onHistory: () -> Unit,
-    onAnalytics: () -> Unit,
+    snackbarHostState: SnackbarHostState,
     onSettings: () -> Unit,
+    onQuickLog: () -> Unit,
     onOpenPlan: (Long) -> Unit,
     onLogPlan: (Long) -> Unit,
     onResumeSession: (planId: Long?) -> Unit,
-    onImportPlan: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showCreate by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<PlanEntity?>(null) }
-    var menuOpen by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
+            // History and Progress are bar destinations, Exercises hangs off Progress, Import
+            // lives on Plans & backup (§4.1 change 1): the only action left is Settings.
             AppTopBar(
-                title = "Plans",
+                title = "Train",
                 actions = {
-                    IconButton(onClick = { showCreate = true }) {
-                        Icon(Icons.Outlined.Add, contentDescription = "New plan")
-                    }
-                    IconButton(onClick = onAnalytics) {
-                        Icon(Icons.Outlined.BarChart, contentDescription = "Analytics")
-                    }
-                    Box {
-                        IconButton(onClick = { menuOpen = true }) {
-                            Icon(Icons.Outlined.MoreVert, contentDescription = "More")
-                        }
-                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                            DropdownMenuItem(
-                                text = { Text("History") },
-                                leadingIcon = { Icon(Icons.Outlined.History, contentDescription = null) },
-                                onClick = { menuOpen = false; onHistory() },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Exercise library") },
-                                leadingIcon = { Icon(Icons.Outlined.LocalLibrary, contentDescription = null) },
-                                onClick = { menuOpen = false; onLibrary() },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Import plan") },
-                                leadingIcon = { Icon(Icons.Outlined.FileDownload, contentDescription = null) },
-                                onClick = { menuOpen = false; onImportPlan() },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Settings") },
-                                leadingIcon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
-                                onClick = { menuOpen = false; onSettings() },
-                            )
-                        }
+                    IconButton(onClick = onSettings) {
+                        Icon(Icons.Outlined.Settings, contentDescription = "Settings")
                     }
                 },
             )
@@ -140,6 +103,7 @@ fun PlanListScreen(
         floatingActionButton = {
             AppFab(text = "Quick log", onClick = onQuickLog, icon = Icons.Outlined.Bolt)
         },
+        snackbarHost = { AppSnackbarHost(snackbarHostState) },
         modifier = modifier.fillMaxSize(),
     ) { padding ->
         Column(
@@ -175,6 +139,10 @@ fun PlanListScreen(
                             onLog = { onLogPlan(card.plan.id) },
                             onDelete = { pendingDelete = card.plan },
                         )
+                    }
+                    // The top bar's + went with the overflow; creating a plan is the list's foot.
+                    item(key = "new-plan") {
+                        AppTextButton(text = "New plan", onClick = { showCreate = true }, icon = Icons.Outlined.Add)
                     }
                 }
             }

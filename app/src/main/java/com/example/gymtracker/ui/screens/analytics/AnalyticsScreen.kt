@@ -59,6 +59,7 @@ import com.example.gymtracker.ui.components.ConsistencyCalendar
 import com.example.gymtracker.data.WeightUnit
 import com.example.gymtracker.data.displayName
 import com.example.gymtracker.ui.components.atoms.AppDivider
+import com.example.gymtracker.ui.components.atoms.AppTextButton
 import com.example.gymtracker.ui.components.atoms.AppTopBar
 import com.example.gymtracker.ui.components.atoms.EmptyState
 import com.example.gymtracker.ui.components.atoms.Section
@@ -72,7 +73,7 @@ import com.example.gymtracker.ui.theme.Radius
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AnalyticsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun AnalyticsScreen(onOpenExercises: () -> Unit, modifier: Modifier = Modifier) {
     val container = LocalAppContainer.current
     val vm: AnalyticsViewModel = viewModel(
         factory = AppViewModelFactory(
@@ -90,7 +91,10 @@ fun AnalyticsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 
     Scaffold(
         topBar = {
-            AppTopBar(title = "Analytics", onBack = onBack)
+            AppTopBar(
+                title = "Progress",
+                actions = { AppTextButton(text = "Exercises", onClick = onOpenExercises) },
+            )
         },
         modifier = modifier.fillMaxSize(),
     ) { padding ->

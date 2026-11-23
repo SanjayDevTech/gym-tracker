@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.gymtracker.data.PreferencesStore
 import com.example.gymtracker.data.VolumeMetric
 import com.example.gymtracker.data.WeightUnit
+import com.example.gymtracker.domain.WeeklyTarget
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -15,6 +16,7 @@ data class SettingsState(
     val haptics: Boolean = true,
     val weightUnit: WeightUnit = WeightUnit.Kg,
     val volumeMetric: VolumeMetric = VolumeMetric.Sets,
+    val weeklyTargetSessions: Int = WeeklyTarget.DEFAULT_TARGET,
 )
 
 class SettingsViewModel(
@@ -24,8 +26,9 @@ class SettingsViewModel(
         prefs.hapticsEnabled,
         prefs.weightUnit,
         prefs.volumeMetric,
-    ) { haptics, unit, metric ->
-        SettingsState(haptics, unit, metric)
+        prefs.weeklyTargetSessions,
+    ) { haptics, unit, metric, weeklyTarget ->
+        SettingsState(haptics, unit, metric, weeklyTarget)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -35,4 +38,5 @@ class SettingsViewModel(
     fun setHaptics(value: Boolean) = viewModelScope.launch { prefs.setHapticsEnabled(value) }
     fun setWeightUnit(value: WeightUnit) = viewModelScope.launch { prefs.setWeightUnit(value) }
     fun setVolumeMetric(value: VolumeMetric) = viewModelScope.launch { prefs.setVolumeMetric(value) }
+    fun setWeeklyTargetSessions(value: Int) = viewModelScope.launch { prefs.setWeeklyTargetSessions(value) }
 }

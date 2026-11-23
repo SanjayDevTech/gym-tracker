@@ -2,17 +2,33 @@ package com.example.gymtracker.ui.navigation
 
 import kotlinx.serialization.Serializable
 
-@Serializable object PlansRoute
-@Serializable object AnalyticsRoute
-@Serializable object SettingsRoute
+/*
+ * Every destination — design-plan §5. The three bar destinations ([TrainRoute], [HistoryRoute],
+ * [ProgressRoute]) are peers; everything else is a leaf page that pushes onto whichever tab is
+ * current and hides the bar.
+ */
 
-@Serializable object LibraryRoute
+// ---- Bottom-bar destinations ----------------------------------------------
+
+/** Start destination: live session, week vs target, plans (§4.1; was "Plans"). */
+@Serializable object TrainRoute
+@Serializable object HistoryRoute
+/** Consistency, volume, muscles (§4.12; was "Analytics"). */
+@Serializable object ProgressRoute
+
+// ---- Leaf pages ------------------------------------------------------------
+
+@Serializable object SettingsRoute
+/** Plans & backup (§4.15), from Settings. */
+@Serializable object DataRoute
+
+/** The exercise library (§4.10), from Progress's top-bar action. */
+@Serializable object ExercisesRoute
 @Serializable data class ExerciseDetailRoute(val exerciseId: Long)
 
 @Serializable data class PlanEditorRoute(val planId: Long)
 @Serializable object ImportPlanRoute
 
-@Serializable object HistoryRoute
 @Serializable data class SessionDetailRoute(val sessionId: Long)
 
 @Serializable data class SessionLoggerRoute(val planId: Long? = null)

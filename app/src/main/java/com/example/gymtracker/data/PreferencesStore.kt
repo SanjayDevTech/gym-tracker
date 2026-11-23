@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.gymtracker.domain.WeeklyTarget
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -20,6 +21,8 @@ class PreferencesStore(private val context: Context) {
         val VolumeMetric = stringPreferencesKey("volume_metric")
         val SeedVersion = intPreferencesKey("seed_version")
         val DefaultRestSeconds = intPreferencesKey("default_rest_seconds")
+        val WeeklyTargetSessions = intPreferencesKey("weekly_target_sessions")
+        val NotificationPermissionAsked = booleanPreferencesKey("notification_permission_asked")
     }
 
     val hapticsEnabled: Flow<Boolean> = context.dataStore.data
@@ -40,6 +43,23 @@ class PreferencesStore(private val context: Context) {
 
     suspend fun setDefaultRestSeconds(value: Int) =
         context.dataStore.edit { it[Keys.DefaultRestSeconds] = value }
+
+    /** Sessions a week counted as "on target" (decision 7); 1–7, default 3. */
+    val weeklyTargetSessions: Flow<Int> = context.dataStore.data
+        .map { (it[Keys.WeeklyTargetSessions] ?: WeeklyTarget.DEFAULT_TARGET).coerceIn(WeeklyTarget.MIN_TARGET, WeeklyTarget.MAX_TARGET) }
+
+    suspend fun setWeeklyTargetSessions(value: Int) =
+        context.dataStore.edit {
+            it[Keys.WeeklyTargetSessions] = value.coerceIn(WeeklyTarget.MIN_TARGET, WeeklyTarget.MAX_TARGET)
+        }
+
+    /** Whether the logger has already asked for POST_NOTIFICATIONS (§6.1 step 3: once, on the
+     *  first workout, not at launch). */
+    val notificationPermissionAsked: Flow<Boolean> = context.dataStore.data
+        .map { it[Keys.NotificationPermissionAsked] ?: false }
+
+    suspend fun setNotificationPermissionAsked() =
+        context.dataStore.edit { it[Keys.NotificationPermissionAsked] = true }
 
     suspend fun setHapticsEnabled(value: Boolean) =
         context.dataStore.edit { it[Keys.Haptics] = value }

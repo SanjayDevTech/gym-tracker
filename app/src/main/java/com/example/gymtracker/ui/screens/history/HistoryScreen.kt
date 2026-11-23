@@ -55,7 +55,7 @@ import com.example.gymtracker.ui.theme.Radius
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistoryScreen(onBack: () -> Unit, onOpenSession: (Long) -> Unit) {
+fun HistoryScreen(onOpenSession: (Long) -> Unit) {
     val container = LocalAppContainer.current
     val vm: HistoryViewModel = viewModel(
         factory = AppViewModelFactory(
@@ -69,7 +69,7 @@ fun HistoryScreen(onBack: () -> Unit, onOpenSession: (Long) -> Unit) {
 
     Scaffold(
         topBar = {
-            AppTopBar(title = "History", onBack = onBack)
+            AppTopBar(title = "History")
         },
         modifier = Modifier.fillMaxSize(),
     ) { padding ->

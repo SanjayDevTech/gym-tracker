@@ -68,7 +68,7 @@ fun LibraryScreen(
 
     Scaffold(
         topBar = {
-            AppTopBar(title = "Exercise library", onBack = onBack)
+            AppTopBar(title = "Exercises", onBack = onBack)
         },
         modifier = modifier.fillMaxSize(),
     ) { padding ->
