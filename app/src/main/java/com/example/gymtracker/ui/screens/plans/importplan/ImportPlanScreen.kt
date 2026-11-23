@@ -61,10 +61,17 @@ import com.example.gymtracker.data.Muscle
 import com.example.gymtracker.data.plan.PlanImportExercise
 import com.example.gymtracker.ui.AppViewModelFactory
 import com.example.gymtracker.ui.LocalAppContainer
+import com.example.gymtracker.data.displayName
 import com.example.gymtracker.ui.components.ExercisePickerSheet
+import com.example.gymtracker.ui.components.atoms.AppButton
+import com.example.gymtracker.ui.components.atoms.AppOutlinedButton
+import com.example.gymtracker.ui.components.atoms.AppTextButton
+import com.example.gymtracker.ui.components.atoms.AppTopBar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.gymtracker.ui.theme.Spacing
+import com.example.gymtracker.ui.theme.Radius
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,14 +107,7 @@ fun ImportPlanScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Import plan") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-                    }
-                },
-            )
+            AppTopBar(title = "Import plan", onBack = onBack)
         },
         modifier = Modifier.fillMaxSize(),
     ) { padding ->
@@ -115,8 +115,8 @@ fun ImportPlanScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = Spacing.l),
+            verticalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
             if (state.payload == null) {
                 PickSection(
@@ -133,8 +133,8 @@ fun ImportPlanScreen(
                 )
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(bottom = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = Spacing.m),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.s),
                 ) {
                     itemsIndexed(state.entries, key = { idx, _ -> idx }) { idx, entry ->
                         EntryRow(
@@ -146,16 +146,13 @@ fun ImportPlanScreen(
                         )
                     }
                 }
-                Button(
+                AppButton(
+                    text = if (state.committing) "Importing…"
+                    else "Import plan ($resolved exercise${if (resolved == 1) "" else "s"})",
                     onClick = { viewModel.commit() },
                     enabled = canCommit,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                ) {
-                    Text(
-                        if (state.committing) "Importing…"
-                        else "Import plan ($resolved exercise${if (resolved == 1) "" else "s"})"
-                    )
-                }
+                    modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.l),
+                )
             }
         }
 
@@ -217,26 +214,19 @@ private fun PickSection(
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         Text(
             "Pick a JSON file that follows the import format.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Button(
-            onClick = {
-                launcher.launch(arrayOf("application/json", "text/plain", "*/*"))
-            },
+        AppButton(
+            text = if (loading) "Reading…" else "Pick JSON file",
+            onClick = { launcher.launch(arrayOf("application/json", "text/plain", "*/*")) },
             enabled = !loading,
             modifier = Modifier.fillMaxWidth(),
-        ) {
-            Icon(
-                Icons.Outlined.UploadFile,
-                contentDescription = null,
-                modifier = Modifier.padding(end = 8.dp),
-            )
-            Text(if (loading) "Reading…" else "Pick JSON file")
-        }
+            icon = Icons.Outlined.UploadFile,
+        )
         val message = readError ?: error
         if (message != null) {
             Text(
@@ -255,9 +245,9 @@ private fun FormatHint() {
     Card(
         modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Radius.md),
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(modifier = Modifier.padding(Spacing.m)) {
             Text(
                 if (expanded) "Hide format" else "Show format",
                 style = MaterialTheme.typography.labelLarge,
@@ -268,7 +258,7 @@ private fun FormatHint() {
                     EXAMPLE_FULL,
                     style = MaterialTheme.typography.bodySmall,
                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                    modifier = Modifier.padding(top = 8.dp),
+                    modifier = Modifier.padding(top = Spacing.s),
                 )
             }
         }
@@ -286,9 +276,9 @@ private fun ParsedSummary(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(Radius.md),
     ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(modifier = Modifier.padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(
                 buildString {
@@ -318,9 +308,9 @@ private fun EntryRow(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Radius.md),
     ) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(modifier = Modifier.padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -337,18 +327,22 @@ private fun EntryRow(
                 ResolutionBadge(entry.resolution, borderColor)
             }
             when (entry.resolution) {
-                Resolution.Pending -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilledTonalButton(onClick = onMap, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Outlined.Link, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
-                        Text("Map")
-                    }
-                    FilledTonalButton(onClick = onCreate, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Outlined.AddCircle, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
-                        Text("Create")
-                    }
-                    TextButton(onClick = onSkip) { Text("Skip") }
+                Resolution.Pending -> Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    AppOutlinedButton(
+                        text = "Map",
+                        onClick = onMap,
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Outlined.Link,
+                    )
+                    AppOutlinedButton(
+                        text = "Create",
+                        onClick = onCreate,
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Outlined.AddCircle,
+                    )
+                    AppTextButton(text = "Skip", onClick = onSkip)
                 }
-                else -> TextButton(onClick = onUndo) { Text("Change") }
+                else -> AppTextButton(text = "Change", onClick = onUndo)
             }
         }
     }
@@ -364,9 +358,9 @@ private fun ResolutionBadge(resolution: Resolution, color: androidx.compose.ui.g
     }
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.padding(end = 2.dp))
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.padding(end = Spacing.xs))
         Text(label, style = MaterialTheme.typography.labelSmall, color = color)
     }
 }
@@ -404,8 +398,8 @@ private fun CreateCustomSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(Spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
             Text("Create custom exercise",
                 style = MaterialTheme.typography.headlineSmall,
@@ -416,35 +410,36 @@ private fun CreateCustomSheet(
                 label = { Text("Name") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(Radius.md),
             )
 
             Text("Movement type", style = MaterialTheme.typography.labelMedium)
             ChipRow(options = MovementType.values().toList(), selected = setOf(movementType),
-                isSingleSelect = true, onToggle = { movementType = it }, labelFor = { it.name })
+                isSingleSelect = true, onToggle = { movementType = it }, labelFor = { it.displayName })
 
             Text("Equipment", style = MaterialTheme.typography.labelMedium)
             ChipRow(options = Equipment.values().toList(), selected = setOf(equipment),
-                isSingleSelect = true, onToggle = { equipment = it }, labelFor = { it.name })
+                isSingleSelect = true, onToggle = { equipment = it }, labelFor = { it.displayName })
 
             Text("Primary muscles", style = MaterialTheme.typography.labelMedium)
             ChipRow(options = Muscle.values().toList(), selected = primary,
                 isSingleSelect = false,
                 onToggle = { primary = if (it in primary) primary - it else primary + it },
-                labelFor = { it.name })
+                labelFor = { it.displayName })
 
             Text("Secondary muscles", style = MaterialTheme.typography.labelMedium)
             ChipRow(options = Muscle.values().toList(), selected = secondary,
                 isSingleSelect = false,
                 onToggle = { secondary = if (it in secondary) secondary - it else secondary + it },
-                labelFor = { it.name })
+                labelFor = { it.displayName })
 
             Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+                modifier = Modifier.fillMaxWidth().padding(top = Spacing.s),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.m, Alignment.End),
             ) {
-                TextButton(onClick = onCancel) { Text("Cancel") }
-                Button(
+                AppTextButton(text = "Cancel", onClick = onCancel)
+                AppButton(
+                    text = "Create",
                     onClick = {
                         onConfirm(
                             Resolution.Create(
@@ -457,8 +452,7 @@ private fun CreateCustomSheet(
                         )
                     },
                     enabled = name.isNotBlank(),
-                    colors = ButtonDefaults.buttonColors(),
-                ) { Text("Create") }
+                )
             }
         }
     }
@@ -476,7 +470,7 @@ private fun <T : Any> ChipRow(
     val scroll = rememberScrollState()
     Row(
         modifier = Modifier.fillMaxWidth().horizontalScroll(scroll),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
     ) {
         options.forEach { opt ->
             FilterChip(

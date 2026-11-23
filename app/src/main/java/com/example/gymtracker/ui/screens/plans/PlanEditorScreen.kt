@@ -43,6 +43,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -50,7 +51,6 @@ import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -79,12 +79,23 @@ import com.example.gymtracker.data.db.ExerciseEntity
 import com.example.gymtracker.data.db.PlannedExerciseEntity
 import com.example.gymtracker.ui.AppViewModelFactory
 import com.example.gymtracker.ui.LocalAppContainer
-import com.example.gymtracker.ui.components.EmptyState
+import com.example.gymtracker.data.displayName
+import com.example.gymtracker.ui.components.atoms.AppButton
+import com.example.gymtracker.ui.components.atoms.AppFab
+import com.example.gymtracker.ui.components.atoms.AppSnackbarHost
+import com.example.gymtracker.ui.components.atoms.AppTextButton
+import com.example.gymtracker.ui.components.atoms.AppTopBar
+import com.example.gymtracker.ui.components.atoms.EmptyState
+import com.example.gymtracker.ui.components.atoms.Stepper
+import com.example.gymtracker.ui.theme.Elevation
+import com.example.gymtracker.ui.theme.Sizes
+import com.example.gymtracker.ui.theme.Spacing
 import com.example.gymtracker.ui.components.ExercisePickerSheet
 import com.example.gymtracker.ui.rememberAppHaptics
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.gymtracker.ui.theme.Radius
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -113,6 +124,7 @@ fun PlanEditorScreen(
     val haptics = rememberAppHaptics()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json"),
@@ -127,11 +139,7 @@ fun PlanEditorScreen(
                         } ?: error("Could not open output stream")
                     }
                 }.isSuccess
-                Toast.makeText(
-                    context,
-                    if (ok) "Plan exported" else "Export failed",
-                    Toast.LENGTH_SHORT,
-                ).show()
+                snackbarHostState.showSnackbar(if (ok) "Plan exported" else "Export failed")
             }
         }
     }
@@ -159,35 +167,15 @@ fun PlanEditorScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    if (plan == null) Text("Plan")
-                    else {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.clickable { showRename = true },
-                        ) {
-                            Text(
-                                plan.name,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            Icon(
-                                Icons.Outlined.Edit,
-                                contentDescription = "Rename",
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+            AppTopBar(
+                title = plan?.name ?: "Plan",
+                onBack = onBack,
+                actions = {
+                    if (plan != null) {
+                        IconButton(onClick = { showRename = true }) {
+                            Icon(Icons.Outlined.Edit, contentDescription = "Rename")
                         }
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
                     if (plan != null && planned.isNotEmpty()) {
                         IconButton(onClick = {
                             exportLauncher.launch(PlanExport.suggestedFileName(plan.name))
@@ -200,7 +188,7 @@ fun PlanEditorScreen(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 contentColor = MaterialTheme.colorScheme.onPrimary,
                             ),
-                            modifier = Modifier.padding(end = 8.dp),
+                            modifier = Modifier.padding(end = Spacing.s),
                         ) {
                             Icon(Icons.Outlined.PlayArrow, contentDescription = "Log session")
                         }
@@ -209,27 +197,23 @@ fun PlanEditorScreen(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showPicker = true },
-                icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
-                text = { Text("Add exercise") },
-            )
+            AppFab(text = "Add exercise", onClick = { showPicker = true }, icon = Icons.Outlined.Add)
         },
+        snackbarHost = { AppSnackbarHost(snackbarHostState) },
         modifier = Modifier.fillMaxSize(),
     ) { padding ->
         if (planned.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                EmptyState(
-                    icon = Icons.Outlined.FitnessCenter,
-                    message = "No exercises yet.\nTap “Add exercise” to start building this plan.",
-                )
-            }
+            EmptyState(
+                title = "No exercises yet",
+                message = "Tap Add exercise to start building this plan.",
+                modifier = Modifier.padding(padding).padding(horizontal = Spacing.gutter),
+            )
         } else {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(start = Spacing.l, end = Spacing.l, top = Spacing.s, bottom = Sizes.fabClearance),
+                verticalArrangement = Arrangement.spacedBy(Spacing.m),
             ) {
                 itemsIndexed(localOrder, key = { _, row -> row.planned.id }) { index, row ->
                     val dragging = row.planned.id == draggingId
@@ -355,17 +339,17 @@ private fun PlannedCard(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onEdit),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Radius.lg),
         colors = CardDefaults.cardColors(
             containerColor = if (dragging) MaterialTheme.colorScheme.surfaceContainerHighest
             else MaterialTheme.colorScheme.surfaceContainer,
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (dragging) 6.dp else 0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = Elevation.none, pressedElevation = Elevation.none),
     ) {
         Row(
-            modifier = Modifier.padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
+            modifier = Modifier.padding(start = Spacing.m, end = Spacing.s, top = Spacing.m, bottom = Spacing.m),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
             Box(
                 modifier = Modifier
@@ -395,13 +379,13 @@ private fun PlannedCard(
                 )
                 if (exercise.primaryMuscles.isNotEmpty()) {
                     Text(
-                        exercise.primaryMuscles.joinToString { it.name },
+                        exercise.primaryMuscles.joinToString { it.displayName },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
                 Text(
-                    "${exercise.movementType.name} · ${exercise.equipment.name}",
+                    "${exercise.movementType.displayName} · ${exercise.equipment.displayName}",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -424,7 +408,7 @@ private fun PlannedCard(
                 Icons.Outlined.DragHandle,
                 contentDescription = "Drag to reorder",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 2.dp),
+                modifier = Modifier.padding(start = Spacing.xs),
             )
         }
     }
@@ -441,8 +425,8 @@ private fun RenameSheet(
     var text by remember { mutableStateOf(current) }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(Spacing.xxl),
+            verticalArrangement = Arrangement.spacedBy(Spacing.l),
         ) {
             Text("Rename plan", style = MaterialTheme.typography.headlineSmall)
             OutlinedTextField(
@@ -451,17 +435,14 @@ private fun RenameSheet(
                 label = { Text("Plan name") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(Radius.md),
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.m, Alignment.End),
             ) {
-                TextButton(onClick = onDismiss) { Text("Cancel") }
-                androidx.compose.material3.Button(
-                    onClick = { onConfirm(text) },
-                    enabled = text.isNotBlank(),
-                ) { Text("Save") }
+                AppTextButton(text = "Cancel", onClick = onDismiss)
+                AppButton(text = "Save", onClick = { onConfirm(text) }, enabled = text.isNotBlank())
             }
         }
     }
@@ -493,10 +474,10 @@ private fun TargetsSheet(
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = Spacing.xxl, end = Spacing.xxl, top = Spacing.xs, bottom = Spacing.xxl),
+            verticalArrangement = Arrangement.spacedBy(Spacing.l),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 Text("Targets", style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(exerciseName, style = MaterialTheme.typography.headlineSmall,
@@ -522,10 +503,11 @@ private fun TargetsSheet(
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.m, Alignment.End),
             ) {
-                TextButton(onClick = onDismiss) { Text("Cancel") }
-                FilledTonalButton(
+                AppTextButton(text = "Cancel", onClick = onDismiss)
+                AppButton(
+                    text = "Apply",
                     onClick = {
                         onApply(initial.copy(
                             targetSets = sets,
@@ -533,7 +515,7 @@ private fun TargetsSheet(
                             targetRepsHigh = high,
                         ))
                     },
-                ) { Text("Apply") }
+                )
             }
         }
     }
@@ -552,22 +534,12 @@ private fun StepperRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            FilledTonalIconButton(onClick = { onChange(value - 1) }, enabled = value > min) {
-                Icon(Icons.Outlined.Remove, contentDescription = "Decrement")
-            }
-            Text(
-                value.toString(),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.width(36.dp),
-            )
-            FilledTonalIconButton(onClick = { onChange(value + 1) }, enabled = value < max) {
-                Icon(Icons.Outlined.Add, contentDescription = "Increment")
-            }
-        }
+        Stepper(
+            value = value,
+            onValueChange = onChange,
+            range = min..max.coerceAtLeast(min),
+            decrementLabel = "Decrease $label",
+            incrementLabel = "Increase $label",
+        )
     }
 }

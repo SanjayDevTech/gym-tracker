@@ -1,5 +1,6 @@
 package com.example.gymtracker.ui.screens.library
 
+import com.example.gymtracker.data.displayName
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,9 +39,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.gymtracker.data.Equipment
 import com.example.gymtracker.data.MovementType
 import com.example.gymtracker.data.Muscle
-import com.example.gymtracker.ui.components.EmptyState
+import com.example.gymtracker.ui.components.atoms.AppTopBar
+import com.example.gymtracker.ui.components.atoms.EmptyState
+import com.example.gymtracker.ui.theme.Spacing
 import com.example.gymtracker.ui.components.ExerciseListRow
 import com.example.gymtracker.ui.rememberAppHaptics
+import com.example.gymtracker.ui.theme.Radius
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,14 +68,7 @@ fun LibraryScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Exercise library") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-                    }
-                },
-            )
+            AppTopBar(title = "Exercise library", onBack = onBack)
         },
         modifier = modifier.fillMaxSize(),
     ) { padding ->
@@ -79,7 +76,7 @@ fun LibraryScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
             OutlinedTextField(
                 value = filters.query,
@@ -87,10 +84,10 @@ fun LibraryScreen(
                 placeholder = { Text("Search exercises") },
                 leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
                 singleLine = true,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(Radius.md),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = Spacing.l),
             )
 
             FilterRow(
@@ -98,40 +95,39 @@ fun LibraryScreen(
                 options = MovementType.values().toList(),
                 selected = filters.movementType,
                 onSelect = { v -> viewModel.setMovementType(v); haptics.light() },
-                labelFor = { it.name },
+                labelFor = { it.displayName },
             )
             FilterRow(
                 label = "Equipment",
                 options = Equipment.values().toList(),
                 selected = filters.equipment,
                 onSelect = { v -> viewModel.setEquipment(v); haptics.light() },
-                labelFor = { it.name },
+                labelFor = { it.displayName },
             )
             FilterRow(
                 label = "Muscle",
                 options = Muscle.values().toList(),
                 selected = filters.muscle,
                 onSelect = { v -> viewModel.setMuscle(v); haptics.light() },
-                labelFor = { it.name },
+                labelFor = { it.displayName },
             )
 
             if (state.exercises.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    EmptyState(
-                        icon = Icons.Outlined.FitnessCenter,
-                        message = "No exercises match this filter",
-                    )
-                }
+                EmptyState(
+                    title = "No matches",
+                    message = "No exercises match this search and filter.",
+                    modifier = Modifier.padding(horizontal = Spacing.gutter),
+                )
             } else {
                 LazyColumn(
                     state = listState,
                     contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 4.dp,
-                        bottom = 24.dp,
+                        start = Spacing.l,
+                        end = Spacing.l,
+                        top = Spacing.xs,
+                        bottom = Spacing.xxl,
                     ),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.s),
                 ) {
                     items(state.exercises, key = { it.id }) { ex ->
                         ExerciseListRow(ex, onClick = { onExerciseClick(ex.id) })
@@ -156,15 +152,15 @@ private fun <T : Any> FilterRow(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(scroll)
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+            .padding(horizontal = Spacing.l),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(end = 6.dp),
+            modifier = Modifier.padding(end = Spacing.s),
         )
         FilterChip(
             selected = selected == null,

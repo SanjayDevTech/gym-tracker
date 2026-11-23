@@ -40,11 +40,16 @@ import com.example.gymtracker.data.WeightUnit
 import com.example.gymtracker.data.kgToDisplay
 import com.example.gymtracker.data.repUnit
 import com.example.gymtracker.domain.ProgressMetric
-import com.example.gymtracker.ui.components.ExclusiveButtonGroup
+import com.example.gymtracker.data.displayName
 import com.example.gymtracker.ui.components.LineChart
-import com.example.gymtracker.ui.components.Section
-import com.example.gymtracker.ui.components.StatTile
-import com.example.gymtracker.ui.components.TagChip
+import com.example.gymtracker.ui.components.atoms.AppTopBar
+import com.example.gymtracker.ui.components.atoms.Eyebrow
+import com.example.gymtracker.ui.components.atoms.Section
+import com.example.gymtracker.ui.components.atoms.StatRow
+import com.example.gymtracker.ui.components.atoms.UnderlineSelector
+import com.example.gymtracker.ui.format.EM_DASH
+import com.example.gymtracker.ui.format.formatWeight
+import com.example.gymtracker.ui.format.formatWeightNumber
 import com.example.gymtracker.ui.theme.Spacing
 import kotlin.math.roundToInt
 
@@ -61,14 +66,7 @@ fun ExerciseDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(exercise?.name ?: "Exercise") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-                    }
-                },
-            )
+            AppTopBar(title = exercise?.name ?: "Exercise", onBack = onBack)
         },
         modifier = modifier.fillMaxSize(),
     ) { padding ->
@@ -80,100 +78,60 @@ fun ExerciseDetailScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .padding(Spacing.l),
-            verticalArrangement = Arrangement.spacedBy(Spacing.m),
+            verticalArrangement = Arrangement.spacedBy(Spacing.section),
         ) {
             if (state.readyToProgress) {
-                Section(
-                    modifier = Modifier.fillMaxWidth(),
-                    borderColor = MaterialTheme.colorScheme.primary,
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.AutoMirrored.Outlined.TrendingUp,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Column(modifier = Modifier.padding(start = Spacing.s)) {
-                            Text("Ready to progress", style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                "You've hit the top of the rep range on the last 2 sessions with reps to spare — no failure sets. Add weight next time.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
+                Section(title = "Ready to progress") {
+                    Text(
+                        "You've hit the top of the rep range on the last 2 sessions with reps to spare — no failure sets. Add weight next time.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
 
             if (state.recentSets.isNotEmpty()) {
                 val r = state.records
-                Text(
-                    "Personal records",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                if (state.hasWeightedHistory) {
-                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                            StatTile(
-                                icon = Icons.AutoMirrored.Outlined.TrendingUp,
-                                title = "Est. 1RM",
-                                value = r.estimatedOneRepMaxKg.weightOrDash(weightUnit),
-                                modifier = Modifier.weight(1f),
-                            )
-                            StatTile(
-                                icon = Icons.Outlined.FitnessCenter,
-                                title = "Heaviest",
-                                value = r.heaviestWeightKg.weightOrDash(weightUnit),
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                            StatTile(
-                                icon = Icons.Outlined.BarChart,
-                                title = "Best set volume",
-                                value = r.bestSetVolumeKg.weightOrDash(weightUnit),
-                                modifier = Modifier.weight(1f),
-                            )
-                            StatTile(
-                                icon = Icons.Outlined.Repeat,
-                                title = "Max reps",
-                                value = r.maxReps?.toString() ?: "—",
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                    }
-                } else {
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                        StatTile(
-                            icon = Icons.Outlined.Repeat,
-                            title = "Max reps",
-                            value = r.maxReps?.toString() ?: "—",
-                            modifier = Modifier.weight(1f),
+                Section(title = "Personal records") {
+                    if (state.hasWeightedHistory) {
+                        StatRow(
+                            label = "Est. 1RM",
+                            value = formatWeightNumber(r.estimatedOneRepMaxKg, weightUnit),
+                            unit = r.estimatedOneRepMaxKg?.let { weightUnit.label },
                         )
-                        StatTile(
-                            icon = Icons.Outlined.CalendarMonth,
-                            title = "Sessions",
-                            value = state.sessionCount.toString(),
-                            modifier = Modifier.weight(1f),
+                        StatRow(
+                            label = "Heaviest",
+                            value = formatWeightNumber(r.heaviestWeightKg, weightUnit),
+                            unit = r.heaviestWeightKg?.let { weightUnit.label },
                         )
+                        StatRow(
+                            label = "Best set volume",
+                            value = formatWeightNumber(r.bestSetVolumeKg, weightUnit),
+                            unit = r.bestSetVolumeKg?.let { weightUnit.label },
+                        )
+                        StatRow(label = "Max reps", value = r.maxReps?.toString() ?: EM_DASH)
+                    } else {
+                        StatRow(label = "Max reps", value = r.maxReps?.toString() ?: EM_DASH)
+                        StatRow(label = "Sessions", value = state.sessionCount.toString())
                     }
                 }
             }
 
-            Section(title = "Overview", modifier = Modifier.fillMaxWidth()) {
-                LabeledLine("Movement", exercise.movementType.name)
-                LabeledLine("Equipment", exercise.equipment.name)
-                if (exercise.primaryMuscles.isNotEmpty()) {
-                    MuscleTags("Primary", exercise.primaryMuscles.map { it.name })
-                }
-                if (exercise.secondaryMuscles.isNotEmpty()) {
-                    MuscleTags("Secondary", exercise.secondaryMuscles.map { it.name })
+            Section(title = "Overview") {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                    LabeledLine("Movement", exercise.movementType.displayName)
+                    LabeledLine("Equipment", exercise.equipment.displayName)
+                    if (exercise.primaryMuscles.isNotEmpty()) {
+                        MuscleTags("Primary", exercise.primaryMuscles.map { it.displayName })
+                    }
+                    if (exercise.secondaryMuscles.isNotEmpty()) {
+                        MuscleTags("Secondary", exercise.secondaryMuscles.map { it.displayName })
+                    }
                 }
             }
 
             if (exercise.cues.isNotBlank()) {
-                Section(title = "Cues", modifier = Modifier.fillMaxWidth()) {
+                Section(title = "Cues") {
                     Text(exercise.cues, style = MaterialTheme.typography.bodyMedium)
                 }
             }
@@ -188,13 +146,13 @@ fun ExerciseDetailScreen(
             }
             val points = state.seriesByMetric[metric].orEmpty()
             if (points.isNotEmpty()) {
-                Section(title = "Progress", modifier = Modifier.fillMaxWidth()) {
+                Section(title = "Progress") {
                     if (metricOptions.size > 1) {
-                        ExclusiveButtonGroup(
+                        UnderlineSelector(
                             options = metricOptions,
                             selected = metric,
-                            onSelect = { if (it != null) metric = it },
-                            labelFor = { it.label },
+                            onSelect = { metric = it },
+                            label = { it.label },
                         )
                         Spacer(Modifier.height(Spacing.s))
                     }
@@ -215,29 +173,31 @@ fun ExerciseDetailScreen(
                 }
             }
 
-            Section(title = "Recent sets", modifier = Modifier.fillMaxWidth()) {
-                if (state.recentSets.isEmpty()) {
-                    Text(
-                        "No logged history yet",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                } else {
-                    val type = exercise.movementType
-                    val countUnit = type.repUnit
-                    val isLifting = type == MovementType.Compound || type == MovementType.Isolation
-                    state.recentSets.take(10).forEach { set ->
-                        val c = set.repsDone?.toString() ?: "—"
-                        val w = set.weightKg?.kgToDisplay(weightUnit)?.let { "$it ${weightUnit.label}" }
-                        val tail = if (isLifting) " · ${w ?: "BW"}" else ""
-                        LabeledLine("Set ${set.setIndex + 1}", "$c $countUnit$tail")
-                    }
-                    if (state.recentSets.size > 10) {
+            Section(title = "Recent sets") {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    if (state.recentSets.isEmpty()) {
                         Text(
-                            "Showing the 10 most recent of ${state.recentSets.size} logged sets",
-                            style = MaterialTheme.typography.labelMedium,
+                            "No logged history yet",
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    } else {
+                        val type = exercise.movementType
+                        val countUnit = type.repUnit
+                        val isLifting = type == MovementType.Compound || type == MovementType.Isolation
+                        state.recentSets.take(10).forEach { set ->
+                            val c = set.repsDone?.toString() ?: "—"
+                            val w = set.weightKg?.let { formatWeight(it, weightUnit) }
+                            val tail = if (isLifting) " · ${w ?: "BW"}" else ""
+                            LabeledLine("Set ${set.setIndex + 1}", "$c $countUnit$tail")
+                        }
+                        if (state.recentSets.size > 10) {
+                            Text(
+                                "Showing the 10 most recent of ${state.recentSets.size} logged sets",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }
@@ -245,13 +205,10 @@ fun ExerciseDetailScreen(
     }
 }
 
-private fun Float?.weightOrDash(unit: WeightUnit): String =
-    this?.let { "${it.kgToDisplay(unit)} ${unit.label}" } ?: "—"
-
 private fun formatMetric(metric: ProgressMetric, value: Float, unit: WeightUnit): String =
     when (metric) {
         ProgressMetric.Reps -> "${value.roundToInt()} reps"
-        else -> "${value.kgToDisplay(unit)} ${unit.label}"
+        else -> formatWeight(value, unit)
     }
 
 @Composable
@@ -278,7 +235,7 @@ private fun LabeledLine(label: String, value: String) {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/** Tags are text, not chips (§2): `CHEST · TRICEPS` in eyebrow. */
 @Composable
 private fun MuscleTags(label: String, muscles: List<String>) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
@@ -287,11 +244,6 @@ private fun MuscleTags(label: String, muscles: List<String>) {
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-        ) {
-            muscles.forEach { TagChip(it) }
-        }
+        Eyebrow(muscles.joinToString(" · "))
     }
 }

@@ -1,5 +1,6 @@
 package com.example.gymtracker.ui.components
 
+import com.example.gymtracker.data.displayName
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -37,6 +38,8 @@ import com.example.gymtracker.data.GymRepository
 import com.example.gymtracker.data.MovementType
 import com.example.gymtracker.data.Muscle
 import com.example.gymtracker.data.db.ExerciseEntity
+import com.example.gymtracker.ui.theme.Spacing
+import com.example.gymtracker.ui.theme.Radius
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,14 +74,14 @@ fun ExercisePickerSheet(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(vertical = Spacing.xs),
+            verticalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
             Text(
                 "Pick an exercise",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(horizontal = 20.dp),
+                modifier = Modifier.padding(horizontal = Spacing.xl),
             )
             OutlinedTextField(
                 value = query,
@@ -86,10 +89,10 @@ fun ExercisePickerSheet(
                 placeholder = { Text("Search…") },
                 leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
                 singleLine = true,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(Radius.md),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
+                    .padding(horizontal = Spacing.xl),
             )
 
             FilterRow(
@@ -97,28 +100,28 @@ fun ExercisePickerSheet(
                 options = MovementType.values().toList(),
                 selected = typeFilter,
                 onSelect = { typeFilter = it },
-                labelFor = { it.name },
+                labelFor = { it.displayName },
             )
             FilterRow(
                 label = "Equipment",
                 options = Equipment.values().toList(),
                 selected = equipmentFilter,
                 onSelect = { equipmentFilter = it },
-                labelFor = { it.name },
+                labelFor = { it.displayName },
             )
             FilterRow(
                 label = "Muscle",
                 options = Muscle.values().toList(),
                 selected = muscleFilter,
                 onSelect = { muscleFilter = it },
-                labelFor = { it.name },
+                labelFor = { it.displayName },
             )
 
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                    .padding(horizontal = Spacing.xl),
+                verticalArrangement = Arrangement.spacedBy(Spacing.s),
             ) {
                 items(filtered, key = { it.id }) { ex ->
                     ExerciseListRow(ex, onClick = { onPick(ex) })
@@ -142,15 +145,15 @@ private fun <T : Any> FilterRow(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(scroll)
-            .padding(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+            .padding(horizontal = Spacing.xl),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(end = 6.dp),
+            modifier = Modifier.padding(end = Spacing.s),
         )
         FilterChip(
             selected = selected == null,

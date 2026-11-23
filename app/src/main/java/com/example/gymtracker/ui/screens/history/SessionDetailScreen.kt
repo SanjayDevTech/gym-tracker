@@ -48,11 +48,20 @@ import com.example.gymtracker.data.db.SessionWithSets
 import com.example.gymtracker.data.kgToDisplay
 import com.example.gymtracker.data.repUnit
 import com.example.gymtracker.ui.LocalAppContainer
-import com.example.gymtracker.ui.components.TagChip
+import com.example.gymtracker.data.displayName
+import com.example.gymtracker.ui.components.atoms.AppTopBar
+import com.example.gymtracker.ui.components.atoms.ConfirmSheet
+import com.example.gymtracker.ui.components.atoms.Eyebrow
+import com.example.gymtracker.ui.format.EM_DASH
+import com.example.gymtracker.ui.format.formatVolumeNumber
+import com.example.gymtracker.ui.format.formatWeight
+import com.example.gymtracker.ui.theme.Effort
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import com.example.gymtracker.ui.theme.Spacing
+import com.example.gymtracker.ui.theme.Radius
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,18 +76,11 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, onOpenExercise: (Lo
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    val date = session?.session?.dateEpochDay?.let {
-                        LocalDate.ofEpochDay(it).format(DateTimeFormatter.ofPattern("EEE, MMM d, yyyy", Locale.getDefault()))
-                    } ?: "Session"
-                    Text(date)
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            AppTopBar(
+                title = session?.session?.dateEpochDay?.let {
+                    LocalDate.ofEpochDay(it).format(DateTimeFormatter.ofPattern("EEE, MMM d, yyyy", Locale.getDefault()))
+                } ?: "Session",
+                onBack = onBack,
                 actions = {
                     if (session != null) {
                         IconButton(onClick = { showDelete = true }) {
@@ -103,14 +105,15 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, onOpenExercise: (Lo
 
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(horizontal = Spacing.l, vertical = Spacing.m),
+            verticalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
             item(key = "summary") {
                 SummaryHeader(
                     exerciseCount = groupedByExercise.size,
                     completedSets = completed.size,
                     tonnage = tonnage,
+                    unit = unit,
                     isFreestyle = s.session.planId == null,
                     notes = s.session.notes,
                 )
@@ -145,26 +148,27 @@ private fun SummaryHeader(
     exerciseCount: Int,
     completedSets: Int,
     tonnage: Float,
+    unit: WeightUnit,
     isFreestyle: Boolean,
     notes: String,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(Radius.lg),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         ),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.l)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.s),
             ) {
                 SummaryStat("$exerciseCount", "exercises", Modifier.weight(1f))
                 SummaryStat("$completedSets", "sets done", Modifier.weight(1f))
                 SummaryStat(
-                    if (tonnage > 0f) "%,.0f".format(tonnage) else "—",
-                    "kg·reps",
+                    if (tonnage > 0f) formatVolumeNumber(tonnage.toDouble(), unit) else EM_DASH,
+                    "${unit.label} volume",
                     Modifier.weight(1f),
                 )
             }
@@ -173,7 +177,7 @@ private fun SummaryHeader(
                     "Volume = weight × reps, summed across working sets (warm-ups excluded).",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp),
+                    modifier = Modifier.padding(top = Spacing.s),
                 )
             }
             if (isFreestyle) {
@@ -181,7 +185,7 @@ private fun SummaryHeader(
                     "Freestyle session",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 12.dp),
+                    modifier = Modifier.padding(top = Spacing.m),
                 )
             }
             if (notes.isNotBlank()) {
@@ -189,7 +193,7 @@ private fun SummaryHeader(
                     notes,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp),
+                    modifier = Modifier.padding(top = Spacing.s),
                 )
             }
         }
@@ -225,10 +229,10 @@ private fun ExerciseGroupCard(
     }
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Radius.lg),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Column(modifier = Modifier.padding(horizontal = Spacing.l, vertical = Spacing.m)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -252,31 +256,30 @@ private fun ExerciseGroupCard(
             val isLifting = type == MovementType.Compound || type == MovementType.Isolation
             sets.sortedBy { it.setIndex }.forEach { set ->
                 val count = set.repsDone?.toString() ?: "—"
-                val w = set.weightKg?.kgToDisplay(unit)?.let { "$it ${unit.label}" }
+                val w = set.weightKg?.let { formatWeight(it, unit) }
                 val suffix = if (isLifting) " · ${w ?: "BW"}" else ""
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp),
+                        .padding(vertical = Spacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Row(
                         modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
                     ) {
                         Text(
                             "Set ${set.setIndex + 1}",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        // Non-working sets (warm-ups, drop sets) get a tinted pill so they're
-                        // distinguishable from working sets at a glance in a dense list.
+                        // Non-working sets are marked in text (no chips): warm-up quiet, failure in Effort.
                         if (set.setType != SetType.Working) {
-                            TagChip(
-                                set.setType.label,
-                                container = MaterialTheme.colorScheme.tertiaryContainer,
-                                content = MaterialTheme.colorScheme.onTertiaryContainer,
+                            Eyebrow(
+                                set.setType.displayName,
+                                color = if (set.setType == SetType.Failure) Effort
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -290,34 +293,13 @@ private fun ExerciseGroupCard(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DeleteSessionSheet(onConfirm: () -> Unit, onCancel: () -> Unit) {
-    val sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden, enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded))
-    ModalBottomSheet(onDismissRequest = onCancel, sheetState = sheetState) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Text("Delete this session?", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-            Text(
-                "All sets logged in this session will be removed. This can't be undone.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
-            ) {
-                TextButton(onClick = onCancel) { Text("Cancel") }
-                Button(
-                    onClick = onConfirm,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError,
-                    ),
-                ) { Text("Delete") }
-            }
-        }
-    }
+    ConfirmSheet(
+        title = "Delete this session?",
+        message = "All sets logged in this session will be removed. This can't be undone.",
+        confirmLabel = "Delete",
+        onConfirm = onConfirm,
+        onDismiss = onCancel,
+    )
 }

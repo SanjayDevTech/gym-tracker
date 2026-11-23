@@ -57,6 +57,9 @@ object Sizes {
     /** Icons inside a control. */
     val icon = 24.dp
 
+    /** Bottom list inset that keeps the last row clear of an extended FAB. */
+    val fabClearance = 96.dp
+
     /** Logger rest transport's Skip button. */
     val transportButton = 56.dp
 }

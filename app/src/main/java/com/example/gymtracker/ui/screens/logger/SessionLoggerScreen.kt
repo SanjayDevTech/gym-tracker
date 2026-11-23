@@ -88,12 +88,20 @@ import com.example.gymtracker.domain.LoggedSetSample
 import com.example.gymtracker.domain.PersonalRecords
 import com.example.gymtracker.ui.AppViewModelFactory
 import com.example.gymtracker.ui.LocalAppContainer
-import com.example.gymtracker.ui.components.EmptyState
 import com.example.gymtracker.ui.components.ExercisePickerSheet
-import com.example.gymtracker.ui.components.Section
+import com.example.gymtracker.ui.components.atoms.AppButton
+import com.example.gymtracker.ui.components.atoms.AppDivider
+import com.example.gymtracker.ui.components.atoms.AppOutlinedButton
+import com.example.gymtracker.ui.components.atoms.AppTextButton
+import com.example.gymtracker.ui.components.atoms.AppTopBar
+import com.example.gymtracker.ui.components.atoms.ConfirmSheet
+import com.example.gymtracker.ui.components.atoms.EmptyState
+import com.example.gymtracker.ui.components.atoms.Stepper
+import com.example.gymtracker.ui.format.formatClock
 import com.example.gymtracker.ui.components.SetRow
 import com.example.gymtracker.ui.rememberAppHaptics
 import com.example.gymtracker.ui.theme.Radius
+import com.example.gymtracker.ui.theme.Elevation
 import com.example.gymtracker.ui.theme.Spacing
 import com.example.gymtracker.ui.AppHaptics
 import kotlinx.coroutines.delay
@@ -154,14 +162,14 @@ fun SessionLoggerScreen(
     }
     val elapsedLabel = remember(state.startedAtMillis, nowMillis) {
         if (state.startedAtMillis <= 0L) ""
-        else formatElapsed(nowMillis - state.startedAtMillis)
+        else formatClock(nowMillis - state.startedAtMillis)
     }
     // Rest timer: time since the last set was logged. Resets on each completed set, so a glance
     // tells you how long you've rested. Before the first set is logged it shows a dormant "--:--"
     // that the user can tap to start manually.
     val restLabel = remember(state.lastSetCompletedAtMillis, nowMillis) {
         if (state.lastSetCompletedAtMillis <= 0L) "--:--"
-        else formatElapsed(nowMillis - state.lastSetCompletedAtMillis)
+        else formatClock(nowMillis - state.lastSetCompletedAtMillis)
     }
     // Once you've passed a typical rest window, the chip lifts to an emphasized "ready" look so the
     // answer to "rested enough?" is readable at a glance without parsing the digits.
@@ -192,34 +200,20 @@ fun SessionLoggerScreen(
     Scaffold(
         topBar = {
             if (reorderMode) {
-                TopAppBar(
-                    title = { Text("Reorder exercises", style = MaterialTheme.typography.titleLarge) },
+                AppTopBar(
+                    title = "Reorder exercises",
                     actions = {
-                        TextButton(onClick = { haptics.light(); reorderMode = false }) { Text("Done") }
+                        AppTextButton(
+                            text = "Done",
+                            onClick = { haptics.light(); reorderMode = false },
+                        )
                     },
                 )
             } else {
-                TopAppBar(
-                    title = {
-                        Column {
-                            Text(
-                                text = if (planId == null) "Quick log" else "Log session",
-                                style = MaterialTheme.typography.titleLarge,
-                            )
-                            state.planName?.let { name ->
-                                Text(
-                                    name,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-                        }
-                    },
+                AppTopBar(
+                    title = if (planId == null) "Quick log" else "Log session",
+                    subtitle = state.planName,
+                    onBack = onBack,
                     actions = {
                         if (state.groups.size >= 2) {
                             IconButton(onClick = { haptics.light(); reorderMode = true }) {
@@ -250,7 +244,9 @@ fun SessionLoggerScreen(
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.imeAnimationTarget.union(WindowInsets.navigationBars)),
             ) {
-              Surface(shadowElevation = 8.dp) {
+              Surface(color = MaterialTheme.colorScheme.background) {
+                Column {
+                AppDivider()
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -258,28 +254,19 @@ fun SessionLoggerScreen(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.s),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    OutlinedButton(
+                    AppOutlinedButton(
+                        text = "Add exercise",
                         onClick = { showPicker = true },
                         modifier = Modifier.weight(1f),
-                    ) {
-                        Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text("  Add exercise")
-                    }
-                    Button(
+                        icon = Icons.Outlined.Add,
+                    )
+                    AppButton(
+                        text = if (state.saving) "Saving…" else "Finish",
                         onClick = { viewModel.attemptSave() },
                         enabled = state.groups.isNotEmpty() && !state.saving,
                         modifier = Modifier.weight(1f),
-                    ) {
-                        if (state.saving) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                            )
-                        } else {
-                            Text("Finish")
-                        }
-                    }
+                    )
+                }
                 }
               }
             }
@@ -368,9 +355,9 @@ fun SessionLoggerScreen(
                 )
             } else if (state.groups.isEmpty()) {
                 EmptyState(
-                    icon = Icons.Outlined.FitnessCenter,
-                    message = "Tap “Add exercise” to start logging.",
-                    modifier = Modifier.fillMaxSize(),
+                    title = "No exercises yet",
+                    message = "Tap Add exercise to start logging.",
+                    modifier = Modifier.padding(horizontal = Spacing.gutter),
                 )
             } else {
                 LazyColumn(
@@ -382,7 +369,10 @@ fun SessionLoggerScreen(
                 ) {
                     itemsIndexed(state.groups, key = { _, group -> group.uid }) { groupIndex, group ->
                         val groupDone = group.sets.count { it.isCompleted }
-                        Section(modifier = Modifier.fillMaxWidth().animateItem()) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().animateItem(),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.s),
+                        ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.s),
@@ -449,17 +439,19 @@ fun SessionLoggerScreen(
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.s),
                                 modifier = Modifier.padding(top = Spacing.xs),
                             ) {
-                                FilledTonalButton(onClick = { haptics.light(); viewModel.addSet(groupIndex) }) {
-                                    Icon(Icons.Outlined.Add, contentDescription = null)
-                                    Text("  Add set")
-                                }
-                                FilledTonalIconButton(
+                                AppOutlinedButton(
+                                    text = "Add set",
+                                    onClick = { haptics.light(); viewModel.addSet(groupIndex) },
+                                    icon = Icons.Outlined.Add,
+                                )
+                                IconButton(
                                     onClick = { haptics.light(); viewModel.removeSet(groupIndex, group.sets.lastIndex) },
                                     enabled = group.sets.size > 1,
                                 ) {
                                     Icon(Icons.Outlined.Remove, contentDescription = "Remove last set")
                                 }
                             }
+                            AppDivider()
                         }
                     }
                 }
@@ -484,16 +476,19 @@ fun SessionLoggerScreen(
             DatePickerDialog(
                 onDismissRequest = { showDatePicker = false },
                 confirmButton = {
-                    TextButton(onClick = {
-                        val millis = datePickerState.selectedDateMillis ?: return@TextButton
-                        val epochDay = Instant.ofEpochMilli(millis)
-                            .atZone(ZoneId.of("UTC")).toLocalDate().toEpochDay()
-                        viewModel.setDate(epochDay)
-                        showDatePicker = false
-                    }) { Text("Set date") }
+                    AppTextButton(
+                        text = "Set date",
+                        onClick = {
+                            val millis = datePickerState.selectedDateMillis ?: return@AppTextButton
+                            val epochDay = Instant.ofEpochMilli(millis)
+                                .atZone(ZoneId.of("UTC")).toLocalDate().toEpochDay()
+                            viewModel.setDate(epochDay)
+                            showDatePicker = false
+                        },
+                    )
                 },
                 dismissButton = {
-                    TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                    AppTextButton(text = "Cancel", onClick = { showDatePicker = false })
                 },
             ) { DatePicker(state = datePickerState) }
         }
@@ -577,8 +572,8 @@ private fun ReorderExerciseList(
             Surface(
                 shape = RoundedCornerShape(Radius.md),
                 color = MaterialTheme.colorScheme.surfaceContainer,
-                tonalElevation = if (dragging) 6.dp else 0.dp,
-                shadowElevation = if (dragging) 8.dp else 0.dp,
+                tonalElevation = Elevation.none,
+                shadowElevation = Elevation.none,
                 modifier = Modifier
                     .fillMaxWidth()
                     .zIndex(if (dragging) 1f else 0f)
@@ -710,51 +705,19 @@ private fun computeSessionPrKeys(
 /** Typical rest window; past this the rest chip switches to its "ready for the next set" emphasis. */
 private const val REST_READY_MILLIS = 90_000L
 
-private fun formatElapsed(elapsedMillis: Long): String {
-    val totalSec = (elapsedMillis / 1000L).coerceAtLeast(0L)
-    val h = totalSec / 3600L
-    val m = (totalSec % 3600L) / 60L
-    val s = totalSec % 60L
-    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DiscardSessionSheet(
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    val sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden, enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded))
-    ModalBottomSheet(onDismissRequest = onCancel, sheetState = sheetState) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(Spacing.xxl),
-            verticalArrangement = Arrangement.spacedBy(Spacing.m),
-        ) {
-            Text(
-                "Discard this session?",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                "Everything you've entered will be lost. This can't be undone.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.m, Alignment.End),
-            ) {
-                TextButton(onClick = onCancel) { Text("Keep") }
-                Button(
-                    onClick = onConfirm,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError,
-                    ),
-                ) { Text("Discard") }
-            }
-        }
-    }
+    ConfirmSheet(
+        title = "Discard this session?",
+        message = "Everything you've entered will be lost. This can't be undone.",
+        confirmLabel = "Discard",
+        dismissLabel = "Keep",
+        onConfirm = onConfirm,
+        onDismiss = onCancel,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -779,14 +742,16 @@ private fun FinishSessionSheet(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Button(
+            AppButton(
+                text = "Finish & save",
                 onClick = onConfirm,
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Finish & save") }
-            TextButton(
+            )
+            AppTextButton(
+                text = "Keep logging",
                 onClick = onCancel,
                 modifier = Modifier.align(Alignment.End),
-            ) { Text("Keep logging") }
+            )
         }
     }
 }
@@ -817,18 +782,21 @@ private fun SavePlanChangesSheet(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Button(
+            AppButton(
+                text = "Update plan & log",
                 onClick = onUpdatePlan,
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Update plan & log") }
-            FilledTonalButton(
+            )
+            AppOutlinedButton(
+                text = "Just log this session",
                 onClick = onJustLog,
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Just log this session") }
-            TextButton(
+            )
+            AppTextButton(
+                text = "Cancel",
                 onClick = onCancel,
                 modifier = Modifier.align(Alignment.End),
-            ) { Text("Cancel") }
+            )
         }
     }
 }
@@ -876,10 +844,11 @@ private fun EditRepTargetSheet(
                 onDecrease = { high = (high - 1).coerceAtLeast(low) },
                 onIncrease = { high += 1 },
             )
-            Button(
+            AppButton(
+                text = "Done",
                 onClick = { onConfirm(low, high) },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Done") }
+            )
         }
     }
 }
@@ -891,23 +860,19 @@ private fun StepperRow(
     onDecrease: () -> Unit,
     onIncrease: () -> Unit,
 ) {
-    val haptics = rememberAppHaptics()
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        FilledTonalIconButton(onClick = { haptics.light(); onDecrease() }) {
-            Icon(Icons.Outlined.Remove, contentDescription = "Decrease $label")
-        }
-        Text(
-            value.toString(),
-            style = MaterialTheme.typography.titleMedium,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            modifier = Modifier.width(48.dp),
+        Stepper(
+            value = value,
+            onValueChange = { v -> if (v < value) onDecrease() else if (v > value) onIncrease() },
+            range = 1..MAX_TARGET,
+            decrementLabel = "Decrease $label",
+            incrementLabel = "Increase $label",
         )
-        FilledTonalIconButton(onClick = { haptics.light(); onIncrease() }) {
-            Icon(Icons.Outlined.Add, contentDescription = "Increase $label")
-        }
     }
 }
+
+private const val MAX_TARGET = 999

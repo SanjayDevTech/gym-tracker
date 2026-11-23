@@ -56,11 +56,19 @@ import com.example.gymtracker.ui.LocalAppContainer
 import com.example.gymtracker.ui.components.BodyDiagram
 import com.example.gymtracker.ui.components.BodyView
 import com.example.gymtracker.ui.components.ConsistencyCalendar
-import com.example.gymtracker.ui.components.EmptyState
-import com.example.gymtracker.ui.components.ExclusiveButtonGroup
-import com.example.gymtracker.ui.components.Section
+import com.example.gymtracker.data.WeightUnit
+import com.example.gymtracker.data.displayName
+import com.example.gymtracker.ui.components.atoms.AppDivider
+import com.example.gymtracker.ui.components.atoms.AppTopBar
+import com.example.gymtracker.ui.components.atoms.EmptyState
+import com.example.gymtracker.ui.components.atoms.Section
+import com.example.gymtracker.ui.components.atoms.Spinner
+import com.example.gymtracker.ui.components.atoms.UnderlineSelector
+import com.example.gymtracker.ui.format.formatVolume
+import com.example.gymtracker.ui.format.formatVolumeNumber
 import com.example.gymtracker.domain.AnalyticsWindow
 import com.example.gymtracker.ui.theme.Spacing
+import com.example.gymtracker.ui.theme.Radius
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,17 +86,11 @@ fun AnalyticsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     val sessionDays by vm.allSessionDays.collectAsStateWithLifecycle()
     val neglected by vm.neglectedMuscles.collectAsStateWithLifecycle()
     var drilledMuscle by remember { mutableStateOf<Muscle?>(null) }
+    val unit by container.prefs.weightUnit.collectAsStateWithLifecycle(initialValue = WeightUnit.Kg)
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Analytics") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-                    }
-                },
-            )
+            AppTopBar(title = "Analytics", onBack = onBack)
         },
         modifier = modifier.fillMaxSize(),
     ) { padding ->
@@ -98,9 +100,9 @@ fun AnalyticsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .padding(Spacing.l),
-            verticalArrangement = Arrangement.spacedBy(Spacing.m),
+            verticalArrangement = Arrangement.spacedBy(Spacing.section),
         ) {
-            Section(modifier = Modifier.fillMaxWidth(), title = "Consistency") {
+            Section(title = "Consistency") {
                 Row(modifier = Modifier.fillMaxWidth()) {
                     HeaderStat(
                         icon = Icons.Outlined.LocalFireDepartment,
@@ -131,60 +133,38 @@ fun AnalyticsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             }
 
             if (neglected.isNotEmpty() && sessionDays.isNotEmpty()) {
-                Section(
-                    modifier = Modifier.fillMaxWidth(),
-                    borderColor = MaterialTheme.colorScheme.tertiary,
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Outlined.Warning,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.tertiary,
-                        )
-                        Spacer(modifier = Modifier.width(Spacing.s))
-                        Column {
-                            Text("Neglected this week", style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                neglected.take(5).joinToString { it.name } +
-                                    if (neglected.size > 5) ", +${neglected.size - 5}" else "",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
+                Section(title = "Neglected this week") {
+                    Text(
+                        neglected.take(5).joinToString { it.displayName } +
+                            if (neglected.size > 5) ", +${neglected.size - 5}" else "",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
                 }
             }
 
-            ExclusiveButtonGroup(
-                options = AnalyticsWindow.values().toList(),
-                selected = state.window,
-                onSelect = { it?.let(vm::setWindow) },
-                labelFor = { it.label },
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            ExclusiveButtonGroup(
-                options = VolumeMetric.values().toList(),
-                selected = state.metric,
-                onSelect = { it?.let(vm::setMetric) },
-                labelFor = { it.label },
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Column {
+                UnderlineSelector(
+                    options = AnalyticsWindow.entries.toList(),
+                    selected = state.window,
+                    onSelect = vm::setWindow,
+                    label = { it.label },
+                )
+                UnderlineSelector(
+                    options = VolumeMetric.entries.toList(),
+                    selected = state.metric,
+                    onSelect = vm::setMetric,
+                    label = { it.label },
+                )
+            }
 
             if (state.sessionsCount == 0) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    EmptyState(
-                        icon = Icons.Outlined.BarChart,
-                        message = "Nothing in this window yet.",
-                    )
-                }
+                EmptyState(
+                    title = "Nothing in this window yet",
+                    message = "Completed sets from this period will show up here.",
+                )
             } else {
-                Section(modifier = Modifier.fillMaxWidth(), title = "Muscle map") {
+                Section(title = "Muscle map") {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         HeaderStat(
                             icon = Icons.Outlined.BarChart,
@@ -196,19 +176,16 @@ fun AnalyticsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                             icon = Icons.Outlined.FitnessCenter,
                             value = when (state.metric) {
                                 VolumeMetric.Sets -> "%,d".format(state.totalVolume.toInt())
-                                VolumeMetric.Tonnage -> "%,.0f".format(state.totalVolume)
+                                VolumeMetric.Tonnage -> formatVolumeNumber(state.totalVolume.toDouble(), unit)
                             },
                             label = when (state.metric) {
                                 VolumeMetric.Sets -> "working sets"
-                                VolumeMetric.Tonnage -> "kg·reps total"
+                                VolumeMetric.Tonnage -> "${unit.label} total"
                             },
                             modifier = Modifier.weight(1f),
                         )
                     }
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = Spacing.s),
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                    )
+                    AppDivider(Modifier.padding(vertical = Spacing.s))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(Spacing.s),
@@ -255,17 +232,17 @@ fun AnalyticsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                 modifier = Modifier.padding(Spacing.l),
                 verticalArrangement = Arrangement.spacedBy(Spacing.s),
             ) {
-                Text(muscle.name, style = MaterialTheme.typography.titleLarge)
+                Text(muscle.displayName, style = MaterialTheme.typography.titleLarge)
                 val ready = breakdown
                 if (ready == null) {
                     Box(
                         modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.l),
                         contentAlignment = Alignment.Center,
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.size(28.dp))
+                        Spinner()
                     }
                 } else {
-                BreakdownBody(breakdown = ready)
+                    BreakdownBody(breakdown = ready, unit = unit)
                 }
             }
         }
@@ -273,7 +250,7 @@ fun AnalyticsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun BreakdownBody(breakdown: MuscleBreakdown) {
+private fun BreakdownBody(breakdown: MuscleBreakdown, unit: WeightUnit) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 when (breakdown.metric) {
                     VolumeMetric.Sets -> {
@@ -285,7 +262,7 @@ private fun BreakdownBody(breakdown: MuscleBreakdown) {
                     }
                     VolumeMetric.Tonnage -> {
                         Text(
-                            "Tonnage: ${"%.0f".format(breakdown.value)} kg·reps",
+                            "Tonnage: ${formatVolume(breakdown.value.toDouble(), unit)}",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         if (breakdown.bodyweightSets > 0) {
@@ -300,7 +277,7 @@ private fun BreakdownBody(breakdown: MuscleBreakdown) {
                 breakdown.exercises.forEach { c ->
                     val detail = when (breakdown.metric) {
                         VolumeMetric.Sets -> "${c.setCount} set${if (c.setCount == 1) "" else "s"}"
-                        VolumeMetric.Tonnage -> "${"%.0f".format(c.tonnage)} kg·reps" +
+                        VolumeMetric.Tonnage -> formatVolume(c.tonnage.toDouble(), unit) +
                             if (c.bodyweightSets > 0) " · ${c.bodyweightSets} BW" else ""
                     }
                     Text(
@@ -400,7 +377,7 @@ private fun HeatLegend() {
             modifier = Modifier
                 .weight(1f)
                 .height(8.dp)
-                .clip(RoundedCornerShape(4.dp))
+                .clip(RoundedCornerShape(Radius.sm))
                 .background(Brush.horizontalGradient(listOf(cold, hot))),
         )
         Text(

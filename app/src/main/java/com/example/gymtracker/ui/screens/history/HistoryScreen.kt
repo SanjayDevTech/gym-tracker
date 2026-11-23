@@ -42,11 +42,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.gymtracker.ui.AppViewModelFactory
 import com.example.gymtracker.ui.LocalAppContainer
-import com.example.gymtracker.ui.components.EmptyState
-import com.example.gymtracker.ui.components.TagChip
+import com.example.gymtracker.data.WeightUnit
+import com.example.gymtracker.ui.components.atoms.AppTopBar
+import com.example.gymtracker.ui.components.atoms.EmptyState
+import com.example.gymtracker.ui.components.atoms.Eyebrow
+import com.example.gymtracker.ui.format.formatVolumeNumber
+import com.example.gymtracker.ui.theme.Spacing
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import com.example.gymtracker.ui.theme.Radius
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,32 +65,25 @@ fun HistoryScreen(onBack: () -> Unit, onOpenSession: (Long) -> Unit) {
         )
     )
     val groups by vm.state.collectAsStateWithLifecycle()
+    val unit by container.prefs.weightUnit.collectAsStateWithLifecycle(initialValue = WeightUnit.Kg)
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("History") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-                    }
-                },
-            )
+            AppTopBar(title = "History", onBack = onBack)
         },
         modifier = Modifier.fillMaxSize(),
     ) { padding ->
         if (groups.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                EmptyState(
-                    icon = Icons.Outlined.History,
-                    message = "Nothing logged yet.",
-                )
-            }
+            EmptyState(
+                title = "Nothing logged yet",
+                message = "Finished sessions appear here, newest first.",
+                modifier = Modifier.padding(padding).padding(horizontal = Spacing.gutter),
+            )
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = Spacing.l, vertical = Spacing.s),
+                verticalArrangement = Arrangement.spacedBy(Spacing.s),
             ) {
                 groups.forEach { group ->
                     item(key = "day-${group.dateEpochDay}") {
@@ -94,6 +92,7 @@ fun HistoryScreen(onBack: () -> Unit, onOpenSession: (Long) -> Unit) {
                     items(group.sessions, key = { it.session.id }) { summary ->
                         SessionCard(
                             summary = summary,
+                            unit = unit,
                             onClick = { onOpenSession(summary.session.id) },
                         )
                     }
@@ -110,9 +109,9 @@ private fun DayHeader(epochDay: Long, sessionCount: Int) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 10.dp, bottom = 2.dp),
+            .padding(top = Spacing.m, bottom = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
     ) {
         Text(
             label,
@@ -135,6 +134,7 @@ private fun DayHeader(epochDay: Long, sessionCount: Int) {
 @Composable
 private fun SessionCard(
     summary: SessionSummary,
+    unit: WeightUnit,
     onClick: () -> Unit,
 ) {
     val isFreestyle = summary.session.planId == null
@@ -142,11 +142,11 @@ private fun SessionCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(Radius.lg),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier.padding(Spacing.l)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 Text(
                     summary.topExerciseName?.let {
                         if (summary.exerciseCount > 1) "$it +${summary.exerciseCount - 1} more" else it
@@ -155,31 +155,29 @@ private fun SessionCard(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
-                if (isFreestyle) TagChip("Freestyle")
+                if (isFreestyle) Eyebrow("Freestyle")
             }
 
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+            Spacer(Modifier.height(Spacing.m))
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.l)) {
                 MetaStat(Icons.Outlined.FitnessCenter, "${summary.exerciseCount}", "exercises")
                 MetaStat(Icons.Outlined.Tag, "${summary.completedSets}", "sets")
                 if (summary.tonnage > 0f) {
-                    MetaStat(null, "%,.0f".format(summary.tonnage), "kg·reps")
+                    MetaStat(null, formatVolumeNumber(summary.tonnage.toDouble(), unit), unit.label)
                 }
             }
 
             if (summary.muscleGroups.isNotEmpty()) {
-                Spacer(Modifier.height(12.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    summary.muscleGroups.take(4).forEach { g -> TagChip(g.label) }
-                    if (summary.muscleGroups.size > 4) TagChip("+${summary.muscleGroups.size - 4}")
-                }
+                Spacer(Modifier.height(Spacing.m))
+                // Tags are text, not chips (§2).
+                Eyebrow(
+                    summary.muscleGroups.take(4).joinToString(" · ") { it.label } +
+                        if (summary.muscleGroups.size > 4) " · +${summary.muscleGroups.size - 4}" else "",
+                )
             }
 
             if (summary.session.notes.isNotBlank()) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Spacing.m))
                 Text(
                     summary.session.notes,
                     style = MaterialTheme.typography.bodyMedium,
@@ -192,7 +190,7 @@ private fun SessionCard(
 
 @Composable
 private fun MetaStat(icon: ImageVector?, value: String, label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         if (icon != null) {
             Icon(
                 icon,

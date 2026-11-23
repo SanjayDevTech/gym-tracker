@@ -65,8 +65,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.gymtracker.data.db.PlanEntity
 import com.example.gymtracker.data.db.SessionDraftEntity
 import com.example.gymtracker.domain.DateUtil
-import com.example.gymtracker.ui.components.EmptyState
-import com.example.gymtracker.ui.components.TagChip
+import com.example.gymtracker.ui.components.atoms.AppButton
+import com.example.gymtracker.ui.components.atoms.AppFab
+import com.example.gymtracker.ui.components.atoms.AppTextButton
+import com.example.gymtracker.ui.components.atoms.AppTopBar
+import com.example.gymtracker.ui.components.atoms.ConfirmSheet
+import com.example.gymtracker.ui.components.atoms.EmptyState
+import com.example.gymtracker.ui.components.atoms.Eyebrow
+import com.example.gymtracker.ui.theme.Sizes
+import com.example.gymtracker.ui.theme.Spacing
+import com.example.gymtracker.ui.theme.Radius
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,8 +98,8 @@ fun PlanListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Plans") },
+            AppTopBar(
+                title = "Plans",
                 actions = {
                     IconButton(onClick = { showCreate = true }) {
                         Icon(Icons.Outlined.Add, contentDescription = "New plan")
@@ -130,11 +138,7 @@ fun PlanListScreen(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = onQuickLog,
-                icon = { Icon(Icons.Outlined.Bolt, contentDescription = null) },
-                text = { Text("Quick log") },
-            )
+            AppFab(text = "Quick log", onClick = onQuickLog, icon = Icons.Outlined.Bolt)
         },
         modifier = modifier.fillMaxSize(),
     ) { padding ->
@@ -147,32 +151,22 @@ fun PlanListScreen(
                 ResumeSessionBanner(
                     draft = draft,
                     onResume = { onResumeSession(draft.planId) },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = Spacing.l, vertical = Spacing.s),
                 )
             }
             if (state.plans.isEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 64.dp, start = 24.dp, end = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(20.dp),
-                ) {
-                    EmptyState(
-                        icon = Icons.Outlined.FitnessCenter,
-                        message = "No plans yet.\nCreate one, or just hit Quick log.",
-                    )
-                    Button(onClick = { showCreate = true }) {
-                        Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.size(6.dp))
-                        Text("New plan")
-                    }
-                }
+                EmptyState(
+                    title = "No plans yet",
+                    message = "Create one, or just hit Quick log.",
+                    actionLabel = "New plan",
+                    onAction = { showCreate = true },
+                    modifier = Modifier.padding(horizontal = Spacing.gutter),
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(start = Spacing.l, end = Spacing.l, top = Spacing.xs, bottom = Sizes.fabClearance),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.m),
                 ) {
                     items(state.plans, key = { it.plan.id }) { card ->
                         PlanRow(
@@ -224,12 +218,12 @@ private fun ResumeSessionBanner(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(Radius.lg),
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(Spacing.l),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
             Icon(Icons.Outlined.Timer, contentDescription = null)
             Column(modifier = Modifier.weight(1f)) {
@@ -263,18 +257,18 @@ private fun PlanRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(Radius.lg),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
         ),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.l)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.m),
             ) {
                 Surface(
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(Radius.md),
                     color = MaterialTheme.colorScheme.primaryContainer,
                     modifier = Modifier.size(44.dp),
                 ) {
@@ -314,27 +308,23 @@ private fun PlanRow(
             }
 
             if (card.muscleGroups.isNotEmpty()) {
-                Spacer(Modifier.height(12.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    card.muscleGroups.take(4).forEach { g -> TagChip(g.label) }
-                    if (card.muscleGroups.size > 4) {
-                        TagChip("+${card.muscleGroups.size - 4}")
-                    }
-                }
+                Spacer(Modifier.height(Spacing.m))
+                // Tags are text, not chips (§2).
+                Eyebrow(
+                    card.muscleGroups.take(4).joinToString(" · ") { it.label } +
+                        if (card.muscleGroups.size > 4) " · +${card.muscleGroups.size - 4}" else "",
+                )
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Spacing.m))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.s),
             ) {
                 Row(
                     modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
                     Icon(
                         Icons.Outlined.Schedule,
@@ -349,19 +339,12 @@ private fun PlanRow(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                FilledTonalButton(
+                AppTextButton(
+                    text = "Log",
                     onClick = onLog,
                     enabled = card.exerciseCount > 0,
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                ) {
-                    Icon(
-                        Icons.Outlined.PlayArrow,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.size(6.dp))
-                    Text("Log")
-                }
+                    icon = Icons.Outlined.PlayArrow,
+                )
             }
         }
     }
@@ -383,8 +366,8 @@ private fun CreatePlanSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(start = Spacing.xxl, end = Spacing.xxl, top = Spacing.s, bottom = Spacing.xxl),
+            verticalArrangement = Arrangement.spacedBy(Spacing.l),
         ) {
             Text("New plan", style = MaterialTheme.typography.headlineSmall)
             Text(
@@ -399,58 +382,34 @@ private fun CreatePlanSheet(
                 placeholder = { Text("e.g. Push day, Upper, Full body") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(Radius.md),
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.m, Alignment.End),
             ) {
-                TextButton(onClick = onDismiss) { Text("Cancel") }
-                Button(
+                AppTextButton(text = "Cancel", onClick = onDismiss)
+                AppButton(
+                    text = "Create plan",
                     onClick = { onCreate(name) },
                     enabled = name.isNotBlank(),
-                ) { Text("Create plan") }
+                )
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DeletePlanSheet(
     plan: PlanEntity,
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    val sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden, enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded))
-    ModalBottomSheet(onDismissRequest = onCancel, sheetState = sheetState) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Text(
-                "Delete “${plan.name}”?",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                "This permanently removes the plan and all its exercises. Logged sessions are kept (their plan link will just be empty). This can't be undone.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
-            ) {
-                TextButton(onClick = onCancel) { Text("Cancel") }
-                Button(
-                    onClick = onConfirm,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError,
-                    ),
-                ) { Text("Delete") }
-            }
-        }
-    }
+    ConfirmSheet(
+        title = "Delete “${plan.name}”?",
+        message = "This permanently removes the plan and all its exercises. Logged sessions are kept (their plan link will just be empty). This can't be undone.",
+        confirmLabel = "Delete",
+        onConfirm = onConfirm,
+        onDismiss = onCancel,
+    )
 }

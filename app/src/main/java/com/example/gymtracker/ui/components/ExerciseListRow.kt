@@ -1,5 +1,6 @@
 package com.example.gymtracker.ui.components
 
+import com.example.gymtracker.data.displayName
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.gymtracker.data.db.ExerciseEntity
+import com.example.gymtracker.ui.theme.Spacing
+import com.example.gymtracker.ui.theme.Radius
 
 /**
  * The canonical exercise list row, shared by the Exercise library screen and the
@@ -35,10 +38,10 @@ fun ExerciseListRow(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Radius.md),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+        Column(modifier = Modifier.padding(horizontal = Spacing.l, vertical = Spacing.m)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     exercise.name,
@@ -50,12 +53,12 @@ fun ExerciseListRow(
             }
             if (exercise.primaryMuscles.isNotEmpty()) {
                 Text(
-                    exercise.primaryMuscles.joinToString { it.name },
+                    exercise.primaryMuscles.joinToString { it.displayName },
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
-            val secondary = exercise.secondaryMuscles.joinToString { it.name }
+            val secondary = exercise.secondaryMuscles.joinToString { it.displayName }
             Text(
                 buildString {
                     append(exercise.equipment.name)

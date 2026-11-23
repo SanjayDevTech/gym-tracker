@@ -57,7 +57,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.gymtracker.data.VolumeMetric
 import com.example.gymtracker.data.WeightUnit
 import com.example.gymtracker.ui.LocalAppContainer
+import com.example.gymtracker.ui.components.atoms.AppButton
+import com.example.gymtracker.ui.components.atoms.AppOutlinedButton
+import com.example.gymtracker.ui.components.atoms.AppSnackbarHost
+import com.example.gymtracker.ui.components.atoms.AppTextButton
+import com.example.gymtracker.ui.components.atoms.AppTopBar
+import com.example.gymtracker.ui.components.atoms.UnderlineSelector
+import com.example.gymtracker.ui.theme.Spacing
 import kotlinx.coroutines.launch
+import com.example.gymtracker.ui.theme.Radius
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -164,16 +172,9 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Settings") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-                    }
-                },
-            )
+            AppTopBar(title = "Settings", onBack = onBack)
         },
-        snackbarHost = { SnackbarHost(snackbar) },
+        snackbarHost = { AppSnackbarHost(snackbar) },
         modifier = modifier.fillMaxSize(),
     ) { padding ->
         Column(
@@ -181,33 +182,25 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = Spacing.gutter, vertical = Spacing.m),
+            verticalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
             SettingsCard(icon = Icons.Outlined.Scale, title = "Weight unit") {
-                val units = WeightUnit.values().toList()
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    units.forEachIndexed { i, u ->
-                        SegmentedButton(
-                            selected = state.weightUnit == u,
-                            onClick = { viewModel.setWeightUnit(u) },
-                            shape = SegmentedButtonDefaults.itemShape(index = i, count = units.size),
-                        ) { Text(u.label) }
-                    }
-                }
+                UnderlineSelector(
+                    options = WeightUnit.entries.toList(),
+                    selected = state.weightUnit,
+                    onSelect = viewModel::setWeightUnit,
+                    label = { it.label },
+                )
             }
 
             SettingsCard(icon = Icons.Outlined.BarChart, title = "Volume metric") {
-                val metrics = VolumeMetric.values().toList()
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    metrics.forEachIndexed { i, m ->
-                        SegmentedButton(
-                            selected = state.volumeMetric == m,
-                            onClick = { viewModel.setVolumeMetric(m) },
-                            shape = SegmentedButtonDefaults.itemShape(index = i, count = metrics.size),
-                        ) { Text(m.label) }
-                    }
-                }
+                UnderlineSelector(
+                    options = VolumeMetric.entries.toList(),
+                    selected = state.volumeMetric,
+                    onSelect = viewModel::setVolumeMetric,
+                    label = { it.label },
+                )
                 Text(
                     "Sets counts each working set once, so bodyweight work (pull-ups, planks) counts " +
                         "fully. Tonnage weighs reps × load and ignores bodyweight sets.",
@@ -238,8 +231,9 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FilledTonalButton(
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                    AppButton(
+                        text = if (busyOp == "plans-export") "Working…" else "Export all",
                         onClick = {
                             plansExportLauncher.launch(
                                 com.example.gymtracker.data.plan.PlansTransferManager.suggestedFileName()
@@ -247,26 +241,15 @@ fun SettingsScreen(
                         },
                         enabled = busyOp == null,
                         modifier = Modifier.weight(1f),
-                    ) {
-                        if (busyOp == "plans-export") {
-                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Outlined.CloudUpload, contentDescription = null)
-                            Text("  Export all")
-                        }
-                    }
-                    OutlinedButton(
+                        icon = Icons.Outlined.CloudUpload,
+                    )
+                    AppOutlinedButton(
+                        text = if (busyOp == "plans-import") "Working…" else "Import all",
                         onClick = { showPlansImportConfirm = true },
                         enabled = busyOp == null,
                         modifier = Modifier.weight(1f),
-                    ) {
-                        if (busyOp == "plans-import") {
-                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Outlined.CloudDownload, contentDescription = null)
-                            Text("  Import all")
-                        }
-                    }
+                        icon = Icons.Outlined.CloudDownload,
+                    )
                 }
             }
 
@@ -276,33 +259,23 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FilledTonalButton(
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                    AppButton(
+                        text = if (busyOp == "export") "Working…" else "Export",
                         onClick = {
                             exportLauncher.launch(com.example.gymtracker.data.backup.BackupManager.suggestedFileName())
                         },
                         enabled = busyOp == null,
                         modifier = Modifier.weight(1f),
-                    ) {
-                        if (busyOp == "export") {
-                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Outlined.CloudUpload, contentDescription = null)
-                            Text("  Export")
-                        }
-                    }
-                    OutlinedButton(
+                        icon = Icons.Outlined.CloudUpload,
+                    )
+                    AppOutlinedButton(
+                        text = if (busyOp == "import") "Working…" else "Import",
                         onClick = { showImportConfirm = true },
                         enabled = busyOp == null,
                         modifier = Modifier.weight(1f),
-                    ) {
-                        if (busyOp == "import") {
-                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Outlined.CloudDownload, contentDescription = null)
-                            Text("  Import")
-                        }
-                    }
+                        icon = Icons.Outlined.CloudDownload,
+                    )
                 }
             }
         }
@@ -321,13 +294,16 @@ fun SettingsScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
-                    showImportConfirm = false
-                    importLauncher.launch(arrayOf("application/json"))
-                }) { Text("Choose file") }
+                AppTextButton(
+                    text = "Choose file",
+                    onClick = {
+                        showImportConfirm = false
+                        importLauncher.launch(arrayOf("application/json"))
+                    },
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showImportConfirm = false }) { Text("Cancel") }
+                AppTextButton(text = "Cancel", onClick = { showImportConfirm = false })
             },
         )
     }
@@ -346,13 +322,16 @@ fun SettingsScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
-                    showPlansImportConfirm = false
-                    plansImportLauncher.launch(arrayOf("application/json"))
-                }) { Text("Choose file") }
+                AppTextButton(
+                    text = "Choose file",
+                    onClick = {
+                        showPlansImportConfirm = false
+                        plansImportLauncher.launch(arrayOf("application/json"))
+                    },
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showPlansImportConfirm = false }) { Text("Cancel") }
+                AppTextButton(text = "Cancel", onClick = { showPlansImportConfirm = false })
             },
         )
     }
@@ -366,16 +345,16 @@ private fun SettingsCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(Radius.lg),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(horizontal = Spacing.l, vertical = Spacing.m),
+            verticalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.m),
             ) {
                 Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
