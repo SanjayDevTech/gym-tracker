@@ -2,30 +2,19 @@ package com.example.gymtracker.ui.screens.plans.importplan
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -40,34 +29,20 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.gymtracker.data.Equipment
-import com.example.gymtracker.data.MovementType
-import com.example.gymtracker.data.Muscle
-import com.example.gymtracker.data.displayName
 import com.example.gymtracker.data.plan.PlanImportExercise
 import com.example.gymtracker.ui.AppViewModelFactory
 import com.example.gymtracker.ui.LocalAppContainer
 import com.example.gymtracker.ui.components.atoms.AppButton
 import com.example.gymtracker.ui.components.atoms.AppDivider
-import com.example.gymtracker.ui.components.atoms.AppSheet
 import com.example.gymtracker.ui.components.atoms.AppTextButton
 import com.example.gymtracker.ui.components.atoms.AppTopBar
 import com.example.gymtracker.ui.components.atoms.Eyebrow
 import com.example.gymtracker.ui.components.atoms.Section
-import com.example.gymtracker.ui.components.atoms.UnderlineSelector
 import com.example.gymtracker.ui.theme.AppText
-import com.example.gymtracker.ui.theme.Elevation
-import com.example.gymtracker.ui.theme.Sizes
 import com.example.gymtracker.ui.theme.Spacing
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -88,6 +63,9 @@ fun ImportPlanScreen(
     onPickExercise: () -> Unit,
     pickedExerciseIds: List<Long>?,
     onPickedHandled: () -> Unit,
+    onCreateExercise: (PlanImportExercise) -> Unit,
+    createdExerciseId: Long?,
+    onCreatedHandled: () -> Unit,
     initialText: String? = null,
 ) {
     val container = LocalAppContainer.current
@@ -118,7 +96,16 @@ fun ImportPlanScreen(
         pickerForIndex = null
         onPickedHandled()
     }
-    var createForIndex by remember { mutableStateOf<Int?>(null) }
+    // Create opens the custom-exercise page (§4.19) prefilled; its new id maps the entry.
+    var createForIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+    LaunchedEffect(createdExerciseId) {
+        val id = createdExerciseId ?: return@LaunchedEffect
+        val idx = createForIndex
+        val exercise = container.repository.findExercise(id)
+        if (idx != null && exercise != null) viewModel.mapEntry(idx, exercise)
+        createForIndex = null
+        onCreatedHandled()
+    }
 
     val pending = state.entries.count { it.resolution is Resolution.Pending }
     val skipped = state.entries.count { it.resolution is Resolution.Skipped }
@@ -163,7 +150,7 @@ fun ImportPlanScreen(
                         ImportEntryRow(
                             entry = entry,
                             onMap = { pickerForIndex = idx; onPickExercise() },
-                            onCreate = { createForIndex = idx },
+                            onCreate = { createForIndex = idx; onCreateExercise(entry.source) },
                             onSkip = { viewModel.skipEntry(idx) },
                             onChange = { viewModel.unresolveEntry(idx) },
                         )
@@ -180,16 +167,6 @@ fun ImportPlanScreen(
         }
     }
 
-    createForIndex?.let { idx ->
-        CreateCustomSheet(
-            source = state.entries[idx].source,
-            onCancel = { createForIndex = null },
-            onConfirm = { res ->
-                viewModel.setResolution(idx, res)
-                createForIndex = null
-            },
-        )
-    }
 }
 
 @Composable
@@ -290,7 +267,7 @@ private fun ReviewHero(
 
 /**
  * §3 `ImportEntryRow`: source name + `3 × 8–12`; the resolution as one text line —
- * `→ Bench press` primary, `+ New: Name` tertiary, `– Skipped` onSurfaceVariant,
+ * `→ Bench press` primary (also after Create, which saves the exercise), `– Skipped` onSurfaceVariant,
  * `! Needs review` error — and its actions as text buttons.
  */
 @Composable
@@ -304,7 +281,6 @@ private fun ImportEntryRow(
     val scheme = MaterialTheme.colorScheme
     val (line, color) = when (val r = entry.resolution) {
         is Resolution.Mapped -> "→ ${r.exerciseName}" to scheme.primary
-        is Resolution.Create -> "+ New: ${r.name}" to scheme.tertiary
         Resolution.Skipped -> "– Skipped" to scheme.onSurfaceVariant
         Resolution.Pending -> "! Needs review" to scheme.error
     }
@@ -334,161 +310,6 @@ private fun ImportEntryRow(
                 }
                 else -> AppTextButton(text = "Change", onClick = onChange, color = scheme.onSurfaceVariant)
             }
-        }
-    }
-}
-
-/**
- * Create a custom exercise for an unmatched entry — a one-sheet form (phase 9 turns it into the
- * custom-exercise page). Single choices are [UnderlineSelector]s; muscles are multi-select text
- * options. Pre-filled from the file's optional fields.
- */
-@Composable
-private fun CreateCustomSheet(
-    source: PlanImportExercise,
-    onCancel: () -> Unit,
-    onConfirm: (Resolution.Create) -> Unit,
-) {
-    var name by remember { mutableStateOf(source.name) }
-    var movementType by remember {
-        mutableStateOf(
-            source.movementType?.let { runCatching { MovementType.valueOf(it) }.getOrNull() }
-                ?: MovementType.Compound
-        )
-    }
-    var equipment by remember {
-        mutableStateOf(
-            source.equipment?.let { runCatching { Equipment.valueOf(it) }.getOrNull() }
-                ?: Equipment.Other
-        )
-    }
-    var primary by remember {
-        mutableStateOf(source.primaryMuscles.mapNotNull { runCatching { Muscle.valueOf(it) }.getOrNull() }.toSet())
-    }
-    var secondary by remember {
-        mutableStateOf(source.secondaryMuscles.mapNotNull { runCatching { Muscle.valueOf(it) }.getOrNull() }.toSet())
-    }
-
-    AppSheet(onDismiss = onCancel) {
-        Column(Modifier.verticalScroll(rememberScrollState())) {
-            Text("Create custom exercise", style = AppText.titleL, color = MaterialTheme.colorScheme.onSurface)
-            Spacer(Modifier.height(Spacing.xl))
-            Eyebrow("Name")
-            UnderlineTextField(value = name, onValueChange = { name = it })
-
-            Spacer(Modifier.height(Spacing.xl))
-            Eyebrow("Type")
-            UnderlineSelector(
-                options = MovementType.entries.toList(),
-                selected = movementType,
-                onSelect = { movementType = it },
-                label = { it.displayName },
-            )
-
-            Spacer(Modifier.height(Spacing.l))
-            Eyebrow("Equipment")
-            UnderlineSelector(
-                options = Equipment.entries.toList(),
-                selected = equipment,
-                onSelect = { equipment = it },
-                label = { it.displayName },
-            )
-
-            Spacer(Modifier.height(Spacing.l))
-            Eyebrow("Primary muscles")
-            MuscleOptions(selected = primary, onToggle = { primary = primary.toggle(it) })
-
-            Spacer(Modifier.height(Spacing.l))
-            Eyebrow("Secondary muscles")
-            MuscleOptions(selected = secondary, onToggle = { secondary = secondary.toggle(it) })
-
-            AppButton(
-                text = "Create",
-                onClick = {
-                    onConfirm(
-                        Resolution.Create(
-                            name = name.trim().ifBlank { source.name },
-                            movementType = movementType,
-                            primaryMuscles = primary.toList(),
-                            secondaryMuscles = secondary.toList(),
-                            equipment = equipment,
-                        )
-                    )
-                },
-                enabled = name.isNotBlank(),
-                modifier = Modifier.fillMaxWidth().padding(top = Spacing.xxl),
-            )
-            AppTextButton(
-                text = "Cancel",
-                onClick = onCancel,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth().padding(top = Spacing.s),
-            )
-        }
-    }
-}
-
-private fun <T> Set<T>.toggle(item: T): Set<T> = if (item in this) this - item else this + item
-
-/** Multi-select text options: selected = onSurface label over a 24×2dp rule (house rule 3). */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun MuscleOptions(selected: Set<Muscle>, onToggle: (Muscle) -> Unit) {
-    val scheme = MaterialTheme.colorScheme
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.l)) {
-        Muscle.entries.forEach { muscle ->
-            val on = muscle in selected
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .heightIn(min = Sizes.touchTarget)
-                    .toggleable(value = on, role = Role.Checkbox, onValueChange = { onToggle(muscle) })
-                    .padding(vertical = Spacing.s),
-            ) {
-                Text(
-                    muscle.displayName,
-                    style = AppText.label,
-                    color = if (on) scheme.onSurface else scheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(Spacing.xs))
-                Box(
-                    Modifier
-                        .size(width = 24.dp, height = 2.dp)
-                        .background(if (on) scheme.onSurface else Color.Transparent),
-                )
-            }
-        }
-    }
-}
-
-/** One-line text input in the [NumberField] idiom: no box, a rule beneath (2dp primary focused). */
-@Composable
-private fun UnderlineTextField(value: String, onValueChange: (String) -> Unit) {
-    val scheme = MaterialTheme.colorScheme
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
-    Column(Modifier.fillMaxWidth().padding(top = Spacing.s)) {
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = true,
-            textStyle = AppText.titleM.copy(color = scheme.onSurface),
-            cursorBrush = SolidColor(scheme.primary),
-            keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.Words,
-                imeAction = ImeAction.Done,
-            ),
-            interactionSource = interaction,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(Spacing.xs))
-        Box(Modifier.fillMaxWidth().height(2.dp)) {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(if (focused) 2.dp else Elevation.hairline)
-                    .background(if (focused) scheme.primary else scheme.outlineVariant),
-            )
         }
     }
 }

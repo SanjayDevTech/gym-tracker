@@ -70,6 +70,12 @@ class ExercisePickerViewModel(
 
     fun toggle(id: Long) = selected.update { if (id in it) it - id else it + id }
 
+    /** A just-created exercise: select it and clear the search that found nothing. */
+    fun onCreated(id: Long) {
+        clearSearch()
+        selected.update { if (id in it) it else it + id }
+    }
+
     companion object {
         const val RECENT_COUNT = 8
     }

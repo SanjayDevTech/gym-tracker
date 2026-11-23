@@ -2,10 +2,7 @@ package com.example.gymtracker.ui.screens.plans.importplan
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.gymtracker.data.Equipment
 import com.example.gymtracker.data.GymRepository
-import com.example.gymtracker.data.MovementType
-import com.example.gymtracker.data.Muscle
 import com.example.gymtracker.data.db.ExerciseEntity
 import com.example.gymtracker.data.db.PlanEntity
 import com.example.gymtracker.data.db.PlannedExerciseEntity
@@ -21,16 +18,8 @@ import java.util.UUID
 
 /** Per-source-exercise resolution chosen by the user. */
 sealed class Resolution {
-    /** Source name matched an existing exercise (or user picked Map). */
+    /** Source name matched an existing exercise, or the user picked Map or created one. */
     data class Mapped(val exerciseId: Long, val exerciseName: String) : Resolution()
-    /** User chose Create custom; values from the create form. */
-    data class Create(
-        val name: String,
-        val movementType: MovementType,
-        val primaryMuscles: List<Muscle>,
-        val secondaryMuscles: List<Muscle>,
-        val equipment: Equipment,
-    ) : Resolution()
     /** User chose to skip. */
     data object Skipped : Resolution()
     /** Unresolved — waiting for user. */
@@ -75,7 +64,7 @@ class ImportPlanViewModel(private val repository: GymRepository) : ViewModel() {
                 }
                 is PlanImportParser.Result.Ok -> {
                     val entries = result.payload.exercises.map { src ->
-                        val existing = repository.findExerciseByName(src.name.trim())
+                        val existing = repository.findActiveExerciseByName(src.name.trim())
                         val resolution = if (existing != null) {
                             Resolution.Mapped(existing.id, existing.name)
                         } else {
@@ -91,7 +80,7 @@ class ImportPlanViewModel(private val repository: GymRepository) : ViewModel() {
         }
     }
 
-    fun setResolution(index: Int, resolution: Resolution) {
+    private fun setResolution(index: Int, resolution: Resolution) {
         _state.update { s ->
             val entries = s.entries.toMutableList()
             if (index in entries.indices) entries[index] = entries[index].copy(resolution = resolution)
@@ -131,20 +120,6 @@ class ImportPlanViewModel(private val repository: GymRepository) : ViewModel() {
             for (entry in s.entries) {
                 val exerciseId: Long = when (val r = entry.resolution) {
                     is Resolution.Mapped -> r.exerciseId
-                    is Resolution.Create -> repository.insertExercise(
-                        ExerciseEntity(
-                            id = 0,
-                            clientUuid = UUID.randomUUID().toString(),
-                            name = r.name.trim(),
-                            movementType = r.movementType,
-                            primaryMuscles = r.primaryMuscles,
-                            secondaryMuscles = r.secondaryMuscles,
-                            equipment = r.equipment,
-                            cues = "",
-                            isCustom = true,
-                            isDeleted = false,
-                        )
-                    )
                     Resolution.Skipped, Resolution.Pending -> continue
                 }
                 planned += PlannedExerciseEntity(

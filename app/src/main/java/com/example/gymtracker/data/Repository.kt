@@ -12,6 +12,16 @@ import com.example.gymtracker.data.db.SessionEntity
 import com.example.gymtracker.data.db.SessionWithSets
 import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
+import java.util.UUID
+
+/** The user-editable fields of a custom exercise (§4.19). */
+data class CustomExerciseFields(
+    val name: String,
+    val movementType: MovementType,
+    val equipment: Equipment,
+    val primaryMuscles: List<Muscle>,
+    val secondaryMuscles: List<Muscle>,
+)
 
 class GymRepository(private val db: AppDatabase) {
     private val exerciseDao = db.exerciseDao()
@@ -31,6 +41,41 @@ class GymRepository(private val db: AppDatabase) {
     suspend fun softDeleteExercise(id: Long) = exerciseDao.setDeleted(id, true)
     suspend fun restoreExercise(id: Long) = exerciseDao.setDeleted(id, false)
     fun observeDeletedExercises(): Flow<List<ExerciseEntity>> = exerciseDao.observeDeleted()
+    fun observeAllExercisesIncludingDeleted(): Flow<List<ExerciseEntity>> = exerciseDao.observeAllIncludingDeleted()
+    suspend fun findActiveExerciseByName(name: String): ExerciseEntity? = exerciseDao.findActiveByName(name)
+
+    /** Insert a user-made exercise (phase 9): fresh random UUID, `isCustom = true`, no cues. */
+    suspend fun createCustomExercise(fields: CustomExerciseFields): Long = exerciseDao.insert(
+        ExerciseEntity(
+            clientUuid = UUID.randomUUID().toString(),
+            name = fields.name.trim(),
+            movementType = fields.movementType,
+            primaryMuscles = fields.primaryMuscles,
+            secondaryMuscles = fields.secondaryMuscles,
+            equipment = fields.equipment,
+            isCustom = true,
+        )
+    )
+
+    /**
+     * Update a custom exercise's editable fields. Refuses (returns false) for built-ins — the
+     * seed's deterministic UUIDs and `seedVersion` reseeding depend on them never changing — and
+     * for soft-deleted rows. UUID, cues and flags are kept.
+     */
+    suspend fun updateCustom(id: Long, fields: CustomExerciseFields): Boolean {
+        val existing = exerciseDao.findById(id) ?: return false
+        if (!existing.isCustom || existing.isDeleted) return false
+        exerciseDao.update(
+            existing.copy(
+                name = fields.name.trim(),
+                movementType = fields.movementType,
+                primaryMuscles = fields.primaryMuscles,
+                secondaryMuscles = fields.secondaryMuscles,
+                equipment = fields.equipment,
+            )
+        )
+        return true
+    }
 
     // Plans
     fun observePlans(): Flow<List<PlanEntity>> = planDao.observePlans()

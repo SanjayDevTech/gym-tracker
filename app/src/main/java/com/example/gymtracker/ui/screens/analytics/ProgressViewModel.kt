@@ -128,7 +128,8 @@ class ProgressViewModel(
     /** Null until the first Room emission (house rule 8). */
     val state: StateFlow<ProgressState?> = combine(
         periodData,
-        repository.observeExercises(),
+        // Deleted (custom) exercises included: their logged sets still count toward muscles.
+        repository.observeAllExercisesIncludingDeleted(),
         repository.observeSessions(),
         prefs.weeklyTargetSessions,
         metric,

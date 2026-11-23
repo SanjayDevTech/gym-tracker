@@ -2,6 +2,7 @@ package com.example.gymtracker.ui.screens.library
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -16,6 +17,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Search
@@ -42,6 +44,7 @@ import com.example.gymtracker.ui.components.ExerciseListRow
 import com.example.gymtracker.ui.components.FilterSheet
 import com.example.gymtracker.ui.components.atoms.AppBadge
 import com.example.gymtracker.ui.components.atoms.AppDivider
+import com.example.gymtracker.ui.components.atoms.AppFab
 import com.example.gymtracker.ui.components.atoms.AppTopBar
 import com.example.gymtracker.ui.components.atoms.EmptyState
 import com.example.gymtracker.ui.theme.AppText
@@ -51,13 +54,15 @@ import com.example.gymtracker.ui.theme.Spacing
 /**
  * Exercises (§4.10) — a leaf of Progress. Top bar with the count; one search line with the filter
  * button (and its active count); the active filters as one line under it; then text rows on
- * hairlines. Loading draws the top bar and search only (house rule 8).
+ * hairlines; a `New exercise` FAB opens the custom-exercise form (§4.19, phase 9). Loading draws the
+ * top bar and search only (house rule 8).
  */
 @Composable
 fun LibraryScreen(
     viewModel: LibraryViewModel,
     onBack: () -> Unit,
     onExerciseClick: (Long) -> Unit,
+    onNewExercise: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -86,6 +91,8 @@ fun LibraryScreen(
                 },
             )
         },
+        // Phase 9: the custom-exercise form (§4.19). Bottom-end, flat pill.
+        floatingActionButton = { AppFab(text = "New exercise", icon = Icons.Outlined.Add, onClick = onNewExercise) },
         modifier = modifier.fillMaxSize(),
     ) { padding ->
         Column(
@@ -115,7 +122,11 @@ fun LibraryScreen(
                 )
                 return@Column
             }
-            LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = Sizes.fabClearance),
+            ) {
                 items(s.exercises, key = { it.id }) { ex ->
                     ExerciseListRow(ex, onClick = { onExerciseClick(ex.id) })
                     AppDivider(Modifier.padding(horizontal = Spacing.gutter))

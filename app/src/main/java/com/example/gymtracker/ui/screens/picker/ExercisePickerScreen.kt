@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FilterList
@@ -68,6 +69,7 @@ import com.example.gymtracker.ui.components.FilterSheet
 import com.example.gymtracker.ui.components.atoms.AppBadge
 import com.example.gymtracker.ui.components.atoms.AppButton
 import com.example.gymtracker.ui.components.atoms.AppDivider
+import com.example.gymtracker.ui.components.atoms.AppTextButton
 import com.example.gymtracker.ui.components.atoms.AppTopBar
 import com.example.gymtracker.ui.components.atoms.EmptyState
 import com.example.gymtracker.ui.components.atoms.Eyebrow
@@ -99,6 +101,9 @@ fun ExercisePickerScreen(
     planId: Long?,
     onBack: () -> Unit,
     onPicked: (List<Long>) -> Unit,
+    onNewExercise: (prefillName: String) -> Unit,
+    createdExerciseId: Long?,
+    onCreatedHandled: () -> Unit,
 ) {
     val container = LocalAppContainer.current
     val viewModel: ExercisePickerViewModel = viewModel(
@@ -111,6 +116,14 @@ fun ExercisePickerScreen(
     var showFilters by remember { mutableStateOf(false) }
     val multi = mode != PickerMode.Single
     val selectedCount = state?.selected?.size ?: 0
+
+    // An exercise made from the empty search (§4.19) comes back here: Single mode returns it at
+    // once; multi-select picks it and clears the search so it shows in the list.
+    LaunchedEffect(createdExerciseId) {
+        val id = createdExerciseId ?: return@LaunchedEffect
+        onCreatedHandled()
+        if (multi) viewModel.onCreated(id) else onPicked(listOf(id))
+    }
 
     Scaffold(
         topBar = {
@@ -156,6 +169,14 @@ fun ExercisePickerScreen(
                     actionLabel = "Clear filters",
                     onAction = viewModel::clearSearch,
                     modifier = Modifier.padding(horizontal = Spacing.gutter),
+                )
+                // Foot row (phase 9): make the exercise that isn't there, named as searched.
+                AppDivider(Modifier.padding(horizontal = Spacing.gutter))
+                AppTextButton(
+                    text = "New exercise",
+                    icon = Icons.Outlined.Add,
+                    onClick = { onNewExercise(s.query.trim()) },
+                    modifier = Modifier.padding(horizontal = Spacing.s),
                 )
                 return@Column
             }

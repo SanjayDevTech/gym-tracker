@@ -21,6 +21,14 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercises WHERE name = :name LIMIT 1")
     suspend fun findByName(name: String): ExerciseEntity?
 
+    /** Like [findByName] but never a soft-deleted row (import auto-match). */
+    @Query("SELECT * FROM exercises WHERE name = :name AND is_deleted = 0 LIMIT 1")
+    suspend fun findActiveByName(name: String): ExerciseEntity?
+
+    /** Every row, soft-deleted included — for resolving names/muscles of logged history. */
+    @Query("SELECT * FROM exercises ORDER BY name COLLATE NOCASE ASC")
+    fun observeAllIncludingDeleted(): Flow<List<ExerciseEntity>>
+
     @Query("SELECT * FROM exercises WHERE is_deleted = 1 ORDER BY name COLLATE NOCASE ASC")
     fun observeDeleted(): Flow<List<ExerciseEntity>>
 

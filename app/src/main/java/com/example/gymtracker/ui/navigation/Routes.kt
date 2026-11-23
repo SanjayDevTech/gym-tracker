@@ -26,6 +26,21 @@ import kotlinx.serialization.Serializable
 @Serializable object ExercisesRoute
 @Serializable data class ExerciseDetailRoute(val exerciseId: Long)
 
+/**
+ * Custom exercise form (§4.19, phase 9). [exerciseId] null = create, else edit (custom only).
+ * The `prefill*` fields seed a new exercise — the picker's search text, or an Import entry's
+ * optional fields (enum names; muscles comma-separated). A create returns the new id under
+ * [CREATED_EXERCISE_KEY] on the previous entry's `savedStateHandle`.
+ */
+@Serializable data class ExerciseFormRoute(
+    val exerciseId: Long? = null,
+    val prefillName: String? = null,
+    val prefillType: String? = null,
+    val prefillEquipment: String? = null,
+    val prefillPrimary: String? = null,
+    val prefillSecondary: String? = null,
+)
+
 @Serializable data class PlanEditorRoute(val planId: Long)
 @Serializable object ImportPlanRoute
 

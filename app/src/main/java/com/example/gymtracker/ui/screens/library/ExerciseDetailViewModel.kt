@@ -13,12 +13,14 @@ import com.example.gymtracker.domain.LoggedSetSample
 import com.example.gymtracker.domain.ProgressMetric
 import com.example.gymtracker.domain.ProgressPoint
 import com.example.gymtracker.domain.ProgressionRule
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /** A record's value and the first day it was reached. */
 data class RecordFigure(val value: Float, val dateEpochDay: Long)
@@ -46,8 +48,9 @@ data class ExerciseDetailState(
 )
 
 class ExerciseDetailViewModel(
-    repository: GymRepository,
+    private val repository: GymRepository,
     private val exerciseId: Long,
+    private val applicationScope: CoroutineScope,
 ) : ViewModel() {
 
     /**
@@ -61,6 +64,17 @@ class ExerciseDetailViewModel(
     ) { exercise, history, planned -> build(exercise, history, planned) }
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /**
+     * Soft delete (phase 9; custom only — the menu is never shown for built-ins). `logged_sets`
+     * references exercises with RESTRICT, so a hard delete isn't possible; history and records
+     * still resolve the name by id. App scope, because the page pops straight after.
+     */
+    fun delete() {
+        val ex = state.value?.exercise ?: return
+        if (!ex.isCustom) return
+        applicationScope.launch { repository.softDeleteExercise(ex.id) }
+    }
 
     private fun build(
         exercise: ExerciseEntity?,

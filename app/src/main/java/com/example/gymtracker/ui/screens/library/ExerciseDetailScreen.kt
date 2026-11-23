@@ -1,6 +1,16 @@
 package com.example.gymtracker.ui.screens.library
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import com.example.gymtracker.ui.components.atoms.ConfirmSheet
+import com.example.gymtracker.ui.theme.Radius
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -73,17 +83,20 @@ private enum class ChartRange(val label: String, val days: Long?) {
 /**
  * Exercise detail (§4.11) — e1RM hero, a dated chart between its two selectors, records with
  * dates, recent sets grouped by session, the muscles on the body diagram, cues. A leaf page: its
- * Scaffold applies the system insets once.
+ * Scaffold applies the system insets once. Custom exercises get a ⋮ with Edit (§4.19) and Delete
+ * (soft delete behind a [ConfirmSheet]; history keeps the name) — phase 9.
  */
 @Composable
 fun ExerciseDetailScreen(
     viewModel: ExerciseDetailViewModel,
     weightUnit: WeightUnit,
     onBack: () -> Unit,
+    onEdit: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val exercise = state?.exercise
+    var confirmDelete by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -91,6 +104,13 @@ fun ExerciseDetailScreen(
                 title = exercise?.name.orEmpty(),
                 subtitle = exercise?.let { "${it.movementType.displayName} · ${it.equipment.displayName}" },
                 onBack = onBack,
+                actions = {
+                    // Phase 9: custom exercises only. Built-ins are never editable or deletable
+                    // (the seed's deterministic UUIDs and seedVersion reseeding depend on it).
+                    if (exercise != null && exercise.isCustom && !exercise.isDeleted) {
+                        OverflowMenu(onEdit = { onEdit(exercise.id) }, onDelete = { confirmDelete = true })
+                    }
+                },
             )
         },
         modifier = modifier.fillMaxSize(),
@@ -118,6 +138,46 @@ fun ExerciseDetailScreen(
                     Text(ex.cues, style = AppText.body, color = MaterialTheme.colorScheme.onSurface)
                 }
             }
+        }
+    }
+
+    if (confirmDelete && exercise != null) {
+        ConfirmSheet(
+            title = "Delete ${exercise.name}?",
+            message = "Its logged sets stay in History.",
+            confirmLabel = "Delete exercise",
+            onConfirm = {
+                confirmDelete = false
+                viewModel.delete()
+                onBack()
+            },
+            onDismiss = { confirmDelete = false },
+        )
+    }
+}
+
+@Composable
+private fun OverflowMenu(onEdit: () -> Unit, onDelete: () -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val scheme = MaterialTheme.colorScheme
+    Box {
+        IconButton(onClick = { open = true }) {
+            Icon(Icons.Outlined.MoreVert, contentDescription = "More")
+        }
+        DropdownMenu(
+            expanded = open,
+            onDismissRequest = { open = false },
+            shape = RoundedCornerShape(Radius.md),
+            containerColor = scheme.surfaceContainer,
+        ) {
+            DropdownMenuItem(
+                text = { Text("Edit", style = AppText.body, color = scheme.onSurface) },
+                onClick = { open = false; onEdit() },
+            )
+            DropdownMenuItem(
+                text = { Text("Delete", style = AppText.body, color = scheme.error) },
+                onClick = { open = false; onDelete() },
+            )
         }
     }
 }

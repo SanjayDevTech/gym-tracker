@@ -43,6 +43,10 @@ import com.example.gymtracker.ui.LocalAppContainer
 import com.example.gymtracker.ui.components.RunningDraft
 import com.example.gymtracker.ui.components.SessionGuardSheet
 import com.example.gymtracker.ui.screens.analytics.ProgressScreen
+import com.example.gymtracker.ui.screens.exerciseform.ExerciseFormScreen
+import com.example.gymtracker.ui.screens.exerciseform.ExerciseFormViewModel
+import com.example.gymtracker.ui.screens.exerciseform.exerciseFormRouteFor
+import com.example.gymtracker.ui.screens.exerciseform.prefill
 import com.example.gymtracker.ui.screens.data.DataScreen
 import com.example.gymtracker.ui.screens.history.HistoryScreen
 import com.example.gymtracker.ui.screens.history.SessionDetailScreen
@@ -247,6 +251,9 @@ fun AppNav() {
                     onPickExercise = { nav.navigate(ExercisePickerRoute(PickerMode.Single)) },
                     pickedExerciseIds = entry.pickedExercises(),
                     onPickedHandled = { entry.clearPickedExercises() },
+                    onCreateExercise = { source -> nav.navigate(exerciseFormRouteFor(source)) },
+                    createdExerciseId = entry.createdExercise(),
+                    onCreatedHandled = { entry.clearCreatedExercise() },
                     onBack = { nav.popBackStack() },
                     onImported = { planId ->
                         nav.popBackStack()
@@ -267,6 +274,7 @@ fun AppNav() {
                     viewModel = vm,
                     onBack = { nav.popBackStack() },
                     onExerciseClick = { nav.navigate(ExerciseDetailRoute(it)) },
+                    onNewExercise = { nav.navigate(ExerciseFormRoute()) },
                 )
             }
 
@@ -277,7 +285,7 @@ fun AppNav() {
                     key = "exercise-${route.exerciseId}",
                     factory = AppViewModelFactory(
                         mapOf(ExerciseDetailViewModel::class.java to {
-                            ExerciseDetailViewModel(container.repository, route.exerciseId)
+                            ExerciseDetailViewModel(container.repository, route.exerciseId, container.applicationScope)
                         })
                     )
                 )
@@ -285,6 +293,24 @@ fun AppNav() {
                     viewModel = vm,
                     weightUnit = unit,
                     onBack = { nav.popBackStack() },
+                    onEdit = { nav.navigate(ExerciseFormRoute(exerciseId = it)) },
+                )
+            }
+
+            composable<ExerciseFormRoute> { entry ->
+                val route: ExerciseFormRoute = entry.toRoute<ExerciseFormRoute>()
+                val vm: ExerciseFormViewModel = viewModel(
+                    factory = AppViewModelFactory(
+                        mapOf(ExerciseFormViewModel::class.java to {
+                            ExerciseFormViewModel(container.repository, route.exerciseId, route.prefill())
+                        })
+                    )
+                )
+                ExerciseFormScreen(
+                    viewModel = vm,
+                    onBack = { nav.popBackStack() },
+                    // A new exercise's id flows back to whoever opened the form (picker, Import).
+                    onSaved = { if (it.created) nav.returnCreatedExercise(it.id) else nav.popBackStack() },
                 )
             }
 
@@ -341,6 +367,9 @@ fun AppNav() {
                     planId = route.planId,
                     onBack = { nav.popBackStack() },
                     onPicked = { ids -> nav.returnPickedExercises(ids) },
+                    onNewExercise = { name -> nav.navigate(ExerciseFormRoute(prefillName = name.ifBlank { null })) },
+                    createdExerciseId = entry.createdExercise(),
+                    onCreatedHandled = { entry.clearCreatedExercise() },
                 )
             }
 
