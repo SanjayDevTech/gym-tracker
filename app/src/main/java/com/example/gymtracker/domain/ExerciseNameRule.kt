@@ -1,6 +1,7 @@
 package com.example.gymtracker.domain
 
 import com.example.gymtracker.data.db.ExerciseEntity
+import java.util.Locale
 
 /**
  * Name validation for the custom-exercise form (§4.19, phase 9): the trimmed name must be
@@ -24,8 +25,29 @@ object ExerciseNameRule {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return Result.Blank
         val clash = existing.firstOrNull {
-            !it.isDeleted && it.id != editingId && it.name.trim().equals(trimmed, ignoreCase = true)
+            !it.isDeleted && it.id != editingId && normalizedName(it.name) == normalizedName(trimmed)
         }
         return if (clash != null) Result.Duplicate(clash.name) else Result.Ok(trimmed)
+    }
+
+    /**
+     * The one key every name-based exercise match uses (form duplicate check, plan import, backup
+     * restore): surrounding whitespace dropped, case folded with the root locale. Kept in Kotlin
+     * rather than SQL because SQLite's LOWER/NOCASE only fold ASCII and TRIM only strips spaces.
+     */
+    fun normalizedName(name: String): String = name.trim().lowercase(Locale.ROOT)
+
+    /**
+     * The live exercise in [candidates] whose name matches [name] under [normalizedName], or null.
+     * Soft-deleted rows never match. If an older database already holds several live rows that
+     * differ only by case/space, the pick is deterministic: a built-in beats a custom, then the
+     * lowest id wins.
+     */
+    fun findLiveMatch(name: String, candidates: List<ExerciseEntity>): ExerciseEntity? {
+        val key = normalizedName(name)
+        if (key.isEmpty()) return null
+        return candidates
+            .filter { !it.isDeleted && normalizedName(it.name) == key }
+            .minWithOrNull(compareBy<ExerciseEntity>({ it.isCustom }, { it.id }))
     }
 }

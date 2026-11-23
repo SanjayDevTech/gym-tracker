@@ -26,9 +26,12 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercises WHERE client_uuid = :clientUuid LIMIT 1")
     suspend fun findByClientUuid(clientUuid: String): ExerciseEntity?
 
-    /** Like [findByName] but never a soft-deleted row: every name match outside the seed. */
-    @Query("SELECT * FROM exercises WHERE name = :name AND is_deleted = 0 LIMIT 1")
-    suspend fun findActiveByName(name: String): ExerciseEntity?
+    /**
+     * Every live row, as a one-shot read — the candidates for name matching outside the seed,
+     * which is done in Kotlin by ExerciseNameRule.findLiveMatch (trimmed, case-insensitive).
+     */
+    @Query("SELECT * FROM exercises WHERE is_deleted = 0")
+    suspend fun allActive(): List<ExerciseEntity>
 
     /** Every row, soft-deleted included — for resolving names/muscles of logged history. */
     @Query("SELECT * FROM exercises ORDER BY name COLLATE NOCASE ASC")

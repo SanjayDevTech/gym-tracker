@@ -83,7 +83,17 @@ class DeletedExerciseTest {
         repo.softDeleteExercise(id)
 
         assertNull(repo.findActiveExerciseByName("Landmine press"))
+        assertNull(repo.findActiveExerciseByName("  landmine PRESS "))
         assertEquals(id, repo.findExerciseByClientUuid("a")?.id)
+    }
+
+    @Test
+    fun activeNameLookupIgnoresCaseAndSurroundingSpace() = runBlocking {
+        val id = exercise("Landmine press", "a")
+
+        assertEquals(id, repo.findActiveExerciseByName("landmine press")?.id)
+        assertEquals(id, repo.findActiveExerciseByName("  LANDMINE PRESS\t")?.id)
+        assertNull(repo.findActiveExerciseByName("Landmine"))
     }
 
     @Test

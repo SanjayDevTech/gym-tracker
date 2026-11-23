@@ -10,6 +10,7 @@ import com.example.gymtracker.data.db.PlannedExerciseEntity
 import com.example.gymtracker.data.db.SessionDraftEntity
 import com.example.gymtracker.data.db.SessionEntity
 import com.example.gymtracker.data.db.SessionWithSets
+import com.example.gymtracker.domain.ExerciseNameRule
 import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
@@ -54,7 +55,12 @@ class GymRepository(private val db: AppDatabase) {
     suspend fun restoreExercise(id: Long) = exerciseDao.setDeleted(id, false)
     fun observeDeletedExercises(): Flow<List<ExerciseEntity>> = exerciseDao.observeDeleted()
     fun observeAllExercisesIncludingDeleted(): Flow<List<ExerciseEntity>> = exerciseDao.observeAllIncludingDeleted()
-    suspend fun findActiveExerciseByName(name: String): ExerciseEntity? = exerciseDao.findActiveByName(name)
+    /**
+     * The live exercise whose name matches [name] trimmed and ignoring case — the same rule as the
+     * custom-exercise form ([ExerciseNameRule]). Used by plan import and backup restore.
+     */
+    suspend fun findActiveExerciseByName(name: String): ExerciseEntity? =
+        ExerciseNameRule.findLiveMatch(name, exerciseDao.allActive())
 
     /** Insert a user-made exercise (phase 9): fresh random UUID, `isCustom = true`, no cues. */
     suspend fun createCustomExercise(fields: CustomExerciseFields): Long = exerciseDao.insert(

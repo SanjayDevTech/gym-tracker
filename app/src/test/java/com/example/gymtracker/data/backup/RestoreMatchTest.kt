@@ -3,6 +3,7 @@ package com.example.gymtracker.data.backup
 import com.example.gymtracker.data.Equipment
 import com.example.gymtracker.data.MovementType
 import com.example.gymtracker.data.db.ExerciseEntity
+import com.example.gymtracker.domain.ExerciseNameRule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -43,6 +44,14 @@ class RestoreMatchTest {
     fun liveBackupRowMergesOntoLiveSameName() {
         val live = row(9, "local-uuid")
         assertEquals(9L, RestoreMatch.customTarget(snapshot(), sameUuid = null, liveSameName = live)?.id)
+    }
+
+    @Test
+    fun liveBackupRowMergesOntoLiveNameDifferingOnlyByCaseAndSpace() {
+        val local = listOf(row(7, "gone", name = "landmine press", deleted = true), row(9, "local-uuid", name = "LANDMINE Press"))
+        val backup = snapshot(name = "  landmine press ")
+        val liveSameName = ExerciseNameRule.findLiveMatch(backup.name, local)
+        assertEquals(9L, RestoreMatch.customTarget(backup, sameUuid = null, liveSameName = liveSameName)?.id)
     }
 
     @Test
