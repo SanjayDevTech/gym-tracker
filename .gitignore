@@ -19,3 +19,16 @@ local.properties
 /app/release/
 # Release signing secrets
 keystore.properties
+*.jks
+*.keystore
+# ...except the deliberately public release key. It signs the GitHub release APKs so
+# they install as updates over each other; its passwords are in app/build.gradle.kts
+# next to it, and it is worthless for anything but that.
+!github-public-release.jks
+*.p12
+*.pem
+*.env
+.env.*
+secrets.properties
+*.apk
+*.aab

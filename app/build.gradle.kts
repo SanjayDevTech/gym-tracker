@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -23,22 +21,22 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    // Release signing reads keystore.properties (gitignored) at the project root:
-    // storeFile, storePassword, keyAlias, keyPassword. Without it, release builds unsigned.
-    val keystoreProps = rootProject.file("keystore.properties").takeIf { it.exists() }
-        ?.let { f -> Properties().apply { f.inputStream().use { load(it) } } }
     signingConfigs {
-        if (keystoreProps != null) create("release") {
-            storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
-            storePassword = keystoreProps.getProperty("storePassword")
-            keyAlias = keystoreProps.getProperty("keyAlias")
-            keyPassword = keystoreProps.getProperty("keyPassword")
+        // Deliberately public: the key and both passwords are in the repo, so anyone can
+        // build an APK that installs over — and updates — a GitHub release. That also means
+        // anyone can sign one, so it proves nothing about who built a given APK. Never use
+        // it for Play.
+        create("githubPublicRelease") {
+            storeFile = rootProject.file("github-public-release.jks")
+            storePassword = "github-public-release"
+            keyAlias = "github-public-release"
+            keyPassword = "github-public-release"
         }
     }
 
     buildTypes {
         release {
-            if (keystoreProps != null) signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.getByName("githubPublicRelease")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
