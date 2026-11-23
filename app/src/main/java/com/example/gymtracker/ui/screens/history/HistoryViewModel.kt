@@ -3,69 +3,84 @@ package com.example.gymtracker.ui.screens.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gymtracker.data.GymRepository
-import com.example.gymtracker.data.MuscleGroup
+import com.example.gymtracker.data.PreferencesStore
 import com.example.gymtracker.data.SetType
+import com.example.gymtracker.data.WeightUnit
 import com.example.gymtracker.data.db.SessionEntity
-import com.example.gymtracker.data.toMuscleGroups
+import com.example.gymtracker.data.db.SessionWithSets
+import com.example.gymtracker.domain.WeeklyTarget
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
-/** A logged session reduced to the facts a history card shows at a glance. */
-data class SessionSummary(
-    val session: SessionEntity,
-    val exerciseCount: Int,
-    val completedSets: Int,
-    val tonnage: Float,
-    val muscleGroups: List<MuscleGroup>,
-    val topExerciseName: String?,
-)
-
-data class HistoryDayGroup(
+/** One History row — §4.8: plan name (or "Quick log"), counts, duration, volume. */
+data class HistoryRow(
+    val sessionId: Long,
     val dateEpochDay: Long,
-    val sessions: List<SessionSummary>,
+    /** Plan name, or null for an ad-hoc session (rendered "Quick log"). */
+    val planName: String?,
+    /** Exercises with at least one completed set (issue 19's one definition). */
+    val exerciseCount: Int,
+    val doneSets: Int,
+    /** Working + failure volume in kg; warm-ups out. */
+    val volumeKg: Double,
+    /** Null for sessions logged before v5 (no start time). */
+    val durationMillis: Long?,
 )
 
+/** One ISO week (Monday start) of sessions, newest first. */
+data class HistoryWeek(
+    val weekStartEpochDay: Long,
+    val sessions: List<HistoryRow>,
+)
+
+data class HistoryState(
+    val weeks: List<HistoryWeek>,
+    val unit: WeightUnit,
+)
+
+/**
+ * History — §4.8. Sessions grouped by ISO week. Starts at `null` (house rule 8) so the
+ * screen draws only its top bar until Room's first emission; an empty list is a real empty.
+ */
 class HistoryViewModel(
-    private val repository: GymRepository,
+    repository: GymRepository,
+    prefs: PreferencesStore,
 ) : ViewModel() {
-    val state: StateFlow<List<HistoryDayGroup>> = combine(
+    val state: StateFlow<HistoryState?> = combine(
         repository.observeAllSessionsWithSets(),
-        repository.observeExercises(),
-    ) { sessions, exercises ->
-        val exById = exercises.associateBy { it.id }
-        sessions
-            .map { sws ->
-                val completed = sws.sets.filter { it.isCompleted }
-                val counting = completed.filter { it.setType != SetType.Warmup }
-                val tonnage = counting.sumOf { set ->
-                    val reps = set.repsDone
-                    val w = set.weightKg
-                    if (reps != null && w != null) (reps * w).toDouble() else 0.0
-                }.toFloat()
-                val muscles = completed.flatMap { exById[it.exerciseId]?.primaryMuscles.orEmpty() }
-                val topExerciseId = completed
-                    .groupingBy { it.exerciseId }
-                    .eachCount()
-                    .maxByOrNull { it.value }
-                    ?.key
-                SessionSummary(
-                    session = sws.session,
-                    exerciseCount = completed.map { it.exerciseId }.distinct().size,
-                    completedSets = completed.size,
-                    tonnage = tonnage,
-                    muscleGroups = muscles.toMuscleGroups(),
-                    topExerciseName = topExerciseId?.let { exById[it]?.name },
-                )
-            }
-            .groupBy { it.session.dateEpochDay }
-            .map { (day, list) -> HistoryDayGroup(day, list) }
-            .sortedByDescending { it.dateEpochDay }
-    }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = emptyList(),
-        )
+        repository.observePlans(),
+        prefs.weightUnit,
+    ) { sessions, plans, unit ->
+        val planNames = plans.associate { it.id to it.name }
+        val weeks = sessions
+            .map { it.toRow(planNames) }
+            .groupBy { WeeklyTarget.weekStart(it.dateEpochDay) }
+            .map { (week, rows) -> HistoryWeek(week, rows) }
+            .sortedByDescending { it.weekStartEpochDay }
+        HistoryState(weeks, unit)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = null,
+    )
 }
+
+internal fun SessionWithSets.toRow(planNames: Map<Long, String>): HistoryRow {
+    val done = sets.filter { it.isCompleted }
+    return HistoryRow(
+        sessionId = session.id,
+        dateEpochDay = session.dateEpochDay,
+        planName = session.planId?.let(planNames::get),
+        exerciseCount = done.map { it.exerciseId }.distinct().size,
+        doneSets = done.size,
+        volumeKg = done.filter { it.setType != SetType.Warmup }
+            .sumOf { ((it.weightKg ?: 0f) * (it.repsDone ?: 0)).toDouble() },
+        durationMillis = session.durationMillis(),
+    )
+}
+
+/** `loggedAt − startedAt`; null when the session predates v5 or the clock went backwards. */
+internal fun SessionEntity.durationMillis(): Long? =
+    startedAtMillis?.let { loggedAtMillis - it }?.takeIf { it >= 0 }
