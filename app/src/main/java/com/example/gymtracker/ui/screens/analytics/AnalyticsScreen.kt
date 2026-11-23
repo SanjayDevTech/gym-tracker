@@ -60,7 +60,7 @@ import com.example.gymtracker.ui.components.EmptyState
 import com.example.gymtracker.ui.components.ExclusiveButtonGroup
 import com.example.gymtracker.ui.components.Section
 import com.example.gymtracker.domain.AnalyticsWindow
-import com.example.gymtracker.ui.theme.Dimens
+import com.example.gymtracker.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,8 +97,8 @@ fun AnalyticsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(Dimens.GutterM),
-            verticalArrangement = Arrangement.spacedBy(Dimens.Gutter),
+                .padding(Spacing.l),
+            verticalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
             Section(modifier = Modifier.fillMaxWidth(), title = "Consistency") {
                 Row(modifier = Modifier.fillMaxWidth()) {
@@ -115,7 +115,7 @@ fun AnalyticsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                         modifier = Modifier.weight(1f),
                     )
                 }
-                Spacer(Modifier.height(Dimens.GutterS))
+                Spacer(Modifier.height(Spacing.s))
                 ConsistencyCalendar(
                     sessionDays = sessionDays,
                     weeks = 12,
@@ -141,7 +141,7 @@ fun AnalyticsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.tertiary,
                         )
-                        Spacer(modifier = Modifier.width(Dimens.GutterS))
+                        Spacer(modifier = Modifier.width(Spacing.s))
                         Column {
                             Text("Neglected this week", style = MaterialTheme.typography.titleMedium)
                             Text(
@@ -206,12 +206,12 @@ fun AnalyticsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                         )
                     }
                     HorizontalDivider(
-                        modifier = Modifier.padding(vertical = Dimens.GutterS),
+                        modifier = Modifier.padding(vertical = Spacing.s),
                         color = MaterialTheme.colorScheme.outlineVariant,
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Dimens.GutterS),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
                     ) {
                         DiagramColumn(
                             label = "Front",
@@ -235,11 +235,11 @@ fun AnalyticsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                         "Tap a muscle for the exercises feeding it.",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp),
+                        modifier = Modifier.padding(top = Spacing.xs),
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(Dimens.GutterL))
+            Spacer(modifier = Modifier.height(Spacing.xl))
         }
     }
 
@@ -252,14 +252,14 @@ fun AnalyticsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         }
         ModalBottomSheet(onDismissRequest = { drilledMuscle = null }, sheetState = sheetState) {
             Column(
-                modifier = Modifier.padding(Dimens.GutterM),
-                verticalArrangement = Arrangement.spacedBy(Dimens.GutterS),
+                modifier = Modifier.padding(Spacing.l),
+                verticalArrangement = Arrangement.spacedBy(Spacing.s),
             ) {
                 Text(muscle.name, style = MaterialTheme.typography.titleLarge)
                 val ready = breakdown
                 if (ready == null) {
                     Box(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = Dimens.GutterM),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.l),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(28.dp))
@@ -274,7 +274,7 @@ fun AnalyticsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 
 @Composable
 private fun BreakdownBody(breakdown: MuscleBreakdown) {
-    Column(verticalArrangement = Arrangement.spacedBy(Dimens.GutterS)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 when (breakdown.metric) {
                     VolumeMetric.Sets -> {
                         val totalSets = breakdown.exercises.sumOf { it.setCount }
@@ -328,7 +328,7 @@ private fun HeaderStat(
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Dimens.GutterS),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
     ) {
         Icon(
             icon,
@@ -363,7 +363,7 @@ private fun DiagramColumn(
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Text(
             label,
@@ -387,9 +387,9 @@ private fun HeatLegend() {
     val cold = MaterialTheme.colorScheme.surfaceVariant
     val hot = MaterialTheme.colorScheme.primary
     Row(
-        modifier = Modifier.fillMaxWidth().padding(top = Dimens.GutterS),
+        modifier = Modifier.fillMaxWidth().padding(top = Spacing.s),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Dimens.GutterS),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
     ) {
         Text(
             "Less",

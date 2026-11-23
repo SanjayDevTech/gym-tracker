@@ -13,7 +13,7 @@ An offline Android workout logger. No account and no cloud: everything is stored
 
 ## Tech
 
-Kotlin · Jetpack Compose · Material 3 · Room · DataStore. Min SDK 31 (Android 12).
+Kotlin · Jetpack Compose (Material 3, OLED dark-only) · Room · DataStore. Min SDK 31 (Android 12).
 
 ## Build
 

@@ -13,7 +13,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.gymtracker.ui.theme.Dimens
+import com.example.gymtracker.ui.theme.Elevation
+import com.example.gymtracker.ui.theme.Radius
+import com.example.gymtracker.ui.theme.Spacing
 
 @Composable
 fun Section(
@@ -21,18 +23,18 @@ fun Section(
     title: String? = null,
     borderColor: Color? = null,
     contentPadding: PaddingValues = PaddingValues(
-        horizontal = Dimens.SectionPaddingH,
-        vertical = Dimens.SectionPaddingV,
+        horizontal = Spacing.l,
+        vertical = Spacing.m,
     ),
     content: @Composable () -> Unit,
 ) {
     val resolvedBorder = borderColor ?: MaterialTheme.colorScheme.outlineVariant
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(Dimens.SectionCornerRadius))
-            .border(Dimens.SectionBorderWidth, resolvedBorder, RoundedCornerShape(Dimens.SectionCornerRadius))
+            .clip(RoundedCornerShape(Radius.lg))
+            .border(Elevation.hairline, resolvedBorder, RoundedCornerShape(Radius.lg))
             .padding(contentPadding),
-        verticalArrangement = Arrangement.spacedBy(Dimens.GutterS),
+        verticalArrangement = Arrangement.spacedBy(Spacing.s),
     ) {
         if (title != null) {
             Text(

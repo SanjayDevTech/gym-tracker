@@ -10,7 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.example.gymtracker.ui.theme.Dimens
+import com.example.gymtracker.ui.theme.Spacing
 
 @Composable
 fun StatTile(
@@ -21,7 +21,7 @@ fun StatTile(
     modifier: Modifier = Modifier,
 ) {
     Section(modifier = modifier) {
-        Column(verticalArrangement = Arrangement.spacedBy(Dimens.GutterXs)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Icon(
                 icon,
                 contentDescription = null,

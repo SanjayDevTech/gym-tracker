@@ -3,10 +3,12 @@ package com.example.gymtracker
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -14,6 +16,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.WindowCompat
 import com.example.gymtracker.session.SessionNotification
 import com.example.gymtracker.ui.LocalAppContainer
 import com.example.gymtracker.ui.navigation.AppNav
@@ -30,7 +33,12 @@ class MainActivity : ComponentActivity() {
         // Must run BEFORE super.onCreate so the splash window installs correctly.
         installSplashScreen()
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // Dark-only app: system bar icons are always light, whatever the system theme.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(AndroidColor.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(AndroidColor.TRANSPARENT),
+        )
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
         maybeRequestNotificationPermission()
         val container = (application as GymTrackerApp).container
         handleResumeIntent(intent)

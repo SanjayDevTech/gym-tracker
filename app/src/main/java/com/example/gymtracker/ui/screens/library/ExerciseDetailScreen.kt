@@ -45,7 +45,7 @@ import com.example.gymtracker.ui.components.LineChart
 import com.example.gymtracker.ui.components.Section
 import com.example.gymtracker.ui.components.StatTile
 import com.example.gymtracker.ui.components.TagChip
-import com.example.gymtracker.ui.theme.Dimens
+import com.example.gymtracker.ui.theme.Spacing
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,8 +79,8 @@ fun ExerciseDetailScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(Dimens.GutterM),
-            verticalArrangement = Arrangement.spacedBy(Dimens.Gutter),
+                .padding(Spacing.l),
+            verticalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
             if (state.readyToProgress) {
                 Section(
@@ -93,7 +93,7 @@ fun ExerciseDetailScreen(
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                         )
-                        Column(modifier = Modifier.padding(start = Dimens.GutterS)) {
+                        Column(modifier = Modifier.padding(start = Spacing.s)) {
                             Text("Ready to progress", style = MaterialTheme.typography.titleMedium)
                             Text(
                                 "You've hit the top of the rep range on the last 2 sessions with reps to spare — no failure sets. Add weight next time.",
@@ -113,8 +113,8 @@ fun ExerciseDetailScreen(
                     fontWeight = FontWeight.SemiBold,
                 )
                 if (state.hasWeightedHistory) {
-                    Column(verticalArrangement = Arrangement.spacedBy(Dimens.GutterS)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(Dimens.GutterS)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                             StatTile(
                                 icon = Icons.AutoMirrored.Outlined.TrendingUp,
                                 title = "Est. 1RM",
@@ -128,7 +128,7 @@ fun ExerciseDetailScreen(
                                 modifier = Modifier.weight(1f),
                             )
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(Dimens.GutterS)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                             StatTile(
                                 icon = Icons.Outlined.BarChart,
                                 title = "Best set volume",
@@ -144,7 +144,7 @@ fun ExerciseDetailScreen(
                         }
                     }
                 } else {
-                    Row(horizontalArrangement = Arrangement.spacedBy(Dimens.GutterS)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                         StatTile(
                             icon = Icons.Outlined.Repeat,
                             title = "Max reps",
@@ -196,13 +196,13 @@ fun ExerciseDetailScreen(
                             onSelect = { if (it != null) metric = it },
                             labelFor = { it.label },
                         )
-                        Spacer(Modifier.height(Dimens.GutterS))
+                        Spacer(Modifier.height(Spacing.s))
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(Dimens.Gutter)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
                         MetricReadout("Current", formatMetric(metric, points.last().value, weightUnit))
                         MetricReadout("Best", formatMetric(metric, points.maxOf { it.value }, weightUnit))
                     }
-                    Spacer(Modifier.height(Dimens.GutterS))
+                    Spacer(Modifier.height(Spacing.s))
                     LineChart(
                         values = points.map { it.value },
                         referenceBand = if (metric == ProgressMetric.Reps) 8f..12f else null,
@@ -281,15 +281,15 @@ private fun LabeledLine(label: String, value: String) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MuscleTags(label: String, muscles: List<String>) {
-    Column(verticalArrangement = Arrangement.spacedBy(Dimens.GutterXs)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(
             label,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(Dimens.GutterXs),
-            verticalArrangement = Arrangement.spacedBy(Dimens.GutterXs),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             muscles.forEach { TagChip(it) }
         }

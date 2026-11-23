@@ -13,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.gymtracker.ui.theme.Dimens
+import com.example.gymtracker.ui.theme.Spacing
 
 @Composable
 fun EmptyState(
@@ -22,9 +22,9 @@ fun EmptyState(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.padding(Dimens.GutterXl),
+        modifier = modifier.padding(Spacing.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Dimens.Gutter),
+        verticalArrangement = Arrangement.spacedBy(Spacing.m),
     ) {
         Icon(
             imageVector = icon,

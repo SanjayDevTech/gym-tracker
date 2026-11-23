@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Adaptive launcher background — matches the muted orange brand seed. -->
-    <color name="ic_launcher_background">#8E5226</color>
+    <!-- Adaptive launcher + splash background: OLED black (the orange brand is retired, decision 6). -->
+    <color name="ic_launcher_background">#000000</color>
 </resources>

@@ -3,10 +3,12 @@ package com.example.gymtracker.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -32,12 +34,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.gymtracker.data.MovementType
 import com.example.gymtracker.data.SetType
 import com.example.gymtracker.data.WeightUnit
 import com.example.gymtracker.data.kgToDisplay
 import com.example.gymtracker.data.repUnitShort
+import com.example.gymtracker.ui.theme.AppText
+import com.example.gymtracker.ui.theme.Radius
+import com.example.gymtracker.ui.theme.Spacing
 
 @Composable
 fun SetRow(
@@ -64,17 +68,17 @@ fun SetRow(
     // A new record subtly tints the whole row so the achievement reads at a glance.
     val rowModifier = if (isPr) {
         modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(Radius.sm))
             .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.30f))
-            .padding(horizontal = 4.dp, vertical = 4.dp)
+            .padding(horizontal = Spacing.xs, vertical = Spacing.xs)
     } else {
-        modifier.padding(vertical = 4.dp)
+        modifier.padding(vertical = Spacing.xs)
     }
 
     Row(
         modifier = rowModifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
     ) {
         SetTypeBadge(
             index = index,
@@ -130,12 +134,15 @@ private fun SetTypeBadge(
     Box {
         Surface(
             onClick = { expanded = true },
-            shape = RoundedCornerShape(9.dp),
+            shape = RoundedCornerShape(Radius.sm),
             color = container,
             contentColor = content,
-            modifier = Modifier.size(width = 30.dp, height = 44.dp),
+            modifier = Modifier.sizeIn(minWidth = 30.dp, minHeight = 44.dp),
         ) {
-            Box(contentAlignment = Alignment.Center) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
                 Text(
                     "${index + 1}",
                     style = MaterialTheme.typography.labelLarge,
@@ -143,14 +150,7 @@ private fun SetTypeBadge(
                 )
                 val tag = setType.shortLabel
                 if (tag.isNotEmpty()) {
-                    Text(
-                        tag,
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 2.dp),
-                    )
+                    Text(tag, style = AppText.eyebrow)
                 }
             }
         }

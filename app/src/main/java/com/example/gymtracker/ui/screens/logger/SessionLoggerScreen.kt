@@ -93,7 +93,8 @@ import com.example.gymtracker.ui.components.ExercisePickerSheet
 import com.example.gymtracker.ui.components.Section
 import com.example.gymtracker.ui.components.SetRow
 import com.example.gymtracker.ui.rememberAppHaptics
-import com.example.gymtracker.ui.theme.Dimens
+import com.example.gymtracker.ui.theme.Radius
+import com.example.gymtracker.ui.theme.Spacing
 import com.example.gymtracker.ui.AppHaptics
 import kotlinx.coroutines.delay
 import java.time.Instant
@@ -253,8 +254,8 @@ fun SessionLoggerScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = Dimens.GutterM, vertical = Dimens.GutterS),
-                    horizontalArrangement = Arrangement.spacedBy(Dimens.GutterS),
+                        .padding(horizontal = Spacing.l, vertical = Spacing.s),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.s),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OutlinedButton(
@@ -295,9 +296,9 @@ fun SessionLoggerScreen(
             FlowRow(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = Dimens.GutterM, vertical = Dimens.GutterS),
-                horizontalArrangement = Arrangement.spacedBy(Dimens.GutterS),
-                verticalArrangement = Arrangement.spacedBy(Dimens.GutterXs),
+                    .padding(horizontal = Spacing.l, vertical = Spacing.s),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
                 AssistChip(
                     onClick = { showDatePicker = true },
@@ -363,7 +364,7 @@ fun SessionLoggerScreen(
                     onMove = { from, to -> viewModel.moveGroup(from, to - from) },
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(top = 4.dp),
+                        .padding(top = Spacing.xs),
                 )
             } else if (state.groups.isEmpty()) {
                 EmptyState(
@@ -375,16 +376,16 @@ fun SessionLoggerScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = Dimens.GutterM),
-                    verticalArrangement = Arrangement.spacedBy(Dimens.GutterS),
-                    contentPadding = PaddingValues(top = 2.dp, bottom = 16.dp),
+                        .padding(horizontal = Spacing.l),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.s),
+                    contentPadding = PaddingValues(top = Spacing.xs, bottom = Spacing.l),
                 ) {
                     itemsIndexed(state.groups, key = { _, group -> group.uid }) { groupIndex, group ->
                         val groupDone = group.sets.count { it.isCompleted }
                         Section(modifier = Modifier.fillMaxWidth().animateItem()) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(Dimens.GutterS),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.s),
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(group.exerciseName, style = MaterialTheme.typography.titleMedium)
@@ -399,7 +400,7 @@ fun SessionLoggerScreen(
                                         color = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier
                                             .clickable { haptics.light(); editTargetIndex = groupIndex }
-                                            .padding(vertical = 2.dp),
+                                            .padding(vertical = Spacing.xs),
                                     )
                                 }
                                 IconButton(onClick = { haptics.light(); viewModel.removeGroup(groupIndex) }) {
@@ -445,8 +446,8 @@ fun SessionLoggerScreen(
                                 )
                             }
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(Dimens.GutterS),
-                                modifier = Modifier.padding(top = Dimens.GutterXs),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+                                modifier = Modifier.padding(top = Spacing.xs),
                             ) {
                                 FilledTonalButton(onClick = { haptics.light(); viewModel.addSet(groupIndex) }) {
                                     Icon(Icons.Outlined.Add, contentDescription = null)
@@ -567,14 +568,14 @@ private fun ReorderExerciseList(
 
     LazyColumn(
         state = listState,
-        modifier = modifier.padding(horizontal = Dimens.GutterM),
-        verticalArrangement = Arrangement.spacedBy(Dimens.GutterS),
-        contentPadding = PaddingValues(vertical = Dimens.GutterS),
+        modifier = modifier.padding(horizontal = Spacing.l),
+        verticalArrangement = Arrangement.spacedBy(Spacing.s),
+        contentPadding = PaddingValues(vertical = Spacing.s),
     ) {
         itemsIndexed(groups, key = { _, group -> group.uid }) { _, group ->
             val dragging = draggedKey == group.uid
             Surface(
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(Radius.md),
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 tonalElevation = if (dragging) 6.dp else 0.dp,
                 shadowElevation = if (dragging) 8.dp else 0.dp,
@@ -627,10 +628,10 @@ private fun ReorderExerciseList(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Dimens.GutterS),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.s),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = Dimens.GutterM, vertical = 16.dp),
+                        .padding(horizontal = Spacing.l, vertical = Spacing.l),
                 ) {
                     Icon(
                         Icons.Outlined.DragHandle,
@@ -661,9 +662,9 @@ private fun SetColumnHeader(repsLabel: String, weightLabel: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = Dimens.GutterXs, bottom = 2.dp),
+            .padding(top = Spacing.xs, bottom = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
     ) {
         val captionColor = MaterialTheme.colorScheme.onSurfaceVariant
         Text(
@@ -726,8 +727,8 @@ private fun DiscardSessionSheet(
     val sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden, enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded))
     ModalBottomSheet(onDismissRequest = onCancel, sheetState = sheetState) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.fillMaxWidth().padding(Spacing.xxl),
+            verticalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
             Text(
                 "Discard this session?",
@@ -741,7 +742,7 @@ private fun DiscardSessionSheet(
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.m, Alignment.End),
             ) {
                 TextButton(onClick = onCancel) { Text("Keep") }
                 Button(
@@ -765,8 +766,8 @@ private fun FinishSessionSheet(
     val sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden, enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded))
     ModalBottomSheet(onDismissRequest = onCancel, sheetState = sheetState) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.fillMaxWidth().padding(Spacing.xxl),
+            verticalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
             Text(
                 "Finish this session?",
@@ -801,8 +802,8 @@ private fun SavePlanChangesSheet(
     val sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden, enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded))
     ModalBottomSheet(onDismissRequest = onCancel, sheetState = sheetState) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.fillMaxWidth().padding(Spacing.xxl),
+            verticalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
             Text(
                 "Save changes to plan?",
@@ -850,8 +851,8 @@ private fun EditRepTargetSheet(
     val unit = movementType.repUnitShort
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(Spacing.xxl),
+            verticalArrangement = Arrangement.spacedBy(Spacing.l),
         ) {
             Text(
                 "Target $unit",
