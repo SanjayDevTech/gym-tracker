@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Adaptive icon foreground — dumbbell silhouette in monochrome white.
-  Content fits inside x:30..78, y:38..70 — well clear of the 66dp safe zone
-  edges so launcher masks never crowd it.
+  Adaptive icon foreground, concept A.
+  Loaded barbell, side-on, in volt: a 4dp bar (the rule) carrying two plates a side.
+  Drawn group is scaled 0.92 about the centre, so the farthest corner sits ~24dp out (48dp keyline).
+  Extents x:27..81, y:38..70; farthest corner 25.6dp from centre, inside the 33dp safe-zone radius.
+  Colour: @color/ic_launcher_foreground (volt, "work done"). Flat; no gradient or shadow.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -10,28 +12,35 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Left plate: rounded rect, 12w × 32h, top-left at (30,38) -->
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M33,38 h6 a3,3 0 0 1 3,3 v26 a3,3 0 0 1 -3,3 h-6 a3,3 0 0 1 -3,-3 v-26 a3,3 0 0 1 3,-3 z" />
+    <group
+        android:scaleX="0.92"
+        android:scaleY="0.92"
+        android:pivotX="54"
+        android:pivotY="54">
 
-    <!-- Left collar: 4w × 8h -->
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M42,50 h4 v8 h-4 z" />
+        <!-- Bar: full-width 4dp rule -->
+        <path
+            android:fillColor="@color/ic_launcher_foreground"
+            android:pathData="M28,52 h52 a1,1 0 0 1 1,1 v2 a1,1 0 0 1 -1,1 h-52 a1,1 0 0 1 -1,-1 v-2 a1,1 0 0 1 1,-1 Z" />
 
-    <!-- Bar: 16w × 4h -->
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M46,52 h16 v4 h-16 z" />
+        <!-- Left big plate 6x32 -->
+        <path
+            android:fillColor="@color/ic_launcher_foreground"
+            android:pathData="M35.5,38 h3 a1.5,1.5 0 0 1 1.5,1.5 v29 a1.5,1.5 0 0 1 -1.5,1.5 h-3 a1.5,1.5 0 0 1 -1.5,-1.5 v-29 a1.5,1.5 0 0 1 1.5,-1.5 Z" />
 
-    <!-- Right collar -->
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M62,50 h4 v8 h-4 z" />
+        <!-- Left small plate 4x20 -->
+        <path
+            android:fillColor="@color/ic_launcher_foreground"
+            android:pathData="M42.25,44 h1 a1.5,1.5 0 0 1 1.5,1.5 v17 a1.5,1.5 0 0 1 -1.5,1.5 h-1 a1.5,1.5 0 0 1 -1.5,-1.5 v-17 a1.5,1.5 0 0 1 1.5,-1.5 Z" />
 
-    <!-- Right plate: rounded rect, 12w × 32h, top-left at (66,38) -->
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M67,38 h6 a3,3 0 0 1 3,3 v26 a3,3 0 0 1 -3,3 h-6 a3,3 0 0 1 -3,-3 v-26 a3,3 0 0 1 3,-3 z" />
+        <!-- Right small plate -->
+        <path
+            android:fillColor="@color/ic_launcher_foreground"
+            android:pathData="M64.75,44 h1 a1.5,1.5 0 0 1 1.5,1.5 v17 a1.5,1.5 0 0 1 -1.5,1.5 h-1 a1.5,1.5 0 0 1 -1.5,-1.5 v-17 a1.5,1.5 0 0 1 1.5,-1.5 Z" />
+
+        <!-- Right big plate -->
+        <path
+            android:fillColor="@color/ic_launcher_foreground"
+            android:pathData="M69.5,38 h3 a1.5,1.5 0 0 1 1.5,1.5 v29 a1.5,1.5 0 0 1 -1.5,1.5 h-3 a1.5,1.5 0 0 1 -1.5,-1.5 v-29 a1.5,1.5 0 0 1 1.5,-1.5 Z" />
+    </group>
 </vector>
