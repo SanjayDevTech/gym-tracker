@@ -2,78 +2,85 @@ package com.example.gymtracker.ui.screens.plans.importplan
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.AddCircle
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Link
-import androidx.compose.material.icons.outlined.UploadFile
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.SheetValue
-import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.gymtracker.data.Equipment
 import com.example.gymtracker.data.MovementType
 import com.example.gymtracker.data.Muscle
+import com.example.gymtracker.data.displayName
 import com.example.gymtracker.data.plan.PlanImportExercise
 import com.example.gymtracker.ui.AppViewModelFactory
 import com.example.gymtracker.ui.LocalAppContainer
-import com.example.gymtracker.data.displayName
-import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.gymtracker.ui.components.atoms.AppButton
-import com.example.gymtracker.ui.components.atoms.AppOutlinedButton
+import com.example.gymtracker.ui.components.atoms.AppDivider
+import com.example.gymtracker.ui.components.atoms.AppSheet
 import com.example.gymtracker.ui.components.atoms.AppTextButton
 import com.example.gymtracker.ui.components.atoms.AppTopBar
+import com.example.gymtracker.ui.components.atoms.Eyebrow
+import com.example.gymtracker.ui.components.atoms.Section
+import com.example.gymtracker.ui.components.atoms.UnderlineSelector
+import com.example.gymtracker.ui.theme.AppText
+import com.example.gymtracker.ui.theme.Elevation
+import com.example.gymtracker.ui.theme.Sizes
+import com.example.gymtracker.ui.theme.Spacing
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.example.gymtracker.ui.theme.Spacing
-import com.example.gymtracker.ui.theme.Radius
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Import plan — design-plan §4.16. Two phases on one page.
+ *
+ * **Pick:** a helper line, `Choose JSON file`, an error line, and the format as a [Section] with
+ * the monospace example. **Review:** a `numberXL` "6 / 8" matched hero with the review/skipped
+ * counts, the source exercises as [ImportEntryRow]s on hairlines, and a pinned
+ * `Import plan (6 exercises)`. Committing always creates a new plan.
+ */
 @Composable
 fun ImportPlanScreen(
     onBack: () -> Unit,
@@ -100,7 +107,7 @@ fun ImportPlanScreen(
         state.committedPlanId?.let(onImported)
     }
 
-    // Saveable: the picker is a page now, so this must survive leaving composition.
+    // Saveable: the picker is a page, so this must survive leaving composition.
     var pickerForIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     LaunchedEffect(pickedExerciseIds) {
         val id = pickedExerciseIds?.firstOrNull() ?: return@LaunchedEffect
@@ -119,43 +126,46 @@ fun ImportPlanScreen(
     val canCommit = state.payload != null && pending == 0 && resolved > 0 && !state.committing
 
     Scaffold(
-        topBar = {
-            AppTopBar(title = "Import plan", onBack = onBack)
-        },
+        topBar = { AppTopBar(title = "Import plan", onBack = onBack) },
         modifier = Modifier.fillMaxSize(),
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = Spacing.l),
-            verticalArrangement = Arrangement.spacedBy(Spacing.m),
-        ) {
-            if (state.payload == null) {
-                PickSection(
-                    error = state.parseError,
-                    onTextLoaded = viewModel::parseText,
-                )
-            } else {
-                ParsedSummary(
-                    name = state.payload!!.name,
-                    total = state.entries.size,
-                    resolved = resolved,
-                    pending = pending,
-                    skipped = skipped,
-                )
+        val payload = state.payload
+        if (payload == null) {
+            PickPhase(
+                error = state.parseError,
+                onTextLoaded = viewModel::parseText,
+                modifier = Modifier.padding(padding),
+            )
+        } else {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = Spacing.gutter),
+            ) {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(bottom = Spacing.m),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.s),
+                    contentPadding = PaddingValues(top = Spacing.l, bottom = Spacing.l),
                 ) {
+                    item("hero") {
+                        ReviewHero(
+                            name = payload.name,
+                            total = state.entries.size,
+                            resolved = resolved,
+                            pending = pending,
+                            skipped = skipped,
+                        )
+                        Spacer(Modifier.height(Spacing.xxl))
+                        AppDivider()
+                    }
                     itemsIndexed(state.entries, key = { idx, _ -> idx }) { idx, entry ->
-                        EntryRow(
+                        if (idx > 0) AppDivider()
+                        ImportEntryRow(
                             entry = entry,
                             onMap = { pickerForIndex = idx; onPickExercise() },
                             onCreate = { createForIndex = idx },
                             onSkip = { viewModel.skipEntry(idx) },
-                            onUndo = { viewModel.unresolveEntry(idx) },
+                            onChange = { viewModel.unresolveEntry(idx) },
                         )
                     }
                 }
@@ -164,32 +174,33 @@ fun ImportPlanScreen(
                     else "Import plan ($resolved exercise${if (resolved == 1) "" else "s"})",
                     onClick = { viewModel.commit() },
                     enabled = canCommit,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.l),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.l),
                 )
             }
         }
+    }
 
-        createForIndex?.let { idx ->
-            val src = state.entries[idx].source
-            CreateCustomSheet(
-                source = src,
-                onCancel = { createForIndex = null },
-                onConfirm = { res ->
-                    viewModel.setResolution(idx, res)
-                    createForIndex = null
-                },
-            )
-        }
+    createForIndex?.let { idx ->
+        CreateCustomSheet(
+            source = state.entries[idx].source,
+            onCancel = { createForIndex = null },
+            onConfirm = { res ->
+                viewModel.setResolution(idx, res)
+                createForIndex = null
+            },
+        )
     }
 }
 
 @Composable
-private fun PickSection(
+private fun PickPhase(
     error: String?,
     onTextLoaded: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val scheme = MaterialTheme.colorScheme
     var loading by remember { mutableStateOf(false) }
     var readError by remember { mutableStateOf<String?>(null) }
 
@@ -209,172 +220,135 @@ private fun PickSection(
             }.getOrNull()
             loading = false
             if (text.isNullOrBlank()) {
-                readError = "Could not read the selected file."
+                readError = "Couldn't read the selected file."
             } else {
                 onTextLoaded(text)
             }
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+    Column(
+        modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = Spacing.gutter, vertical = Spacing.l),
+    ) {
         Text(
-            "Pick a JSON file that follows the import format.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            "Choose a plan JSON file. You'll review how each exercise matches your library " +
+                "before anything is saved, and it always becomes a new plan.",
+            style = AppText.bodyS,
+            color = scheme.onSurfaceVariant,
         )
+        Spacer(Modifier.height(Spacing.l))
         AppButton(
-            text = if (loading) "Reading…" else "Pick JSON file",
+            text = if (loading) "Reading…" else "Choose JSON file",
             onClick = { launcher.launch(arrayOf("application/json", "text/plain", "*/*")) },
             enabled = !loading,
             modifier = Modifier.fillMaxWidth(),
-            icon = Icons.Outlined.UploadFile,
         )
         val message = readError ?: error
         if (message != null) {
-            Text(
-                message,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
+            Spacer(Modifier.height(Spacing.s))
+            Text(message, style = AppText.bodyS, color = scheme.error)
         }
-        FormatHint()
-    }
-}
-
-@Composable
-private fun FormatHint() {
-    var expanded by remember { mutableStateOf(false) }
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        shape = RoundedCornerShape(Radius.md),
-    ) {
-        Column(modifier = Modifier.padding(Spacing.m)) {
+        Spacer(Modifier.height(Spacing.section))
+        Section("Format") {
             Text(
-                if (expanded) "Hide format" else "Show format",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
+                EXAMPLE_FULL,
+                style = AppText.bodyS.copy(fontFamily = FontFamily.Monospace),
+                color = scheme.onSurfaceVariant,
             )
-            if (expanded) {
-                Text(
-                    EXAMPLE_FULL,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                    modifier = Modifier.padding(top = Spacing.s),
-                )
-            }
         }
     }
 }
 
+/** Plan name, then `6 / 8` matched in `numberXL` and `2 need review · 0 skipped`. */
 @Composable
-private fun ParsedSummary(
+private fun ReviewHero(
     name: String,
     total: Int,
     resolved: Int,
     pending: Int,
     skipped: Int,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        shape = RoundedCornerShape(Radius.md),
-    ) {
-        Column(modifier = Modifier.padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text(
-                buildString {
-                    append("$resolved/$total matched")
-                    if (pending > 0) append(" · $pending need attention")
-                    if (skipped > 0) append(" · $skipped skipped")
-                },
-                style = MaterialTheme.typography.bodyMedium,
-            )
+    val scheme = MaterialTheme.colorScheme
+    Column {
+        Eyebrow("Plan")
+        Text(name, style = AppText.titleM, color = scheme.onSurface)
+        Spacer(Modifier.height(Spacing.l))
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text("$resolved / $total", style = AppText.numberXL, color = scheme.onSurface)
+            Text(" matched", style = AppText.bodyS, color = scheme.onSurfaceVariant)
         }
+        Text(
+            "$pending need${if (pending == 1) "s" else ""} review · $skipped skipped",
+            style = AppText.bodyS,
+            color = if (pending > 0) scheme.error else scheme.onSurfaceVariant,
+        )
     }
 }
 
+/**
+ * §3 `ImportEntryRow`: source name + `3 × 8–12`; the resolution as one text line —
+ * `→ Bench press` primary, `+ New: Name` tertiary, `– Skipped` onSurfaceVariant,
+ * `! Needs review` error — and its actions as text buttons.
+ */
 @Composable
-private fun EntryRow(
+private fun ImportEntryRow(
     entry: ImportEntry,
     onMap: () -> Unit,
     onCreate: () -> Unit,
     onSkip: () -> Unit,
-    onUndo: () -> Unit,
+    onChange: () -> Unit,
 ) {
-    val borderColor = when (entry.resolution) {
-        is Resolution.Mapped, is Resolution.Create -> MaterialTheme.colorScheme.primary
-        Resolution.Pending -> MaterialTheme.colorScheme.error
-        Resolution.Skipped -> MaterialTheme.colorScheme.outline
+    val scheme = MaterialTheme.colorScheme
+    val (line, color) = when (val r = entry.resolution) {
+        is Resolution.Mapped -> "→ ${r.exerciseName}" to scheme.primary
+        is Resolution.Create -> "+ New: ${r.name}" to scheme.tertiary
+        Resolution.Skipped -> "– Skipped" to scheme.onSurfaceVariant
+        Resolution.Pending -> "! Needs review" to scheme.error
     }
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        shape = RoundedCornerShape(Radius.md),
-    ) {
-        Column(modifier = Modifier.padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        entry.source.name,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Text(
-                        "${entry.source.sets} × ${entry.source.repsLow}–${entry.source.repsHigh}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                ResolutionBadge(entry.resolution, borderColor)
-            }
+    Column(Modifier.fillMaxWidth().padding(top = Spacing.m)) {
+        Row(verticalAlignment = Alignment.Top) {
+            Text(
+                entry.source.name,
+                style = AppText.titleM,
+                color = scheme.onSurface,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.size(Spacing.m))
+            Text(
+                "${entry.source.sets} × ${entry.source.repsLow}–${entry.source.repsHigh}",
+                style = AppText.bodyS,
+                color = scheme.tertiary,
+            )
+        }
+        Spacer(Modifier.height(Spacing.xs))
+        Text(line, style = AppText.label, color = color)
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             when (entry.resolution) {
-                Resolution.Pending -> Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                    AppOutlinedButton(
-                        text = "Map",
-                        onClick = onMap,
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Outlined.Link,
-                    )
-                    AppOutlinedButton(
-                        text = "Create",
-                        onClick = onCreate,
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Outlined.AddCircle,
-                    )
-                    AppTextButton(text = "Skip", onClick = onSkip)
+                Resolution.Pending -> {
+                    AppTextButton(text = "Map", onClick = onMap)
+                    AppTextButton(text = "Create", onClick = onCreate)
+                    AppTextButton(text = "Skip", onClick = onSkip, color = scheme.onSurfaceVariant)
                 }
-                else -> AppTextButton(text = "Change", onClick = onUndo)
+                else -> AppTextButton(text = "Change", onClick = onChange, color = scheme.onSurfaceVariant)
             }
         }
     }
 }
 
-@Composable
-private fun ResolutionBadge(resolution: Resolution, color: androidx.compose.ui.graphics.Color) {
-    val (icon, label) = when (resolution) {
-        is Resolution.Mapped -> Icons.Outlined.CheckCircle to "→ ${resolution.exerciseName}"
-        is Resolution.Create -> Icons.Outlined.AddCircle to "New: ${resolution.name}"
-        Resolution.Skipped -> Icons.Outlined.Edit to "Skipped"
-        Resolution.Pending -> Icons.Outlined.Edit to "Needs review"
-    }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-    ) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.padding(end = Spacing.xs))
-        Text(label, style = MaterialTheme.typography.labelSmall, color = color)
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Create a custom exercise for an unmatched entry — a one-sheet form (phase 9 turns it into the
+ * custom-exercise page). Single choices are [UnderlineSelector]s; muscles are multi-select text
+ * options. Pre-filled from the file's optional fields.
+ */
 @Composable
 private fun CreateCustomSheet(
     source: PlanImportExercise,
     onCancel: () -> Unit,
     onConfirm: (Resolution.Create) -> Unit,
 ) {
-    val sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden, enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded))
     var name by remember { mutableStateOf(source.name) }
     var movementType by remember {
         mutableStateOf(
@@ -395,90 +369,125 @@ private fun CreateCustomSheet(
         mutableStateOf(source.secondaryMuscles.mapNotNull { runCatching { Muscle.valueOf(it) }.getOrNull() }.toSet())
     }
 
-    ModalBottomSheet(onDismissRequest = onCancel, sheetState = sheetState) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(Spacing.xl),
-            verticalArrangement = Arrangement.spacedBy(Spacing.m),
-        ) {
-            Text("Create custom exercise",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold)
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Name") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(Radius.md),
+    AppSheet(onDismiss = onCancel) {
+        Column(Modifier.verticalScroll(rememberScrollState())) {
+            Text("Create custom exercise", style = AppText.titleL, color = MaterialTheme.colorScheme.onSurface)
+            Spacer(Modifier.height(Spacing.xl))
+            Eyebrow("Name")
+            UnderlineTextField(value = name, onValueChange = { name = it })
+
+            Spacer(Modifier.height(Spacing.xl))
+            Eyebrow("Type")
+            UnderlineSelector(
+                options = MovementType.entries.toList(),
+                selected = movementType,
+                onSelect = { movementType = it },
+                label = { it.displayName },
             )
 
-            Text("Movement type", style = MaterialTheme.typography.labelMedium)
-            ChipRow(options = MovementType.values().toList(), selected = setOf(movementType),
-                isSingleSelect = true, onToggle = { movementType = it }, labelFor = { it.displayName })
+            Spacer(Modifier.height(Spacing.l))
+            Eyebrow("Equipment")
+            UnderlineSelector(
+                options = Equipment.entries.toList(),
+                selected = equipment,
+                onSelect = { equipment = it },
+                label = { it.displayName },
+            )
 
-            Text("Equipment", style = MaterialTheme.typography.labelMedium)
-            ChipRow(options = Equipment.values().toList(), selected = setOf(equipment),
-                isSingleSelect = true, onToggle = { equipment = it }, labelFor = { it.displayName })
+            Spacer(Modifier.height(Spacing.l))
+            Eyebrow("Primary muscles")
+            MuscleOptions(selected = primary, onToggle = { primary = primary.toggle(it) })
 
-            Text("Primary muscles", style = MaterialTheme.typography.labelMedium)
-            ChipRow(options = Muscle.values().toList(), selected = primary,
-                isSingleSelect = false,
-                onToggle = { primary = if (it in primary) primary - it else primary + it },
-                labelFor = { it.displayName })
+            Spacer(Modifier.height(Spacing.l))
+            Eyebrow("Secondary muscles")
+            MuscleOptions(selected = secondary, onToggle = { secondary = secondary.toggle(it) })
 
-            Text("Secondary muscles", style = MaterialTheme.typography.labelMedium)
-            ChipRow(options = Muscle.values().toList(), selected = secondary,
-                isSingleSelect = false,
-                onToggle = { secondary = if (it in secondary) secondary - it else secondary + it },
-                labelFor = { it.displayName })
-
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = Spacing.s),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.m, Alignment.End),
-            ) {
-                AppTextButton(text = "Cancel", onClick = onCancel)
-                AppButton(
-                    text = "Create",
-                    onClick = {
-                        onConfirm(
-                            Resolution.Create(
-                                name = name.trim().ifBlank { source.name },
-                                movementType = movementType,
-                                primaryMuscles = primary.toList(),
-                                secondaryMuscles = secondary.toList(),
-                                equipment = equipment,
-                            )
+            AppButton(
+                text = "Create",
+                onClick = {
+                    onConfirm(
+                        Resolution.Create(
+                            name = name.trim().ifBlank { source.name },
+                            movementType = movementType,
+                            primaryMuscles = primary.toList(),
+                            secondaryMuscles = secondary.toList(),
+                            equipment = equipment,
                         )
-                    },
-                    enabled = name.isNotBlank(),
+                    )
+                },
+                enabled = name.isNotBlank(),
+                modifier = Modifier.fillMaxWidth().padding(top = Spacing.xxl),
+            )
+            AppTextButton(
+                text = "Cancel",
+                onClick = onCancel,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth().padding(top = Spacing.s),
+            )
+        }
+    }
+}
+
+private fun <T> Set<T>.toggle(item: T): Set<T> = if (item in this) this - item else this + item
+
+/** Multi-select text options: selected = onSurface label over a 24×2dp rule (house rule 3). */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MuscleOptions(selected: Set<Muscle>, onToggle: (Muscle) -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.l)) {
+        Muscle.entries.forEach { muscle ->
+            val on = muscle in selected
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .heightIn(min = Sizes.touchTarget)
+                    .toggleable(value = on, role = Role.Checkbox, onValueChange = { onToggle(muscle) })
+                    .padding(vertical = Spacing.s),
+            ) {
+                Text(
+                    muscle.displayName,
+                    style = AppText.label,
+                    color = if (on) scheme.onSurface else scheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(Spacing.xs))
+                Box(
+                    Modifier
+                        .size(width = 24.dp, height = 2.dp)
+                        .background(if (on) scheme.onSurface else Color.Transparent),
                 )
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** One-line text input in the [NumberField] idiom: no box, a rule beneath (2dp primary focused). */
 @Composable
-private fun <T : Any> ChipRow(
-    options: List<T>,
-    selected: Set<T>,
-    isSingleSelect: Boolean,
-    onToggle: (T) -> Unit,
-    labelFor: (T) -> String,
-) {
-    val scroll = rememberScrollState()
-    Row(
-        modifier = Modifier.fillMaxWidth().horizontalScroll(scroll),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
-    ) {
-        options.forEach { opt ->
-            FilterChip(
-                selected = opt in selected,
-                onClick = { onToggle(opt) },
-                label = { Text(labelFor(opt)) },
+private fun UnderlineTextField(value: String, onValueChange: (String) -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    Column(Modifier.fillMaxWidth().padding(top = Spacing.s)) {
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            textStyle = AppText.titleM.copy(color = scheme.onSurface),
+            cursorBrush = SolidColor(scheme.primary),
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Words,
+                imeAction = ImeAction.Done,
+            ),
+            interactionSource = interaction,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(Spacing.xs))
+        Box(Modifier.fillMaxWidth().height(2.dp)) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(if (focused) 2.dp else Elevation.hairline)
+                    .background(if (focused) scheme.primary else scheme.outlineVariant),
             )
         }
     }
@@ -503,14 +512,14 @@ private const val EXAMPLE_FULL = """{
   ]
 }
 
-Optional fields (movementType/primaryMuscles/
-secondaryMuscles/equipment) pre-fill the
-Create-custom form when name doesn't match.
+Optional fields (movementType, primaryMuscles,
+secondaryMuscles, equipment) pre-fill the
+Create form when a name doesn't match.
 
-Valid movementType: Compound, Isolation, Cardio, Mobility
-Valid equipment: Barbell, Dumbbell, Machine, Cable,
-                 Bodyweight, Kettlebell, Band, Other
-Muscle names: Chest, FrontDelts, SideDelts, RearDelts,
-              Biceps, Triceps, Forearms, UpperBack, Lats,
-              Traps, LowerBack, Abs, Obliques, Glutes,
-              Quads, Hamstrings, Calves"""
+movementType: Compound, Isolation, Cardio, Mobility
+equipment: Barbell, Dumbbell, Machine, Cable,
+           Bodyweight, Kettlebell, Band, Other
+Muscles: Chest, FrontDelts, SideDelts, RearDelts,
+         Biceps, Triceps, Forearms, UpperBack, Lats,
+         Traps, LowerBack, Abs, Obliques, Glutes,
+         Quads, Hamstrings, Calves, Adductors"""

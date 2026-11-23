@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.gymtracker.session.ReportLoggerPresence
 import com.example.gymtracker.ui.AppViewModelFactory
 import com.example.gymtracker.ui.LocalAppContainer
 import com.example.gymtracker.ui.components.atoms.AppButton
@@ -69,6 +70,7 @@ fun SessionLoggerHost(
         }
     }
     BackHandler(onBack = onMinimise)
+    ReportLoggerPresence()
     NotificationPermissionPrompt()
     LoggerScreen(
         viewModel = viewModel,

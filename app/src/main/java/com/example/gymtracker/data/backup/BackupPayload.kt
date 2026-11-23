@@ -4,7 +4,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class BackupPayload(
-    // v3: sessions carry optional startedAtMillis. v2 files still import (field defaults).
+    // v3 (additive, all optional): session startedAtMillis, set type, volume metric and weekly
+    // target. v2 files still import — every v3 field has a default meaning "not in the file".
     val version: Int = 3,
     val exportedAtMillis: Long,
     val prefs: PrefsSnapshot,
@@ -20,6 +21,9 @@ data class PrefsSnapshot(
     val seedVersion: Int,
     // Legacy field from earlier exports; ignored on restore.
     val themeMode: String = "",
+    // v3. Null when the file predates it — the current preference is then left alone.
+    val volumeMetric: String? = null,
+    val weeklyTargetSessions: Int? = null,
 )
 
 @Serializable
@@ -74,4 +78,6 @@ data class SetSnapshot(
     val weightKg: Float?,
     val isCompleted: Boolean,
     val rpe: Float? = null,
+    // v3. Absent in v2 files, which restore as Working (the column default).
+    val setType: String? = null,
 )

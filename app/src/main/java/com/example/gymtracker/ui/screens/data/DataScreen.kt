@@ -6,23 +6,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CloudDownload
-import androidx.compose.material.icons.outlined.CloudUpload
-import androidx.compose.material.icons.outlined.FileDownload
-import androidx.compose.material.icons.outlined.FitnessCenter
-import androidx.compose.material.icons.outlined.ImportExport
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
@@ -35,24 +25,32 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
+import com.example.gymtracker.data.backup.BackupManager
+import com.example.gymtracker.data.plan.PlansTransferManager
 import com.example.gymtracker.ui.LocalAppContainer
-import com.example.gymtracker.ui.components.atoms.AppButton
-import com.example.gymtracker.ui.components.atoms.AppOutlinedButton
 import com.example.gymtracker.ui.components.atoms.AppSnackbarHost
 import com.example.gymtracker.ui.components.atoms.AppTextButton
 import com.example.gymtracker.ui.components.atoms.AppTopBar
+import com.example.gymtracker.ui.components.atoms.ConfirmSheet
+import com.example.gymtracker.ui.components.atoms.Section
+import com.example.gymtracker.ui.components.atoms.Spinner
+import com.example.gymtracker.ui.rememberAppHaptics
+import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Spacing
 import kotlinx.coroutines.launch
-import com.example.gymtracker.ui.theme.Radius
+
+/** Which file operation is running — drives the row spinner and locks every action. */
+private enum class DataOp { PlansExport, PlansImport, BackupExport, BackupRestore }
+
+private enum class DataConfirm { PlansImport, BackupRestore }
 
 /**
- * Plans & backup — design-plan §4.15. For now this hosts the plan transfer and backup code moved
- * verbatim from Settings, plus the Import-plan entry that used to sit in the Plans overflow;
- * phase 8 restyles it into the three text sections of §4.15.
+ * Plans & backup — design-plan §4.15. Three [Section]s, each a one-line description and a foot of
+ * text-button actions: IMPORT A PLAN (one reviewed plan → §4.16, always a new plan), ALL PLANS
+ * (bundle export/import, upserts by name) and FULL BACKUP (export/restore). The running
+ * operation shows a [Spinner] in its own foot; results arrive by snackbar. The two imports that
+ * overwrite are confirmed first.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DataScreen(
     onBack: () -> Unit,
@@ -61,103 +59,81 @@ fun DataScreen(
 ) {
     val container = LocalAppContainer.current
     val scope = rememberCoroutineScope()
+    val haptics = rememberAppHaptics()
     val snackbar = remember { SnackbarHostState() }
-    // Which backup op is running ("export"/"import"/null) — drives the spinners and disables the
-    // buttons so a backup can't be fired twice or both at once.
-    var busyOp by remember { mutableStateOf<String?>(null) }
-    var showImportConfirm by remember { mutableStateOf(false) }
-    var showPlansImportConfirm by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf<DataOp?>(null) }
+    var confirm by remember { mutableStateOf<DataConfirm?>(null) }
 
-    val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json"),
-    ) { uri: Uri? ->
-        if (uri != null) {
-            scope.launch {
-                busyOp = "export"
-                try {
-                    val result = container.backup.exportTo(uri)
-                    snackbar.showSnackbar(
-                        if (result.isSuccess) "Backup exported"
-                        else "Export failed: ${result.exceptionOrNull()?.message}"
-                    )
-                } finally {
-                    busyOp = null
-                }
+    /** Runs [block] as [op], then shows its message. One operation at a time. */
+    fun run(op: DataOp, block: suspend () -> String) {
+        scope.launch {
+            busy = op
+            val message = try {
+                block()
+            } finally {
+                busy = null
             }
+            snackbar.showSnackbar(message)
         }
     }
 
-    val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
+    val backupExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
     ) { uri: Uri? ->
-        if (uri != null) {
-            scope.launch {
-                busyOp = "import"
-                try {
-                    val result = container.backup.importFrom(uri)
-                    snackbar.showSnackbar(
-                        if (result.isSuccess) "Backup imported"
-                        else "Import failed: ${result.exceptionOrNull()?.message}"
-                    )
-                } finally {
-                    busyOp = null
-                }
-            }
+        uri ?: return@rememberLauncherForActivityResult
+        run(DataOp.BackupExport) {
+            val result = container.backup.exportTo(uri)
+            if (result.isSuccess) "Backup exported" else "Export failed: ${result.exceptionOrNull()?.message}"
+        }
+    }
+
+    val backupRestoreLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri: Uri? ->
+        uri ?: return@rememberLauncherForActivityResult
+        run(DataOp.BackupRestore) {
+            val result = container.backup.importFrom(uri)
+            if (result.isSuccess) "Backup restored" else "Restore failed: ${result.exceptionOrNull()?.message}"
         }
     }
 
     val plansExportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json"),
+        ActivityResultContracts.CreateDocument("application/json"),
     ) { uri: Uri? ->
-        if (uri != null) {
-            scope.launch {
-                busyOp = "plans-export"
-                try {
-                    val result = container.plansTransfer.exportTo(uri)
-                    val count = result.getOrNull() ?: 0
-                    snackbar.showSnackbar(
-                        if (result.isSuccess) "Exported $count plan${if (count == 1) "" else "s"}"
-                        else "Export failed: ${result.exceptionOrNull()?.message}"
-                    )
-                } finally {
-                    busyOp = null
-                }
-            }
+        uri ?: return@rememberLauncherForActivityResult
+        run(DataOp.PlansExport) {
+            val result = container.plansTransfer.exportTo(uri)
+            val count = result.getOrNull()
+            if (count != null) "Exported $count ${plural(count, "plan")}"
+            else "Export failed: ${result.exceptionOrNull()?.message}"
         }
     }
 
     val plansImportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
+        ActivityResultContracts.OpenDocument(),
     ) { uri: Uri? ->
-        if (uri != null) {
-            scope.launch {
-                busyOp = "plans-import"
-                try {
-                    val result = container.plansTransfer.importFrom(uri)
-                    val r = result.getOrNull()
-                    snackbar.showSnackbar(
-                        when {
-                            r == null -> "Import failed: ${result.exceptionOrNull()?.message}"
-                            else -> buildString {
-                                append("Imported ${r.plansTotal} plan${if (r.plansTotal == 1) "" else "s"}")
-                                if (r.plansUpdated > 0) append(" (${r.plansUpdated} updated)")
-                                if (r.exercisesCreated > 0) {
-                                    append(" · ${r.exercisesCreated} new exercise${if (r.exercisesCreated == 1) "" else "s"}")
-                                }
-                            }
-                        }
-                    )
-                } finally {
-                    busyOp = null
+        uri ?: return@rememberLauncherForActivityResult
+        run(DataOp.PlansImport) {
+            val result = container.plansTransfer.importFrom(uri)
+            val r = result.getOrNull()
+            if (r == null) {
+                "Import failed: ${result.exceptionOrNull()?.message}"
+            } else {
+                buildString {
+                    append("Imported ${r.plansTotal} ${plural(r.plansTotal, "plan")}")
+                    if (r.plansUpdated > 0) append(" (${r.plansUpdated} updated)")
+                    if (r.exercisesCreated > 0) {
+                        append(" · ${r.exercisesCreated} new ${plural(r.exercisesCreated, "exercise")}")
+                    }
                 }
             }
         }
     }
 
+    val idle = busy == null
+
     Scaffold(
-        topBar = {
-            AppTopBar(title = "Plans & backup", onBack = onBack)
-        },
+        topBar = { AppTopBar(title = "Plans & backup", onBack = onBack) },
         snackbarHost = { AppSnackbarHost(snackbar) },
         modifier = modifier.fillMaxSize(),
     ) { padding ->
@@ -166,155 +142,114 @@ fun DataScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.gutter, vertical = Spacing.m),
-            verticalArrangement = Arrangement.spacedBy(Spacing.m),
+                .padding(horizontal = Spacing.gutter, vertical = Spacing.l),
+            verticalArrangement = Arrangement.spacedBy(Spacing.section),
         ) {
-            SettingsCard(icon = Icons.Outlined.FileDownload, title = "Import a plan") {
-                Text(
-                    "Review one plan from a JSON file before it's added. Always creates a new plan.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                AppOutlinedButton(text = "Choose file…", onClick = onImportPlan)
-            }
-
-            SettingsCard(icon = Icons.Outlined.ImportExport, title = "Plans") {
-                Text(
-                    "Export all your plans to a JSON file, or import them back. Plans only — no " +
-                        "history or settings. Re-importing updates plans with the same name instead " +
-                        "of duplicating them.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                    AppButton(
-                        text = if (busyOp == "plans-export") "Working…" else "Export all",
-                        onClick = {
-                            plansExportLauncher.launch(
-                                com.example.gymtracker.data.plan.PlansTransferManager.suggestedFileName()
-                            )
-                        },
-                        enabled = busyOp == null,
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Outlined.CloudUpload,
-                    )
-                    AppOutlinedButton(
-                        text = if (busyOp == "plans-import") "Working…" else "Import all",
-                        onClick = { showPlansImportConfirm = true },
-                        enabled = busyOp == null,
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Outlined.CloudDownload,
-                    )
-                }
-            }
-
-            SettingsCard(icon = Icons.Outlined.FitnessCenter, title = "Backup") {
-                Text(
-                    "Save a JSON snapshot of all your plans, history, and custom exercises.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                    AppButton(
-                        text = if (busyOp == "export") "Working…" else "Export",
-                        onClick = {
-                            exportLauncher.launch(com.example.gymtracker.data.backup.BackupManager.suggestedFileName())
-                        },
-                        enabled = busyOp == null,
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Outlined.CloudUpload,
-                    )
-                    AppOutlinedButton(
-                        text = if (busyOp == "import") "Working…" else "Import",
-                        onClick = { showImportConfirm = true },
-                        enabled = busyOp == null,
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Outlined.CloudDownload,
-                    )
-                }
-            }
-        }
-    }
-
-    if (showImportConfirm) {
-        AlertDialog(
-            onDismissRequest = { showImportConfirm = false },
-            icon = { Icon(Icons.Outlined.CloudDownload, contentDescription = null) },
-            title = { Text("Import backup?") },
-            text = {
-                Text(
-                    "This adds the backup's plans, sessions, and custom exercises to what you " +
-                        "already have — it doesn't replace anything. Importing a backup you've " +
-                        "already restored can create duplicate plans and sessions.",
-                )
-            },
-            confirmButton = {
-                AppTextButton(
-                    text = "Choose file",
-                    onClick = {
-                        showImportConfirm = false
-                        importLauncher.launch(arrayOf("application/json"))
-                    },
-                )
-            },
-            dismissButton = {
-                AppTextButton(text = "Cancel", onClick = { showImportConfirm = false })
-            },
-        )
-    }
-
-    if (showPlansImportConfirm) {
-        AlertDialog(
-            onDismissRequest = { showPlansImportConfirm = false },
-            icon = { Icon(Icons.Outlined.ImportExport, contentDescription = null) },
-            title = { Text("Import plans?") },
-            text = {
-                Text(
-                    "This adds the file's plans to yours. A plan whose name matches one you " +
-                        "already have is updated (its exercises replaced); new names are added. " +
-                        "Exercises the file references that aren't in your library are recreated " +
-                        "as custom. Your history and settings aren't touched.",
-                )
-            },
-            confirmButton = {
-                AppTextButton(
-                    text = "Choose file",
-                    onClick = {
-                        showPlansImportConfirm = false
-                        plansImportLauncher.launch(arrayOf("application/json"))
-                    },
-                )
-            },
-            dismissButton = {
-                AppTextButton(text = "Cancel", onClick = { showPlansImportConfirm = false })
-            },
-        )
-    }
-}
-
-@Composable
-private fun SettingsCard(
-    icon: ImageVector,
-    title: String,
-    content: @Composable () -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(Radius.lg),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = Spacing.l, vertical = Spacing.m),
-            verticalArrangement = Arrangement.spacedBy(Spacing.m),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+            DataSection(
+                title = "Import a plan",
+                description = "Review one plan from a JSON file, matching its exercises to your " +
+                    "library, before it's added. Always creates a new plan.",
+                running = false,
             ) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                AppTextButton(
+                    text = "Choose file…",
+                    onClick = { haptics.light(); onImportPlan() },
+                    enabled = idle,
+                )
             }
-            content()
+
+            DataSection(
+                title = "All plans",
+                description = "Every plan in one JSON file — plans only, no history or settings. " +
+                    "Importing updates plans with the same name and adds the rest.",
+                running = busy == DataOp.PlansExport || busy == DataOp.PlansImport,
+            ) {
+                AppTextButton(
+                    text = "Export",
+                    onClick = {
+                        haptics.light()
+                        plansExportLauncher.launch(PlansTransferManager.suggestedFileName())
+                    },
+                    enabled = idle,
+                )
+                AppTextButton(
+                    text = "Import",
+                    onClick = { haptics.light(); confirm = DataConfirm.PlansImport },
+                    enabled = idle,
+                )
+            }
+
+            DataSection(
+                title = "Full backup",
+                description = "A JSON snapshot of your plans, history, custom exercises and settings.",
+                running = busy == DataOp.BackupExport || busy == DataOp.BackupRestore,
+            ) {
+                AppTextButton(
+                    text = "Export",
+                    onClick = {
+                        haptics.light()
+                        backupExportLauncher.launch(BackupManager.suggestedFileName())
+                    },
+                    enabled = idle,
+                )
+                AppTextButton(
+                    text = "Restore",
+                    onClick = { haptics.light(); confirm = DataConfirm.BackupRestore },
+                    enabled = idle,
+                )
+            }
+        }
+    }
+
+    when (confirm) {
+        DataConfirm.PlansImport -> ConfirmSheet(
+            title = "Import plans?",
+            message = "A plan whose name matches one of yours is updated — its exercises replaced. " +
+                "New names are added, and exercises missing from your library are recreated as " +
+                "custom. History and settings aren't touched.",
+            confirmLabel = "Choose file",
+            onConfirm = {
+                confirm = null
+                plansImportLauncher.launch(arrayOf("application/json"))
+            },
+            onDismiss = { confirm = null },
+        )
+        DataConfirm.BackupRestore -> ConfirmSheet(
+            title = "Restore a backup?",
+            message = "Plans, sessions and custom exercises in the file replace the copies you " +
+                "already have; anything not in the file stays. Your settings are restored too.",
+            confirmLabel = "Choose file",
+            onConfirm = {
+                confirm = null
+                backupRestoreLauncher.launch(arrayOf("application/json"))
+            },
+            onDismiss = { confirm = null },
+        )
+        null -> Unit
+    }
+}
+
+/** Standing head · one-line description · a foot of text actions with the spinner at its end. */
+@Composable
+private fun DataSection(
+    title: String,
+    description: String,
+    running: Boolean,
+    actions: @Composable () -> Unit,
+) {
+    Section(title) {
+        Text(description, style = AppText.bodyS, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(Spacing.s))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+        ) {
+            actions()
+            Spacer(Modifier.weight(1f))
+            if (running) Spinner()
         }
     }
 }
+
+private fun plural(count: Int, noun: String): String = if (count == 1) noun else "${noun}s"

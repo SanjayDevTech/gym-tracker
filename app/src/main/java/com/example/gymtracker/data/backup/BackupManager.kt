@@ -8,6 +8,8 @@ import com.example.gymtracker.data.GymRepository
 import com.example.gymtracker.data.MovementType
 import com.example.gymtracker.data.Muscle
 import com.example.gymtracker.data.PreferencesStore
+import com.example.gymtracker.data.SetType
+import com.example.gymtracker.data.VolumeMetric
 import com.example.gymtracker.data.WeightUnit
 import com.example.gymtracker.data.db.AppDatabase
 import com.example.gymtracker.data.db.ExerciseEntity
@@ -101,6 +103,7 @@ class BackupManager(
                         weightKg = st.weightKg,
                         isCompleted = st.isCompleted,
                         rpe = st.rpe,
+                        setType = st.setType.name,
                     )
                 } ?: emptyList(),
             )
@@ -126,6 +129,8 @@ class BackupManager(
                 haptics = prefs.hapticsEnabled.first(),
                 weightUnit = prefs.weightUnit.first().name,
                 seedVersion = prefs.seedVersion.first(),
+                volumeMetric = prefs.volumeMetric.first().name,
+                weeklyTargetSessions = prefs.weeklyTargetSessions.first(),
             ),
             customExercises = customs,
             plans = planSnapshots,
@@ -209,6 +214,7 @@ class BackupManager(
                             weightKg = snap.weightKg,
                             isCompleted = snap.isCompleted,
                             rpe = snap.rpe,
+                            setType = snap.setType?.let { parseEnumOrNull<SetType>(it) } ?: SetType.Working,
                         )
                     }
                 }
@@ -219,6 +225,10 @@ class BackupManager(
         prefs.setHapticsEnabled(payload.prefs.haptics)
         prefs.setWeightUnit(parseEnum(payload.prefs.weightUnit, WeightUnit.Kg))
         prefs.setSeedVersion(payload.prefs.seedVersion)
+        payload.prefs.volumeMetric?.let { name ->
+            parseEnumOrNull<VolumeMetric>(name)?.let { prefs.setVolumeMetric(it) }
+        }
+        payload.prefs.weeklyTargetSessions?.let { prefs.setWeeklyTargetSessions(it) }
     }
 
     private inline fun <reified T : Enum<T>> parseEnum(value: String, fallback: T): T =
