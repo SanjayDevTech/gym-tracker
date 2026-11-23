@@ -68,6 +68,14 @@ interface PlanDao {
     @Query("DELETE FROM planned_exercises WHERE plan_id = :planId")
     suspend fun deletePlannedForPlan(planId: Long)
 
+    /** Take one exercise out of every plan (its soft delete). */
+    @Query("DELETE FROM planned_exercises WHERE exercise_id = :exerciseId")
+    suspend fun deletePlannedForExercise(exerciseId: Long): Int
+
+    /** Take every soft-deleted exercise out of every plan (repair after restore / older builds). */
+    @Query("DELETE FROM planned_exercises WHERE exercise_id IN (SELECT id FROM exercises WHERE is_deleted = 1)")
+    suspend fun deletePlannedForDeletedExercises(): Int
+
     @Query("SELECT * FROM planned_exercises ORDER BY plan_id ASC, sort_index ASC")
     fun observeAllPlanned(): Flow<List<PlannedExerciseEntity>>
 }

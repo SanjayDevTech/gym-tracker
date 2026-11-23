@@ -24,6 +24,8 @@ class GymTrackerApp : Application() {
         SessionNotification.ensureChannel(this)
         applicationScope.launch {
             ExerciseSeed.ensureSeeded(this@GymTrackerApp, container.repository, container.prefs)
+            // Builds before plan cleanup on delete could leave deleted exercises in plans.
+            container.repository.removeDeletedExercisesFromPlans()
         }
         // Start the foreground tracker whenever a draft appears; the service stops itself when the
         // draft is cleared. This survives process death — restart hydrates from Room.

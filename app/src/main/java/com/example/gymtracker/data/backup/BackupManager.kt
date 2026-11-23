@@ -140,9 +140,15 @@ class BackupManager(
 
     private suspend fun applyPayload(payload: BackupPayload) {
         database.withTransaction {
-            // 1) Restore custom exercises (upsert by clientUuid).
+            // 1) Restore custom exercises: onto the same clientUuid if present (deleted rows
+            //    included — history restored in step 3 refers to them by that id), else onto a
+            //    live exercise of the same name, else as a new row. See [RestoreMatch].
             for (ce in payload.customExercises) {
-                val existing = repository.findExerciseByName(ce.name)
+                val existing = RestoreMatch.customTarget(
+                    snapshot = ce,
+                    sameUuid = repository.findExerciseByClientUuid(ce.clientUuid),
+                    liveSameName = repository.findActiveExerciseByName(ce.name),
+                )
                 val row = ExerciseEntity(
                     id = existing?.id ?: 0,
                     clientUuid = ce.clientUuid,
@@ -155,7 +161,9 @@ class BackupManager(
                     isCustom = true,
                     isDeleted = ce.isDeleted,
                 )
-                repository.insertExercise(row)
+                // UPDATE in place, never REPLACE: REPLACE deletes first, which the RESTRICT keys on
+                // logged_sets / planned_exercises reject once the exercise has been used.
+                if (existing != null) repository.updateExercise(row) else repository.insertExercise(row)
             }
 
             // 2) Plans + planned exercises (resolve exercise refs by clientUuid).
@@ -173,7 +181,7 @@ class BackupManager(
                     )
                 )
                 val plannedRows = p.planned.mapNotNull { pl ->
-                    val ex = exerciseByUuid[pl.exerciseClientUuid] ?: return@mapNotNull null
+                    val ex = RestoreMatch.plannedTarget(exerciseByUuid[pl.exerciseClientUuid]) ?: return@mapNotNull null
                     PlannedExerciseEntity(
                         planId = planId,
                         exerciseId = ex.id,
@@ -187,7 +195,11 @@ class BackupManager(
                 if (plannedRows.isNotEmpty()) repository.insertPlannedAll(plannedRows)
             }
 
-            // 3) Sessions + sets.
+            // Plans already on the device may hold an exercise the backup restored as deleted.
+            repository.removeDeletedExercisesFromPlans()
+
+            // 3) Sessions + sets — by clientUuid over every row, deleted included, so history
+            //    of a deleted exercise comes back attached to it.
             val allPlans = repository.observePlans().first()
             val planByUuid = allPlans.associateBy { it.clientUuid }
             val refreshedExercises = repository.observeExercises().first() + repository.observeDeletedExercises().first()
@@ -243,4 +255,24 @@ class BackupManager(
             return "gym-tracker-backup-$ts.json"
         }
     }
+}
+
+/** How restore maps backed-up exercises onto local rows. Pure, so it can be unit-tested. */
+internal object RestoreMatch {
+    /**
+     * The local row a backed-up custom exercise is written onto, or null to insert it new.
+     * The same clientUuid wins — deleted rows included, since it is the same exercise and restored
+     * history points at it. Failing that, a live backup row merges onto a live exercise of the same
+     * name. Deleted rows never take part in name matching on either side: a deleted local row
+     * would be revived or hijacked, and a deleted backup row would delete the user's live one.
+     */
+    fun customTarget(
+        snapshot: ExerciseSnapshot,
+        sameUuid: ExerciseEntity?,
+        liveSameName: ExerciseEntity?,
+    ): ExerciseEntity? =
+        sameUuid ?: liveSameName?.takeIf { !snapshot.isDeleted && !it.isDeleted }
+
+    /** A plan row's exercise, or null to drop the row: plans never hold a deleted exercise. */
+    fun plannedTarget(exercise: ExerciseEntity?): ExerciseEntity? = exercise?.takeIf { !it.isDeleted }
 }

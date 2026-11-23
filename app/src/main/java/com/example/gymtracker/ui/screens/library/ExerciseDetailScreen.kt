@@ -143,7 +143,7 @@ fun ExerciseDetailScreen(
     if (confirmDelete && exercise != null) {
         ConfirmSheet(
             title = "Delete ${exercise.name}?",
-            message = "Its logged sets stay in History.",
+            message = deleteMessage(state?.planCount ?: 0),
             confirmLabel = "Delete exercise",
             onConfirm = {
                 confirmDelete = false
@@ -153,6 +153,12 @@ fun ExerciseDetailScreen(
             onDismiss = { confirmDelete = false },
         )
     }
+}
+
+/** "Its logged sets stay in History." plus, when it is planned, how many plans it leaves. */
+internal fun deleteMessage(planCount: Int): String = buildString {
+    append("Its logged sets stay in History.")
+    if (planCount > 0) append(" It will be removed from $planCount ${plural(planCount, "plan")}.")
 }
 
 @Composable

@@ -22,8 +22,8 @@ import java.util.UUID
  *
  * Import is **upsert by plan name** (case-insensitive): a plan whose name already exists is
  * updated in place — kept at the same row id so any logged sessions stay linked to it — while new
- * names are added. Exercises are resolved by name; an unknown name is recreated as a custom
- * exercise from the payload's hint fields. Sessions and preferences are untouched (that's what the
+ * names are added. Exercises are resolved by name among live (non-deleted) exercises; an unknown
+ * name is recreated as a custom exercise from the payload's hint fields. Sessions and preferences are untouched (that's what the
  * full Backup is for).
  */
 class PlansTransferManager(
@@ -92,7 +92,8 @@ class PlansTransferManager(
                 for (src in plan.exercises) {
                     val exName = src.name.trim()
                     if (exName.isBlank()) continue
-                    val existing = repository.findExerciseByName(exName)
+                    // Live rows only: a plan never maps onto a deleted exercise.
+                    val existing = repository.findActiveExerciseByName(exName)
                     val exerciseId = if (existing != null) {
                         existing.id
                     } else {

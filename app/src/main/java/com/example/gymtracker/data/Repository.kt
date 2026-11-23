@@ -33,12 +33,24 @@ class GymRepository(private val db: AppDatabase) {
     fun observeExercises(): Flow<List<ExerciseEntity>> = exerciseDao.observeAll()
     fun observeExercise(id: Long): Flow<ExerciseEntity?> = exerciseDao.observeById(id)
     suspend fun findExercise(id: Long): ExerciseEntity? = exerciseDao.findById(id)
+    /** Name match over every row, deleted included — the seed only; use [findActiveExerciseByName]. */
     suspend fun findExerciseByName(name: String): ExerciseEntity? = exerciseDao.findByName(name)
+    suspend fun findExerciseByClientUuid(clientUuid: String): ExerciseEntity? = exerciseDao.findByClientUuid(clientUuid)
     suspend fun countExercises(): Int = exerciseDao.count()
     suspend fun insertExercise(exercise: ExerciseEntity): Long = exerciseDao.insert(exercise)
     suspend fun insertExercises(exercises: List<ExerciseEntity>): List<Long> = exerciseDao.insertAll(exercises)
     suspend fun updateExercise(exercise: ExerciseEntity) = exerciseDao.update(exercise)
-    suspend fun softDeleteExercise(id: Long) = exerciseDao.setDeleted(id, true)
+    /**
+     * Soft delete: the row stays (logged sets reference it, RESTRICT) but it leaves every plan,
+     * in the same transaction, so no plan ever lists a deleted exercise. A running draft keeps it.
+     */
+    suspend fun softDeleteExercise(id: Long) = db.withTransaction {
+        planDao.deletePlannedForExercise(id)
+        exerciseDao.setDeleted(id, true)
+    }
+
+    /** Drop plan rows that point at soft-deleted exercises (see [softDeleteExercise]). */
+    suspend fun removeDeletedExercisesFromPlans(): Int = planDao.deletePlannedForDeletedExercises()
     suspend fun restoreExercise(id: Long) = exerciseDao.setDeleted(id, false)
     fun observeDeletedExercises(): Flow<List<ExerciseEntity>> = exerciseDao.observeDeleted()
     fun observeAllExercisesIncludingDeleted(): Flow<List<ExerciseEntity>> = exerciseDao.observeAllIncludingDeleted()

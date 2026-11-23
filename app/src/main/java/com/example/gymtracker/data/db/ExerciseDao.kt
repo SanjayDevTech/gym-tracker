@@ -18,10 +18,15 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercises WHERE id = :id LIMIT 1")
     fun observeById(id: Long): Flow<ExerciseEntity?>
 
+    /** Any row, soft-deleted included — only the seed uses this (built-ins are never deleted). */
     @Query("SELECT * FROM exercises WHERE name = :name LIMIT 1")
     suspend fun findByName(name: String): ExerciseEntity?
 
-    /** Like [findByName] but never a soft-deleted row (import auto-match). */
+    /** By the stable id backups and history refer to; soft-deleted rows included. */
+    @Query("SELECT * FROM exercises WHERE client_uuid = :clientUuid LIMIT 1")
+    suspend fun findByClientUuid(clientUuid: String): ExerciseEntity?
+
+    /** Like [findByName] but never a soft-deleted row: every name match outside the seed. */
     @Query("SELECT * FROM exercises WHERE name = :name AND is_deleted = 0 LIMIT 1")
     suspend fun findActiveByName(name: String): ExerciseEntity?
 

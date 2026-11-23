@@ -840,7 +840,7 @@ Phase 9 (decision 2) adds a `+ New exercise` FAB (bottom-end, flat pill) opening
 ```
 
 The two selectors are separated by the chart so neither reads as the other's label (issue 30's failure). Reps metric shows the target band in tertiary using the exercise's plan target when it is in exactly one plan, else no band (the hard-coded 8–12 goes; domain part in the non-UI list). Cardio/mobility label in min/sec (issue 24). Bodyweight exercises: hero = max reps, metric selector = REPS only.
-Phase 9 (decision 2) adds a top-bar ⋮ on custom exercises only: Edit → §4.19, Delete → `ConfirmSheet` (soft delete; history keeps the name).
+Phase 9 (decision 2) adds a top-bar ⋮ on custom exercises only: Edit → §4.19, Delete → `ConfirmSheet` (soft delete; history keeps the name; the exercise leaves every plan it was in).
 **Empty (no history):** hero `—`, chart replaced by "Log this exercise to see progress"; Records hidden; Muscles and Cues still shown. **Loading:** top bar only.
 **vs today:** bordered boxes, a 2×2 tile grid, a 120dp axis-less line, raw-enum TagChips, and an undated "Set 1, Set 2, Set 1" list.
 
@@ -993,7 +993,8 @@ Notification: title "Push A · 7 of 18 sets"; when resting, text "Rest · target
 └────────────────────────────────────────────┘
 ```
 
-**Empty:** n/a (a form). **Loading:** edit mode shows top bar only until the exercise loads. Duplicate names are allowed but warned in `bodyS` under the field ("You already have Landmine press"). Built-in exercises never reach this page.
+**Empty:** n/a (a form). **Loading:** edit mode shows top bar only until the exercise loads. Duplicate names are **blocked**: a name matching (ignoring case) any exercise that isn't deleted shows an inline error under the field ("You already have Landmine press") and Save stays disabled; a deleted exercise's name is free to reuse. Built-in exercises never reach this page.
+**Delete** (custom only, from Exercise detail ⋮) soft-deletes the exercise and, in the same transaction, removes it from every plan; the `ConfirmSheet` says so when it is planned: "Its logged sets stay in History. It will be removed from 2 plans." A workout in progress keeps it (its sets are saved), but Finish never syncs it back into a plan. Backup restore, plan import and plan transfer match exercises by name among live exercises only; restore still matches by `clientUuid` first, deleted rows included, so history of a deleted exercise comes back attached to it.
 **vs today:** the only way to make an exercise is the Import screen's "Create" sheet with chip rows; there is no edit or delete.
 
 ---
@@ -1175,7 +1176,8 @@ Week grouping, plan names, durations (`—` for sessions logged before decision 
 Scope, and nothing more:
 - **Create:** `+ New exercise` FAB on Exercises (§4.10) and a `New exercise` foot row in the picker's empty-search state → §4.19 form page.
 - **Edit:** Exercise detail ⋮ → Edit, for custom exercises only. Built-in (seeded) exercises are never editable — the seed's deterministic UUIDs and `seedVersion` reseeding depend on that.
-- **Delete:** Exercise detail ⋮ → Delete (custom only) → `ConfirmSheet` "Its logged sets stay in History." → `softDeleteExercise` (already in the DAO; FK on `logged_sets` is `RESTRICT`, so hard delete is not an option). Soft-deleted exercises vanish from Exercises and the picker; history and records still resolve their names.
+- **Delete:** Exercise detail ⋮ → Delete (custom only) → `ConfirmSheet` "Its logged sets stay in History." (+ "It will be removed from n plans." when planned) → `softDeleteExercise` (already in the DAO; FK on `logged_sets` is `RESTRICT`, so hard delete is not an option), which also deletes its `planned_exercises` rows in the same transaction. Soft-deleted exercises vanish from Exercises, the picker and every plan; history and records still resolve their names. Name matching (import, plan transfer, backup restore) ignores deleted exercises.
+- **Duplicate names:** blocked in the form with an inline error, not warned (§4.19).
 - **Form:** reuses Import's "Create custom exercise" fields (name, type, equipment, primary, secondary) restyled as a page; Import's Create then opens the same page prefilled.
 - **Data:** `ExerciseDao.update` + `ExerciseRepository.updateCustom`. No schema change (`ExerciseEntity` already has every field and the custom flag).
 - Out of this phase: cues editing, images, merging duplicates.

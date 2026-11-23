@@ -45,6 +45,8 @@ data class ExerciseDetailState(
     val readyToProgress: Boolean,
     /** The plan target's rep range when the exercise is in exactly one plan; else no band. */
     val repTarget: IntRange?,
+    /** Plans this exercise is in — Delete removes it from them (the confirm says how many). */
+    val planCount: Int,
 )
 
 class ExerciseDetailViewModel(
@@ -68,7 +70,8 @@ class ExerciseDetailViewModel(
     /**
      * Soft delete (phase 9; custom only — the menu is never shown for built-ins). `logged_sets`
      * references exercises with RESTRICT, so a hard delete isn't possible; history and records
-     * still resolve the name by id. App scope, because the page pops straight after.
+     * still resolve the name by id. The exercise also leaves every plan, in the same transaction.
+     * App scope, because the page pops straight after.
      */
     fun delete() {
         val ex = state.value?.exercise ?: return
@@ -98,7 +101,8 @@ class ExerciseDetailViewModel(
         }.take(RECENT_SESSIONS)
 
         val plans = planned.filter { it.exerciseId == exerciseId }
-        val target = plans.firstOrNull()?.takeIf { plans.map { p -> p.planId }.distinct().size == 1 }
+        val planCount = plans.map { it.planId }.distinct().size
+        val target = plans.firstOrNull()?.takeIf { planCount == 1 }
         val ready = target != null && ProgressionRule.readyToProgress(
             plan = target,
             recentSetsBySession = bySession.values.reversed().map { sets ->
@@ -127,6 +131,7 @@ class ExerciseDetailViewModel(
             recent = recent,
             readyToProgress = ready,
             repTarget = target?.let { it.targetRepsLow..it.targetRepsHigh },
+            planCount = planCount,
         )
     }
 

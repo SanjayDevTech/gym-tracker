@@ -483,7 +483,8 @@ class SessionLoggerViewModel(
         val baseline = plan.planned.sortedBy { it.planned.sortIndex }
         val remaining = baseline.toMutableList()
         val changes = mutableListOf<String>()
-        s.groups.forEach { g ->
+        val groups = plannableGroups(s.groups)
+        groups.forEach { g ->
             val match = remaining.firstOrNull { it.planned.exerciseId == g.exerciseId }
             if (match == null) {
                 changes += "added ${g.exerciseName}"
@@ -499,11 +500,18 @@ class SessionLoggerViewModel(
             }
         }
         remaining.forEach { changes += "removed ${it.exercise.name}" }
-        if (changes.isEmpty() && baseline.map { it.planned.exerciseId } != s.groups.map { it.exerciseId }) {
+        if (changes.isEmpty() && baseline.map { it.planned.exerciseId } != groups.map { it.exerciseId }) {
             changes += "reordered"
         }
         return changes
     }
+
+    /**
+     * The groups a plan may hold: an exercise deleted mid-workout stays in the draft (and its sets
+     * are saved) but is never synced back into the plan it was just removed from.
+     */
+    private suspend fun plannableGroups(groups: List<ExerciseGroup>): List<ExerciseGroup> =
+        groups.filter { repository.findExercise(it.exerciseId)?.isDeleted != true }
 
     private fun rangeLabel(low: Int, high: Int) = if (low == high) "$low" else "$low–$high"
 
@@ -514,7 +522,7 @@ class SessionLoggerViewModel(
             val s = _draft.value
             val unit = s.weightUnit
             if (updatePlan && s.planId != null) {
-                val planned = s.groups.mapIndexed { i, g ->
+                val planned = plannableGroups(s.groups).mapIndexed { i, g ->
                     PlannedExerciseEntity(
                         planId = s.planId,
                         exerciseId = g.exerciseId,
