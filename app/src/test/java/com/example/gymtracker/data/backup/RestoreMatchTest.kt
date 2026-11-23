@@ -77,4 +77,17 @@ class RestoreMatchTest {
         assertNull(RestoreMatch.plannedTarget(null))
         assertEquals(9L, RestoreMatch.plannedTarget(row(9, "b"))?.id)
     }
+
+    @Test
+    fun customNamedLikeABuiltInIsAliasedNotRewritten() {
+        val builtIn = row(3, "seed-uuid", name = "Bench press", custom = false)
+        val target = RestoreMatch.customTarget(snapshot(name = "bench press"), sameUuid = null, liveSameName = builtIn)
+        assertEquals(3L, RestoreMatch.builtInAlias(target)?.id)
+    }
+
+    @Test
+    fun customTargetIsNotAnAlias() {
+        assertNull(RestoreMatch.builtInAlias(row(9, "local-uuid")))
+        assertNull(RestoreMatch.builtInAlias(null))
+    }
 }

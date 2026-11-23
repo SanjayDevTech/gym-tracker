@@ -143,12 +143,19 @@ class BackupManager(
             // 1) Restore custom exercises: onto the same clientUuid if present (deleted rows
             //    included — history restored in step 3 refers to them by that id), else onto a
             //    live exercise of the same name, else as a new row. See [RestoreMatch].
+            //    A match on a built-in is never rewritten: the backup's id is aliased to it instead.
+            val builtInAliases = mutableMapOf<String, ExerciseEntity>()
             for (ce in payload.customExercises) {
                 val existing = RestoreMatch.customTarget(
                     snapshot = ce,
                     sameUuid = repository.findExerciseByClientUuid(ce.clientUuid),
                     liveSameName = repository.findActiveExerciseByName(ce.name),
                 )
+                val builtIn = RestoreMatch.builtInAlias(existing)
+                if (builtIn != null) {
+                    builtInAliases[ce.clientUuid] = builtIn
+                    continue
+                }
                 val row = ExerciseEntity(
                     id = existing?.id ?: 0,
                     clientUuid = ce.clientUuid,
@@ -168,7 +175,7 @@ class BackupManager(
 
             // 2) Plans + planned exercises (resolve exercise refs by clientUuid).
             val allExercises = repository.observeExercises().first() + repository.observeDeletedExercises().first()
-            val exerciseByUuid = allExercises.associateBy { it.clientUuid }
+            val exerciseByUuid = allExercises.associateBy { it.clientUuid } + builtInAliases
 
             for (p in payload.plans) {
                 if (p.isDeleted) continue   // v1 backups may carry archived plans; skip them.
@@ -203,7 +210,7 @@ class BackupManager(
             val allPlans = repository.observePlans().first()
             val planByUuid = allPlans.associateBy { it.clientUuid }
             val refreshedExercises = repository.observeExercises().first() + repository.observeDeletedExercises().first()
-            val exerciseByUuid2 = refreshedExercises.associateBy { it.clientUuid }
+            val exerciseByUuid2 = refreshedExercises.associateBy { it.clientUuid } + builtInAliases
 
             for (s in payload.sessions) {
                 val planId = s.planClientUuid?.let { planByUuid[it]?.id }
@@ -272,6 +279,13 @@ internal object RestoreMatch {
         liveSameName: ExerciseEntity?,
     ): ExerciseEntity? =
         sameUuid ?: liveSameName?.takeIf { !snapshot.isDeleted && !it.isDeleted }
+
+    /**
+     * The built-in a backed-up custom exercise resolved to, or null. Built-ins are never rewritten
+     * (the seed owns their ids and fields, and they must stay non-editable), so restore points the
+     * backup's id at the built-in and its plans and history attach there.
+     */
+    fun builtInAlias(target: ExerciseEntity?): ExerciseEntity? = target?.takeIf { !it.isCustom }
 
     /** A plan row's exercise, or null to drop the row: plans never hold a deleted exercise. */
     fun plannedTarget(exercise: ExerciseEntity?): ExerciseEntity? = exercise?.takeIf { !it.isDeleted }
