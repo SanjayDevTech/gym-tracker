@@ -56,6 +56,7 @@ data class SessionDetailState(
     val durationMillis: Long?,
     val doneSets: Int,
     val volumeKg: Double,
+    /** Exercises with at least one PR set (same unit as the Session summary). */
     val prCount: Int,
     val exerciseCount: Int,
     val notes: String,
@@ -136,7 +137,8 @@ class SessionDetailViewModel(
             doneSets = done.size,
             volumeKg = done.filter { it.setType != SetType.Warmup }
                 .sumOf { ((it.weightKg ?: 0f) * (it.repsDone ?: 0)).toDouble() },
-            prCount = exercises.sumOf { e -> e.sets.count { it.isPr } },
+            // Exercises with at least one record, matching the Session summary count.
+            prCount = exercises.count { e -> e.sets.any { it.isPr } },
             exerciseCount = exercises.count { it.doneSets > 0 },
             notes = session.notes,
             exercises = exercises,

@@ -27,16 +27,4 @@ object DateUtil {
 
     fun rangeDaysBack(today: Long, days: Int): List<Long> =
         (today - (days - 1)..today).toList()
-
-    /** Compact human label for how long ago [epochDay] was relative to [today]. */
-    fun relativeDayLabel(epochDay: Long, today: Long = todayEpochDay()): String =
-        when (val diff = today - epochDay) {
-            0L -> "Today"
-            1L -> "Yesterday"
-            in 2..6 -> "${diff}d ago"
-            in 7..13 -> "1w ago"
-            in 14..30 -> "${diff / 7}w ago"
-            in 31..364 -> "${diff / 30}mo ago"
-            else -> if (diff < 0) "Today" else "${diff / 365}y ago"
-        }
 }

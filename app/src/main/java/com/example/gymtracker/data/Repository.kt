@@ -21,7 +21,6 @@ class GymRepository(private val db: AppDatabase) {
 
     // Exercises
     fun observeExercises(): Flow<List<ExerciseEntity>> = exerciseDao.observeAll()
-    fun searchExercises(query: String): Flow<List<ExerciseEntity>> = exerciseDao.searchByName(query)
     fun observeExercise(id: Long): Flow<ExerciseEntity?> = exerciseDao.observeById(id)
     suspend fun findExercise(id: Long): ExerciseEntity? = exerciseDao.findById(id)
     suspend fun findExerciseByName(name: String): ExerciseEntity? = exerciseDao.findByName(name)
@@ -66,13 +65,9 @@ class GymRepository(private val db: AppDatabase) {
     fun observeSessionsWithSetsInRange(start: Long, end: Long): Flow<List<SessionWithSets>> =
         sessionDao.observeSessionsWithSetsInRange(start, end)
     fun observeSessionWithSets(id: Long): Flow<SessionWithSets?> = sessionDao.observeSessionWithSets(id)
-    fun observeSessionDays(): Flow<List<Long>> = sessionDao.observeSessionDays()
     suspend fun deleteSession(id: Long) = sessionDao.deleteSession(id)
     suspend fun updateSessionNotes(id: Long, notes: String) = sessionDao.updateNotes(id, notes)
     suspend fun recentExerciseIds(limit: Int = 8): List<Long> = sessionDao.recentExerciseIds(limit)
-
-    suspend fun recentSetsForExercise(exerciseId: Long, limit: Int = 30): List<LoggedSetEntity> =
-        sessionDao.recentSetsForExercise(exerciseId, limit)
 
     fun observeExerciseSetsWithDate(exerciseId: Long): Flow<List<ExerciseSetWithDate>> =
         sessionDao.observeExerciseSetsWithDate(exerciseId)

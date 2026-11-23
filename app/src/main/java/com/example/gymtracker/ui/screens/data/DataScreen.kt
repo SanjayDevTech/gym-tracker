@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
@@ -25,6 +27,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.example.gymtracker.data.backup.BackupManager
 import com.example.gymtracker.data.plan.PlansTransferManager
 import com.example.gymtracker.ui.LocalAppContainer
@@ -36,6 +39,7 @@ import com.example.gymtracker.ui.components.atoms.Section
 import com.example.gymtracker.ui.components.atoms.Spinner
 import com.example.gymtracker.ui.rememberAppHaptics
 import com.example.gymtracker.ui.theme.AppText
+import com.example.gymtracker.ui.theme.Radius
 import com.example.gymtracker.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
@@ -49,7 +53,8 @@ private enum class DataConfirm { PlansImport, BackupRestore }
  * text-button actions: IMPORT A PLAN (one reviewed plan → §4.16, always a new plan), ALL PLANS
  * (bundle export/import, upserts by name) and FULL BACKUP (export/restore). The running
  * operation shows a [Spinner] in its own foot; results arrive by snackbar. The two imports that
- * overwrite are confirmed first.
+ * overwrite are confirmed first: plans import by [ConfirmSheet], backup restore by an
+ * [AlertDialog] (§5 — the one data-wide hard stop).
  */
 @Composable
 fun DataScreen(
@@ -214,16 +219,40 @@ fun DataScreen(
             },
             onDismiss = { confirm = null },
         )
-        DataConfirm.BackupRestore -> ConfirmSheet(
-            title = "Restore a backup?",
-            message = "Plans, sessions and custom exercises in the file replace the copies you " +
-                "already have; anything not in the file stays. Your settings are restored too.",
-            confirmLabel = "Choose file",
-            onConfirm = {
-                confirm = null
-                backupRestoreLauncher.launch(arrayOf("application/json"))
+        // §5: a data-wide restore is a hard modal stop, so it stays a system AlertDialog
+        // (surfaceContainer fill, zero elevation) rather than a ConfirmSheet.
+        DataConfirm.BackupRestore -> AlertDialog(
+            onDismissRequest = { confirm = null },
+            title = { Text("Restore a backup?", style = AppText.titleL) },
+            text = {
+                Text(
+                    "Plans, sessions and custom exercises in the file replace the copies you " +
+                        "already have; anything not in the file stays. Your settings are restored too.",
+                    style = AppText.body,
+                )
             },
-            onDismiss = { confirm = null },
+            confirmButton = {
+                AppTextButton(
+                    text = "Choose file",
+                    onClick = {
+                        confirm = null
+                        backupRestoreLauncher.launch(arrayOf("application/json"))
+                    },
+                    color = MaterialTheme.colorScheme.error,
+                )
+            },
+            dismissButton = {
+                AppTextButton(
+                    text = "Cancel",
+                    onClick = { confirm = null },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+            shape = RoundedCornerShape(Radius.lg),
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            tonalElevation = 0.dp,
         )
         null -> Unit
     }

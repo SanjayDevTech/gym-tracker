@@ -85,9 +85,6 @@ interface SessionDao {
     @Query("SELECT * FROM sessions WHERE id = :id LIMIT 1")
     fun observeSessionWithSets(id: Long): Flow<SessionWithSets?>
 
-    @Query("SELECT DISTINCT date_epoch_day FROM sessions ORDER BY date_epoch_day DESC")
-    fun observeSessionDays(): Flow<List<Long>>
-
     @Query(
         """
         SELECT * FROM logged_sets
@@ -103,17 +100,6 @@ interface SessionDao {
         """
     )
     suspend fun lastLoggedSetsFor(exerciseId: Long): List<LoggedSetEntity>
-
-    @Query(
-        """
-        SELECT ls.* FROM logged_sets ls
-        INNER JOIN sessions s ON s.id = ls.session_id
-        WHERE ls.exercise_id = :exerciseId
-        ORDER BY s.date_epoch_day DESC, s.logged_at_millis DESC, ls.set_index ASC
-        LIMIT :limit
-        """
-    )
-    suspend fun recentSetsForExercise(exerciseId: Long, limit: Int = 30): List<LoggedSetEntity>
 
     /** Full logged history for one exercise, each set carrying its session date (ascending). */
     @Query(

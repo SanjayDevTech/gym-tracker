@@ -12,9 +12,6 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercises WHERE is_deleted = 0 ORDER BY name COLLATE NOCASE ASC")
     fun observeAll(): Flow<List<ExerciseEntity>>
 
-    @Query("SELECT * FROM exercises WHERE is_deleted = 0 AND name LIKE '%' || :query || '%' ORDER BY name COLLATE NOCASE ASC")
-    fun searchByName(query: String): Flow<List<ExerciseEntity>>
-
     @Query("SELECT * FROM exercises WHERE id = :id LIMIT 1")
     suspend fun findById(id: Long): ExerciseEntity?
 
