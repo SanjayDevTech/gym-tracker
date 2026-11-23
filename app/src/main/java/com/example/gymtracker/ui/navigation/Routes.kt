@@ -1,5 +1,6 @@
 package com.example.gymtracker.ui.navigation
 
+import androidx.annotation.Keep
 import kotlinx.serialization.Serializable
 
 /*
@@ -56,6 +57,8 @@ import kotlinx.serialization.Serializable
  * [Session] multi-select with autofocused search (logger); [Plan] multi-select with `IN PLAN`
  * marks for [ExercisePickerRoute.planId]; [Single] one tap returns (Import's Map).
  */
+// Kept: Navigation looks enum route arguments up by class name, which R8 would rename.
+@Keep
 enum class PickerMode { Session, Plan, Single }
 
 /** Full-page exercise picker. Returns a `LongArray` of ids under [PICKED_EXERCISES_KEY] on the
