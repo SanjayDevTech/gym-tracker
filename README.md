@@ -64,6 +64,11 @@ Single module, MVVM:
 - `session/`: the foreground service and notification that carry a session in the background.
 - `ui/`: shared components in `components/`, one package per screen under `screens/`.
 
+The interface was rebuilt from a written plan, and the code cites it throughout — a comment
+saying "§6.5" or "decision 7" points into
+[docs/design-plan.md](docs/design-plan.md). Read the relevant section before changing a
+screen.
+
 ## How it was made
 
 Built with AI assistance (Claude), directed, designed and tested by its maintainer. The commit
