@@ -27,6 +27,7 @@ import com.example.gymtracker.ui.components.atoms.ValueText
 import com.example.gymtracker.ui.format.EM_DASH
 import com.example.gymtracker.ui.format.grouped
 import com.example.gymtracker.ui.format.formatVolumeNumber
+import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.screens.plans.WeekSummary
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Spacing
@@ -63,7 +64,7 @@ fun WeekHero(
                     style = AppText.numberXL,
                 )
                 Text(
-                    if (week.sessions == 1) "session" else "sessions",
+                    plural(week.sessions, "session"),
                     style = AppText.bodyS,
                     color = scheme.onSurfaceVariant,
                 )

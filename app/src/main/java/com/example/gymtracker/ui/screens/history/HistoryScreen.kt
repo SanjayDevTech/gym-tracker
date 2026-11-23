@@ -34,6 +34,7 @@ import com.example.gymtracker.ui.components.atoms.Eyebrow
 import com.example.gymtracker.ui.components.atoms.SectionHead
 import com.example.gymtracker.ui.format.formatDuration
 import com.example.gymtracker.ui.format.formatVolume
+import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Sizes
 import com.example.gymtracker.ui.theme.Spacing
@@ -118,7 +119,7 @@ private fun WeekHead(weekStart: Long, today: Long, count: Int, modifier: Modifie
             title = weekLabel(weekStart, today),
             trailing = {
                 Text(
-                    "$count ${if (count == 1) "session" else "sessions"}",
+                    "$count ${plural(count, "session")}",
                     style = AppText.bodyS,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -163,7 +164,7 @@ private fun SessionRow(
         Column(horizontalAlignment = Alignment.End) {
             Text("${row.doneSets}", style = AppText.numberL, color = scheme.onSurface)
             Text(
-                if (row.doneSets == 1) "set" else "sets",
+                plural(row.doneSets, "set"),
                 style = AppText.bodyS,
                 color = scheme.onSurfaceVariant,
             )
@@ -176,7 +177,7 @@ private fun SessionRow(
  * "omit the duration"), volume when there is none (cardio, bodyweight-only).
  */
 private fun HistoryRow.metaLine(unit: WeightUnit): String = buildList {
-    add("$exerciseCount ${if (exerciseCount == 1) "exercise" else "exercises"}")
+    add("$exerciseCount ${plural(exerciseCount, "exercise")}")
     durationMillis?.let { add(formatDuration(it)) }
     if (volumeKg > 0.0) add(formatVolume(volumeKg, unit))
 }.joinToString(" · ")

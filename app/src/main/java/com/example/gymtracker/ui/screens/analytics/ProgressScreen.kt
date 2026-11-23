@@ -59,6 +59,7 @@ import com.example.gymtracker.ui.format.EM_DASH
 import com.example.gymtracker.ui.format.formatVolume
 import com.example.gymtracker.ui.format.formatVolumeNumber
 import com.example.gymtracker.ui.format.grouped
+import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Effort
 import com.example.gymtracker.ui.theme.Spacing
@@ -172,7 +173,7 @@ private fun ConsistencyBlock(s: ProgressState) {
         }
         Spacer(Modifier.height(Spacing.s))
         Text(
-            "Target ${c.target} ${if (c.target == 1) "session" else "sessions"} a week",
+            "Target ${c.target} ${plural(c.target, "session")} a week",
             style = AppText.bodyS,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -284,7 +285,7 @@ private fun MusclesSection(s: ProgressState, onMuscle: (Muscle) -> Unit) {
             MuscleRankRow(
                 name = muscle.displayName,
                 value = "$rounded",
-                unit = if (rounded == 1) "set" else "sets",
+                unit = plural(rounded, "set"),
                 fraction = sets / scale,
                 band = band,
                 valueColor = if (!week) scheme.onSurface else when (MuscleVolume.guideline(sets)) {
@@ -366,7 +367,7 @@ private fun BreakdownBody(b: MuscleBreakdown, unit: WeightUnit) {
             StatRow(
                 label = c.exercise.name,
                 value = "${c.sets}",
-                unit = if (c.sets == 1) "set" else "sets",
+                unit = plural(c.sets, "set"),
                 caption = caption,
                 valueStyle = AppText.numberM,
             )
@@ -382,7 +383,7 @@ private fun volumeNumber(value: Float, metric: VolumeMetric, unit: WeightUnit): 
 }
 
 private fun volumeUnit(value: Float, metric: VolumeMetric, unit: WeightUnit): String? = when (metric) {
-    VolumeMetric.Sets -> if (value.roundToInt() == 1) "working set" else "working sets"
+    VolumeMetric.Sets -> plural(value.roundToInt(), "working set")
     VolumeMetric.Tonnage -> unit.label
 }
 

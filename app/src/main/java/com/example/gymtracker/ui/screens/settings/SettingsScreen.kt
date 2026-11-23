@@ -46,6 +46,7 @@ import com.example.gymtracker.ui.components.atoms.UnderlineSelector
 import com.example.gymtracker.ui.components.atoms.ValueText
 import com.example.gymtracker.ui.format.EM_DASH
 import com.example.gymtracker.ui.format.formatClock
+import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.screens.logger.SessionLoggerViewModel
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Sizes
@@ -119,7 +120,7 @@ fun SettingsScreen(
                 SettingRow(
                     label = "Weekly target",
                     value = state.weeklyTargetSessions.toString(),
-                    unit = if (state.weeklyTargetSessions == 1) "session" else "sessions",
+                    unit = plural(state.weeklyTargetSessions, "session"),
                     onClick = { sheet = SettingsSheet.WeeklyTarget },
                 )
                 SettingRow(

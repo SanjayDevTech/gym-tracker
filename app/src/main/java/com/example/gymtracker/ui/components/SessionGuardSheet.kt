@@ -17,6 +17,7 @@ import com.example.gymtracker.data.db.SessionDraftPayload
 import com.example.gymtracker.ui.components.atoms.AppButton
 import com.example.gymtracker.ui.components.atoms.AppSheet
 import com.example.gymtracker.ui.components.atoms.AppTextButton
+import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Spacing
 import kotlinx.serialization.json.Json
@@ -62,7 +63,7 @@ fun SessionGuardSheet(
 ) {
     var confirming by rememberSaveable { mutableStateOf(false) }
     val minutes = ((System.currentTimeMillis() - running.startedAtMillis) / 60_000L).coerceAtLeast(0)
-    val sets = "${running.doneSets} set${if (running.doneSets == 1) "" else "s"}"
+    val sets = "${running.doneSets} ${plural(running.doneSets, "set")}"
 
     AppSheet(onDismiss = onDismiss) {
         Text(

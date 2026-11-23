@@ -34,4 +34,12 @@ class FormatTest {
         assertEquals("1${n}h 05${n}min", formatDuration(65 * 60_000L))
         assertEquals(EM_DASH, formatDuration(null))
     }
+
+    @Test fun pluralAgreesWithCount() {
+        assertEquals("set", plural(1, "set"))
+        assertEquals("sets", plural(0, "set"))
+        assertEquals("sets", plural(3, "set"))
+        assertEquals("weeks", plural(2L, "week"))
+        assertEquals("PR", plural(1, "PR"))
+    }
 }

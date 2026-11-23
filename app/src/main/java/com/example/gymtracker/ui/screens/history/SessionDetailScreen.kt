@@ -17,15 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -54,6 +47,9 @@ import com.example.gymtracker.data.WeightUnit
 import com.example.gymtracker.data.repUnit
 import com.example.gymtracker.ui.AppViewModelFactory
 import com.example.gymtracker.ui.LocalAppContainer
+import com.example.gymtracker.ui.components.MenuItem
+import com.example.gymtracker.ui.components.NoteLine
+import com.example.gymtracker.ui.components.OverflowMenu
 import com.example.gymtracker.ui.components.atoms.AppBadge
 import com.example.gymtracker.ui.components.atoms.AppButton
 import com.example.gymtracker.ui.components.atoms.AppDivider
@@ -66,9 +62,9 @@ import com.example.gymtracker.ui.format.EM_DASH
 import com.example.gymtracker.ui.format.formatClock
 import com.example.gymtracker.ui.format.formatVolumeNumber
 import com.example.gymtracker.ui.format.formatWeightNumber
+import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Effort
-import com.example.gymtracker.ui.theme.Radius
 import com.example.gymtracker.ui.theme.Sizes
 import com.example.gymtracker.ui.theme.Spacing
 import java.time.LocalDate
@@ -108,7 +104,7 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, onOpenExercise: (Lo
                         .format(DateTimeFormatter.ofPattern("EEE d MMM yyyy", Locale.getDefault()))
                 },
                 onBack = onBack,
-                actions = { if (s != null) OverflowMenu(onDelete = { confirmDelete = true }) },
+                actions = { if (s != null) OverflowMenu(listOf(MenuItem("Delete session", { confirmDelete = true }, destructive = true))) },
             )
         },
         modifier = Modifier.fillMaxSize(),
@@ -130,12 +126,12 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, onOpenExercise: (Lo
                     DetailStats(s)
                     Spacer(Modifier.height(Spacing.s))
                     Text(
-                        "${s.exerciseCount} ${if (s.exerciseCount == 1) "exercise" else "exercises"} · " +
+                        "${s.exerciseCount} ${plural(s.exerciseCount, "exercise")} · " +
                             "Volume = weight × reps, warm-ups out.",
                         style = AppText.bodyS,
                         color = scheme.onSurfaceVariant,
                     )
-                    NoteLine(notes = s.notes, onClick = { editingNote = true })
+                    NoteLine(note = s.notes, onClick = { editingNote = true }, label = "Note")
                 }
             }
             s.exercises.forEach { e ->
@@ -177,31 +173,6 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, onOpenExercise: (Lo
     }
 }
 
-@Composable
-private fun OverflowMenu(onDelete: () -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    val scheme = MaterialTheme.colorScheme
-    Box {
-        IconButton(onClick = { open = true }) {
-            Icon(Icons.Outlined.MoreVert, contentDescription = "More")
-        }
-        DropdownMenu(
-            expanded = open,
-            onDismissRequest = { open = false },
-            shape = RoundedCornerShape(Radius.md),
-            containerColor = scheme.surfaceContainer,
-        ) {
-            DropdownMenuItem(
-                text = { Text("Delete session", style = AppText.body, color = scheme.error) },
-                onClick = {
-                    open = false
-                    onDelete()
-                },
-            )
-        }
-    }
-}
-
 /**
  * The S4-c stat row: four equal columns, eyebrow over [AppText.numberM]. A private twin of
  * `StatColumns` because PRS needs its own colour (primary when > 0), which the atom can't take.
@@ -236,28 +207,6 @@ private fun RowScope.StatCell(
     Column(Modifier.weight(1f)) {
         Eyebrow(label)
         ValueText(value = value, unit = unit, style = AppText.numberM, color = color)
-    }
-}
-
-@Composable
-private fun NoteLine(notes: String, onClick: () -> Unit) {
-    val scheme = MaterialTheme.colorScheme
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClickLabel = "Edit note", onClick = onClick)
-            .heightIn(min = Sizes.touchTarget)
-            .padding(vertical = Spacing.s),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Eyebrow("Note")
-        Spacer(Modifier.width(Spacing.m))
-        Text(
-            notes.ifBlank { "Add a note…" },
-            style = AppText.body,
-            color = if (notes.isBlank()) scheme.onSurfaceVariant else scheme.onSurface,
-            modifier = Modifier.weight(1f),
-        )
     }
 }
 
@@ -332,7 +281,7 @@ private fun ExerciseTable(
                 )
                 Spacer(Modifier.width(Spacing.m))
                 Text(
-                    "${exercise.doneSets} ${if (exercise.doneSets == 1) "set" else "sets"}",
+                    "${exercise.doneSets} ${plural(exercise.doneSets, "set")}",
                     style = AppText.bodyS,
                     color = scheme.onSurfaceVariant,
                 )

@@ -31,6 +31,7 @@ import com.example.gymtracker.ui.components.atoms.AppTextButton
 import com.example.gymtracker.ui.components.atoms.AppTopBar
 import com.example.gymtracker.ui.components.atoms.EmptyState
 import com.example.gymtracker.ui.components.atoms.SectionHead
+import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.rememberAppHaptics
 import com.example.gymtracker.ui.screens.plans.components.LiveStrip
 import com.example.gymtracker.ui.screens.plans.components.PlanRow
@@ -118,7 +119,7 @@ fun TrainScreen(
                     if (current.plans.isNotEmpty()) {
                         val n = current.plans.size
                         Text(
-                            "$n plan${if (n == 1) "" else "s"}",
+                            "$n ${plural(n, "plan")}",
                             style = AppText.bodyS,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

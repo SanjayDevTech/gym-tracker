@@ -57,6 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.gymtracker.ui.AppHaptics
+import com.example.gymtracker.ui.components.MenuItem
 import com.example.gymtracker.ui.components.TargetSheet
 import com.example.gymtracker.ui.components.atoms.AppButton
 import com.example.gymtracker.ui.components.atoms.AppDivider
@@ -66,6 +67,7 @@ import com.example.gymtracker.ui.components.atoms.AppTopBar
 import com.example.gymtracker.ui.components.atoms.ConfirmSheet
 import com.example.gymtracker.ui.format.formatClock
 import com.example.gymtracker.domain.DateUtil
+import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.rememberAppHaptics
 import com.example.gymtracker.ui.screens.logger.SessionLoggerViewModel.Companion.REST_MAX_SECONDS
 import com.example.gymtracker.ui.screens.logger.SessionLoggerViewModel.Companion.REST_MIN_SECONDS
@@ -73,7 +75,6 @@ import com.example.gymtracker.ui.screens.logger.SessionLoggerViewModel.Companion
 import com.example.gymtracker.ui.screens.logger.components.ExerciseBlock
 import com.example.gymtracker.ui.screens.logger.components.FinishSheet
 import com.example.gymtracker.ui.screens.logger.components.LoggerDock
-import com.example.gymtracker.ui.screens.logger.components.LoggerMenuItem
 import com.example.gymtracker.ui.screens.logger.components.LoggerTopBar
 import com.example.gymtracker.ui.screens.logger.components.RestSheet
 import com.example.gymtracker.ui.screens.logger.components.SetActions
@@ -199,13 +200,13 @@ fun LoggerScreen(
                     onMinimise = onMinimise,
                     onFinish = { haptics.light(); viewModel.openFinish() },
                     menu = listOf(
-                        LoggerMenuItem("Change date", { showDatePicker = true }, enabled = state.initialized),
-                        LoggerMenuItem(
+                        MenuItem("Change date", { showDatePicker = true }, enabled = state.initialized),
+                        MenuItem(
                             "Reorder exercises",
                             { haptics.light(); reorderMode = true },
                             enabled = state.groups.size >= 2,
                         ),
-                        LoggerMenuItem("Discard workout", { showDiscard = true }, destructive = true),
+                        MenuItem("Discard workout", { showDiscard = true }, destructive = true),
                     ),
                 )
             }
@@ -299,7 +300,7 @@ fun LoggerScreen(
     if (showDiscard) {
         ConfirmSheet(
             title = "Discard workout?",
-            message = if (state.doneSets > 0) "${state.doneSets} logged ${if (state.doneSets == 1) "set" else "sets"} will be lost."
+            message = if (state.doneSets > 0) "${state.doneSets} logged ${plural(state.doneSets, "set")} will be lost."
             else "Nothing from this workout will be saved.",
             confirmLabel = "Discard",
             dismissLabel = "Keep logging",
@@ -661,7 +662,7 @@ private fun ReorderList(
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
-                            "${group.sets.size} ${if (group.sets.size == 1) "set" else "sets"}",
+                            "${group.sets.size} ${plural(group.sets.size, "set")}",
                             style = AppText.bodyS,
                             color = scheme.onSurfaceVariant,
                         )

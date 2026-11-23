@@ -12,30 +12,22 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.gymtracker.ui.components.MenuItem
+import com.example.gymtracker.ui.components.OverflowMenu
 import com.example.gymtracker.ui.components.atoms.AppOutlinedButton
 import com.example.gymtracker.ui.components.atoms.Eyebrow
 import com.example.gymtracker.ui.components.atoms.Meter
 import com.example.gymtracker.ui.theme.AppText
-import com.example.gymtracker.ui.theme.Radius
 import com.example.gymtracker.ui.theme.Spacing
 
 /**
@@ -54,7 +46,7 @@ fun LoggerTopBar(
     finishEnabled: Boolean,
     onMinimise: () -> Unit,
     onFinish: () -> Unit,
-    menu: List<LoggerMenuItem>,
+    menu: List<MenuItem>,
     modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -97,57 +89,3 @@ fun LoggerTopBar(
         Spacer(Modifier.height(Spacing.s))
     }
 }
-
-/** One ⋮ entry. [destructive] draws it in `error` (Discard workout). */
-data class LoggerMenuItem(
-    val label: String,
-    val onClick: () -> Unit,
-    val enabled: Boolean = true,
-    val destructive: Boolean = false,
-)
-
-/** ⋮ with a `surfaceContainer` menu at [Radius.md] — shared by the bar and each block. */
-@Composable
-fun OverflowMenu(
-    items: List<LoggerMenuItem>,
-    modifier: Modifier = Modifier,
-    contentDescription: String = "More options",
-) {
-    var open by remember { mutableStateOf(false) }
-    val scheme = MaterialTheme.colorScheme
-    Box(modifier) {
-        IconButton(onClick = { open = true }) {
-            Icon(Icons.Outlined.MoreVert, contentDescription = contentDescription, tint = scheme.onSurfaceVariant)
-        }
-        DropdownMenu(
-            expanded = open,
-            onDismissRequest = { open = false },
-            shape = RoundedCornerShape(Radius.md),
-            containerColor = scheme.surfaceContainer,
-        ) {
-            items.forEach { item ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            item.label,
-                            style = AppText.body,
-                            color = when {
-                                !item.enabled -> scheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                item.destructive -> scheme.error
-                                else -> scheme.onSurface
-                            },
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                    enabled = item.enabled,
-                    onClick = {
-                        open = false
-                        item.onClick()
-                    },
-                )
-            }
-        }
-    }
-}
-

@@ -8,11 +8,11 @@ import com.example.gymtracker.data.PreferencesStore
 import com.example.gymtracker.data.SetType
 import com.example.gymtracker.data.WeightUnit
 import com.example.gymtracker.data.db.ExerciseSetWithDate
-import com.example.gymtracker.data.db.LoggedSetEntity
 import com.example.gymtracker.data.db.SessionWithSets
 import com.example.gymtracker.data.formatTarget
-import com.example.gymtracker.domain.ExerciseProgress
 import com.example.gymtracker.domain.LoggedSetSample
+import com.example.gymtracker.domain.Records
+import com.example.gymtracker.domain.toSample
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -97,17 +97,14 @@ class SessionDetailViewModel(
             )
         }
         // Exercise order = insertion order of each exercise's first set (as logged).
-        val exercises = withSets.sets.sortedBy { it.id }.groupBy { it.exerciseId }
+        val perExercise = withSets.sets.sortedBy { it.id }.groupBy { it.exerciseId }
             .map { (exerciseId, sets) ->
                 val exercise = repository.findExercise(exerciseId)
                 val ordered = sets.sortedBy { it.setIndex }
                 val before = repository.observeExerciseSetsWithDate(exerciseId).first().beforeSession(sessionId)
-                val prIndices = ExerciseProgress.sessionPrs(
-                    ExerciseProgress.records(before),
-                    ordered.map { it.sample() },
-                ).keys
+                val records = Records.forSession(before, ordered.map { it.toSample() })
                 var working = 0
-                DetailExercise(
+                records to DetailExercise(
                     exerciseId = exerciseId,
                     name = exercise?.name ?: "Exercise",
                     movementType = exercise?.movementType ?: MovementType.Compound,
@@ -124,11 +121,12 @@ class SessionDetailViewModel(
                             weightKg = set.weightKg,
                             reps = set.repsDone,
                             completed = set.isCompleted,
-                            isPr = i in prIndices,
+                            isPr = i in records.prSets,
                         )
                     },
                 )
             }
+        val exercises = perExercise.map { it.second }
         val done = withSets.sets.filter { it.isCompleted }
         return SessionDetailState(
             planName = plan?.plan?.name,
@@ -138,7 +136,7 @@ class SessionDetailViewModel(
             volumeKg = done.filter { it.setType != SetType.Warmup }
                 .sumOf { ((it.weightKg ?: 0f) * (it.repsDone ?: 0)).toDouble() },
             // Exercises with at least one record, matching the Session summary count.
-            prCount = exercises.count { e -> e.sets.any { it.isPr } },
+            prCount = Records.prCount(perExercise.map { it.first }),
             exerciseCount = exercises.count { it.doneSets > 0 },
             notes = session.notes,
             exercises = exercises,
@@ -161,8 +159,6 @@ class SessionDetailViewModel(
             _deleted.value = true
         }
     }
-
-    private fun LoggedSetEntity.sample() = LoggedSetSample(0L, repsDone, weightKg, isCompleted, setType)
 }
 
 /**
@@ -170,5 +166,4 @@ class SessionDetailViewModel(
  * everything up to this session's first set is earlier; a session not found yields the whole list.
  */
 internal fun List<ExerciseSetWithDate>.beforeSession(sessionId: Long): List<LoggedSetSample> =
-    takeWhile { it.sessionId != sessionId }
-        .map { LoggedSetSample(it.dateEpochDay, it.repsDone, it.weightKg, it.isCompleted, it.setType) }
+    takeWhile { it.sessionId != sessionId }.map { it.toSample() }

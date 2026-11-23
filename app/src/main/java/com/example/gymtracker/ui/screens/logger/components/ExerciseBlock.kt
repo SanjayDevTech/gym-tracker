@@ -34,6 +34,8 @@ import com.example.gymtracker.data.SetType
 import com.example.gymtracker.data.WeightUnit
 import com.example.gymtracker.data.formatTarget
 import com.example.gymtracker.data.repUnitShort
+import com.example.gymtracker.ui.components.MenuItem
+import com.example.gymtracker.ui.components.OverflowMenu
 import com.example.gymtracker.ui.components.atoms.AppDivider
 import com.example.gymtracker.ui.components.atoms.AppTextButton
 import com.example.gymtracker.ui.components.atoms.Eyebrow
@@ -186,9 +188,9 @@ private fun ExpandedBlock(
         }
         OverflowMenu(
             items = listOf(
-                LoggerMenuItem("Edit target", onEditTarget),
-                LoggerMenuItem("Progress", onViewProgress),
-                LoggerMenuItem("Remove exercise", onRemove, destructive = true),
+                MenuItem("Edit target", onEditTarget),
+                MenuItem("Progress", onViewProgress),
+                MenuItem("Remove exercise", onRemove, destructive = true),
             ),
             contentDescription = "${group.exerciseName} options",
         )

@@ -37,6 +37,7 @@ import com.example.gymtracker.ui.components.atoms.AppTopBar
 import com.example.gymtracker.ui.components.atoms.ConfirmSheet
 import com.example.gymtracker.ui.components.atoms.Section
 import com.example.gymtracker.ui.components.atoms.Spinner
+import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.rememberAppHaptics
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Radius
@@ -280,5 +281,3 @@ private fun DataSection(
         }
     }
 }
-
-private fun plural(count: Int, noun: String): String = if (count == 1) noun else "${noun}s"

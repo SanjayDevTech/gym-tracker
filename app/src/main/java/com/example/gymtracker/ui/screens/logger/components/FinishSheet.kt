@@ -26,6 +26,7 @@ import com.example.gymtracker.ui.components.atoms.AppDivider
 import com.example.gymtracker.ui.components.atoms.AppSheet
 import com.example.gymtracker.ui.components.atoms.AppTextButton
 import com.example.gymtracker.ui.components.atoms.Spinner
+import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Sizes
 import com.example.gymtracker.ui.theme.Spacing
@@ -57,14 +58,14 @@ fun FinishSheet(
         Text(
             buildString {
                 append("$elapsed · $doneSets of $totalSets sets")
-                if (prCount > 0) append(" · $prCount ${if (prCount == 1) "PR" else "PRs"}")
+                if (prCount > 0) append(" · $prCount ${plural(prCount, "PR")}")
             },
             style = AppText.bodyS,
             color = scheme.onSurfaceVariant,
         )
         if (skipped > 0) {
             Text(
-                "$skipped unticked ${if (skipped == 1) "set" else "sets"} will be saved as skipped",
+                "$skipped unticked ${plural(skipped, "set")} will be saved as skipped",
                 style = AppText.bodyS,
                 color = scheme.onSurfaceVariant,
             )

@@ -74,3 +74,9 @@ fun formatDuration(millis: Long?): String {
     val m = totalMin % 60L
     return if (h > 0) "$h${NBSP}h ${"%02d".format(m)}${NBSP}min" else "$m${NBSP}min"
 }
+
+/** The noun agreeing with [count]: `plural(1, "set")` → `set`, `plural(3, "set")` → `sets`. */
+fun plural(count: Long, noun: String): String = if (count == 1L) noun else "${noun}s"
+
+/** [Int] twin of [plural]. */
+fun plural(count: Int, noun: String): String = plural(count.toLong(), noun)

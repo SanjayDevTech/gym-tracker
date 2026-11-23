@@ -42,6 +42,7 @@ import com.example.gymtracker.ui.components.atoms.AppTextButton
 import com.example.gymtracker.ui.components.atoms.AppTopBar
 import com.example.gymtracker.ui.components.atoms.Eyebrow
 import com.example.gymtracker.ui.components.atoms.Section
+import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Spacing
 import kotlinx.coroutines.Dispatchers
@@ -158,7 +159,7 @@ fun ImportPlanScreen(
                 }
                 AppButton(
                     text = if (state.committing) "Importing…"
-                    else "Import plan ($resolved exercise${if (resolved == 1) "" else "s"})",
+                    else "Import plan ($resolved ${plural(resolved, "exercise")})",
                     onClick = { viewModel.commit() },
                     enabled = canCommit,
                     modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.l),

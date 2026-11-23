@@ -61,6 +61,9 @@ import com.example.gymtracker.data.formatTarget
 import com.example.gymtracker.data.plan.PlanExport
 import com.example.gymtracker.ui.AppViewModelFactory
 import com.example.gymtracker.ui.LocalAppContainer
+import com.example.gymtracker.ui.components.MenuItem
+import com.example.gymtracker.ui.components.NoteLine
+import com.example.gymtracker.ui.components.OverflowMenu
 import com.example.gymtracker.ui.components.TargetSheet
 import com.example.gymtracker.ui.components.atoms.AppButton
 import com.example.gymtracker.ui.components.atoms.AppDivider
@@ -70,10 +73,8 @@ import com.example.gymtracker.ui.components.atoms.AppTopBar
 import com.example.gymtracker.ui.components.atoms.ConfirmSheet
 import com.example.gymtracker.ui.components.atoms.EmptyState
 import com.example.gymtracker.ui.components.atoms.SectionHead
-import com.example.gymtracker.ui.format.formatDuration
+import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.rememberAppHaptics
-import com.example.gymtracker.ui.screens.logger.components.LoggerMenuItem
-import com.example.gymtracker.ui.screens.logger.components.OverflowMenu
 import com.example.gymtracker.ui.screens.plans.components.TextEntrySheet
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Sizes
@@ -196,13 +197,13 @@ fun PlanEditorScreen(
                     if (plan != null) {
                         OverflowMenu(
                             items = listOf(
-                                LoggerMenuItem("Rename", { sheet = EditorSheet.Rename }),
-                                LoggerMenuItem(
+                                MenuItem("Rename", { sheet = EditorSheet.Rename }),
+                                MenuItem(
                                     "Export",
                                     { exportLauncher.launch(PlanExport.suggestedFileName(plan.name)) },
                                     enabled = planned.isNotEmpty(),
                                 ),
-                                LoggerMenuItem("Delete plan", { sheet = EditorSheet.Delete }, destructive = true),
+                                MenuItem("Delete plan", { sheet = EditorSheet.Delete }, destructive = true),
                             ),
                         )
                     }
@@ -241,11 +242,11 @@ fun PlanEditorScreen(
                             .clickable(onClickLabel = "Rename plan") { sheet = EditorSheet.Rename },
                     )
                     Text(
-                        metaLine(planned.size, totalSets, typicalDuration),
+                        PlanStats.metaLine(planned.size, typicalDuration, sets = totalSets),
                         style = AppText.bodyS,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    NoteLine(note = plan.notes, onEdit = { sheet = EditorSheet.Note })
+                    NoteLine(note = plan.notes, onClick = { sheet = EditorSheet.Note })
                     Spacer(Modifier.height(Spacing.l))
                 }
             }
@@ -253,7 +254,7 @@ fun PlanEditorScreen(
                 SectionHead(title = "Exercises") {
                     if (totalSets > 0) {
                         Text(
-                            "$totalSets set${if (totalSets == 1) "" else "s"}",
+                            "$totalSets ${plural(totalSets, "set")}",
                             style = AppText.bodyS,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -420,32 +421,6 @@ fun PlanEditorScreen(
                 remove(row)
             },
         )
-    }
-}
-
-private fun metaLine(exercises: Int, sets: Int, typicalMillis: Long?): String = buildList {
-    add(if (exercises == 1) "1 exercise" else "$exercises exercises")
-    add(if (sets == 1) "1 set" else "$sets sets")
-    typicalMillis?.let { add("~" + formatDuration(it)) }
-}.joinToString(" · ")
-
-/** The plan note (issue 9): the text itself, or a quiet prompt to add one. Tap → edit. */
-@Composable
-private fun NoteLine(note: String, onEdit: () -> Unit) {
-    val scheme = MaterialTheme.colorScheme
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .heightIn(min = Sizes.touchTarget)
-            .clickable(onClickLabel = "Edit note", onClick = onEdit)
-            .padding(vertical = Spacing.s),
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        if (note.isBlank()) {
-            Text("Add a note", style = AppText.bodyS, color = scheme.onSurfaceVariant)
-        } else {
-            Text(note, style = AppText.body, color = scheme.onSurface)
-        }
     }
 }
 

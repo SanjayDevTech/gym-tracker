@@ -1,16 +1,6 @@
 package com.example.gymtracker.ui.screens.library
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import com.example.gymtracker.ui.components.atoms.ConfirmSheet
-import com.example.gymtracker.ui.theme.Radius
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -51,8 +41,11 @@ import com.example.gymtracker.domain.ProgressPoint
 import com.example.gymtracker.ui.components.BodyDiagram
 import com.example.gymtracker.ui.components.BodyView
 import com.example.gymtracker.ui.components.LineChart
+import com.example.gymtracker.ui.components.MenuItem
+import com.example.gymtracker.ui.components.OverflowMenu
 import com.example.gymtracker.ui.components.atoms.AppDivider
 import com.example.gymtracker.ui.components.atoms.AppTopBar
+import com.example.gymtracker.ui.components.atoms.ConfirmSheet
 import com.example.gymtracker.ui.components.atoms.Eyebrow
 import com.example.gymtracker.ui.components.atoms.Section
 import com.example.gymtracker.ui.components.atoms.StatRow
@@ -61,6 +54,7 @@ import com.example.gymtracker.ui.components.atoms.ValueText
 import com.example.gymtracker.ui.format.EM_DASH
 import com.example.gymtracker.ui.format.formatVolumeNumber
 import com.example.gymtracker.ui.format.formatWeightNumber
+import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Effort
 import com.example.gymtracker.ui.theme.Spacing
@@ -108,7 +102,12 @@ fun ExerciseDetailScreen(
                     // Phase 9: custom exercises only. Built-ins are never editable or deletable
                     // (the seed's deterministic UUIDs and seedVersion reseeding depend on it).
                     if (exercise != null && exercise.isCustom && !exercise.isDeleted) {
-                        OverflowMenu(onEdit = { onEdit(exercise.id) }, onDelete = { confirmDelete = true })
+                        OverflowMenu(
+                            listOf(
+                                MenuItem("Edit", { onEdit(exercise.id) }),
+                                MenuItem("Delete", { confirmDelete = true }, destructive = true),
+                            ),
+                        )
                     }
                 },
             )
@@ -153,32 +152,6 @@ fun ExerciseDetailScreen(
             },
             onDismiss = { confirmDelete = false },
         )
-    }
-}
-
-@Composable
-private fun OverflowMenu(onEdit: () -> Unit, onDelete: () -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    val scheme = MaterialTheme.colorScheme
-    Box {
-        IconButton(onClick = { open = true }) {
-            Icon(Icons.Outlined.MoreVert, contentDescription = "More")
-        }
-        DropdownMenu(
-            expanded = open,
-            onDismissRequest = { open = false },
-            shape = RoundedCornerShape(Radius.md),
-            containerColor = scheme.surfaceContainer,
-        ) {
-            DropdownMenuItem(
-                text = { Text("Edit", style = AppText.body, color = scheme.onSurface) },
-                onClick = { open = false; onEdit() },
-            )
-            DropdownMenuItem(
-                text = { Text("Delete", style = AppText.body, color = scheme.error) },
-                onClick = { open = false; onDelete() },
-            )
-        }
     }
 }
 
@@ -312,7 +285,7 @@ private fun RecordsSection(s: ExerciseDetailState, ex: ExerciseEntity, unit: Wei
     val type = ex.movementType
     Section(title = "Records", trailing = {
         Text(
-            "${s.sessionCount} ${if (s.sessionCount == 1) "session" else "sessions"}",
+            "${s.sessionCount} ${plural(s.sessionCount, "session")}",
             style = AppText.bodyS,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

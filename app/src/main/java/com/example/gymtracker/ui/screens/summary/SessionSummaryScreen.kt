@@ -55,6 +55,7 @@ import com.example.gymtracker.ui.format.formatClock
 import com.example.gymtracker.ui.format.formatVolume
 import com.example.gymtracker.ui.format.formatVolumeNumber
 import com.example.gymtracker.ui.format.formatWeight
+import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.format.trimDecimal
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Spacing
@@ -146,7 +147,7 @@ fun SessionSummaryScreen(
                 trailing = if (s.records.isEmpty()) null else {
                     {
                         Text(
-                            "${s.records.size} ${if (s.records.size == 1) "PR" else "PRs"}",
+                            "${s.records.size} ${plural(s.records.size, "PR")}",
                             style = AppText.bodyS,
                             color = scheme.primary,
                         )
@@ -241,7 +242,7 @@ private fun SummaryRecord.deltaText(unit: WeightUnit): String? {
 
 /** `3 sets · 62.5×9`, `1 set · 25 min`, or `2 sets` when nothing was completed with values. */
 private fun SummaryExercise.lineText(unit: WeightUnit): String {
-    val count = "$doneSets ${if (doneSets == 1) "set" else "sets"}"
+    val count = "$doneSets ${plural(doneSets, "set")}"
     val reps = bestReps ?: return count
     val best = when {
         movementType == MovementType.Cardio || movementType == MovementType.Mobility ->

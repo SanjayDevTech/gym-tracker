@@ -19,8 +19,9 @@ import com.example.gymtracker.data.db.SessionEntity
 import com.example.gymtracker.data.displayToKg
 import com.example.gymtracker.data.kgToDisplay
 import com.example.gymtracker.domain.DateUtil
-import com.example.gymtracker.domain.ExerciseProgress
 import com.example.gymtracker.domain.LoggedSetSample
+import com.example.gymtracker.domain.Records
+import com.example.gymtracker.domain.toSample
 import com.example.gymtracker.domain.PersonalRecords
 import com.example.gymtracker.ui.format.trimDecimal
 import kotlinx.coroutines.CoroutineScope
@@ -309,12 +310,7 @@ class SessionLoggerViewModel(
         val toLoad = exerciseIds.distinct().filter { it !in _draft.value.baselineRecords }
         if (toLoad.isEmpty()) return
         val loaded = toLoad.associateWith { id ->
-            val history = repository.observeExerciseSetsWithDate(id).first()
-            ExerciseProgress.records(
-                history.map {
-                    LoggedSetSample(it.dateEpochDay, it.repsDone, it.weightKg, it.isCompleted, it.setType)
-                }
-            )
+            Records.baseline(repository.observeExerciseSetsWithDate(id).first().map { it.toSample() })
         }
         _draft.update { it.copy(baselineRecords = it.baselineRecords + loaded) }
     }
@@ -589,7 +585,7 @@ fun sessionPrKeys(
                 setType = s.setType,
             )
         }
-        ExerciseProgress.sessionPrs(baseline, samples).keys.forEach { idx -> keys.add("${group.uid}#$idx") }
+        Records.forSession(baseline, samples).prSets.keys.forEach { idx -> keys.add("${group.uid}#$idx") }
     }
     return keys
 }

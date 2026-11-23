@@ -7,12 +7,10 @@ import com.example.gymtracker.data.MovementType
 import com.example.gymtracker.data.PreferencesStore
 import com.example.gymtracker.data.SetType
 import com.example.gymtracker.data.WeightUnit
-import com.example.gymtracker.data.db.LoggedSetEntity
-import com.example.gymtracker.domain.ExerciseProgress
-import com.example.gymtracker.domain.LoggedSetSample
 import com.example.gymtracker.domain.OneRepMax
-import com.example.gymtracker.domain.PersonalRecords
 import com.example.gymtracker.domain.PrType
+import com.example.gymtracker.domain.Records
+import com.example.gymtracker.domain.toSample
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -86,8 +84,9 @@ class SessionSummaryViewModel(
             val ordered = sets.sortedBy { it.setIndex }
             val history = repository.observeExerciseSetsWithDate(exerciseId).first()
                 .filter { it.sessionId != sessionId }
-                .map { LoggedSetSample(it.dateEpochDay, it.repsDone, it.weightKg, it.isCompleted, it.setType) }
-            bestRecord(name, ExerciseProgress.records(history), ordered.map { it.sample() })?.let(records::add)
+                .map { it.toSample() }
+            Records.forSession(history, ordered.map { it.toSample() }).best
+                ?.let { records += SummaryRecord(name, it.type, it.value, it.delta) }
             val scoring = ordered.filter { it.isCompleted && it.setType != SetType.Warmup && (it.repsDone ?: 0) > 0 }
             val best = scoring.maxByOrNull { s ->
                 s.weightKg?.takeIf { it > 0f }?.let { OneRepMax.epley(it, s.repsDone!!) } ?: s.repsDone!!.toFloat() / 1000f
@@ -115,23 +114,6 @@ class SessionSummaryViewModel(
             notes = session.notes,
             unit = unit,
         )
-    }
-
-    private fun LoggedSetEntity.sample() = LoggedSetSample(0L, repsDone, weightKg, isCompleted, setType)
-
-    /** The highest-priority record this exercise broke ([PrType] order), with its delta. */
-    private fun bestRecord(name: String, baseline: PersonalRecords, sets: List<LoggedSetSample>): SummaryRecord? {
-        val won = ExerciseProgress.sessionPrs(baseline, sets)
-        if (won.isEmpty()) return null
-        val type = won.values.flatten().minByOrNull { it.ordinal } ?: return null
-        val session = ExerciseProgress.records(sets)
-        val (value, previous) = when (type) {
-            PrType.OneRepMax -> session.estimatedOneRepMaxKg to baseline.estimatedOneRepMaxKg
-            PrType.Weight -> session.heaviestWeightKg to baseline.heaviestWeightKg
-            PrType.Volume -> session.bestSetVolumeKg to baseline.bestSetVolumeKg
-            PrType.Reps -> session.maxReps?.toFloat() to baseline.maxReps?.toFloat()
-        }
-        return SummaryRecord(name, type, value ?: return null, previous?.let { value - it })
     }
 
     /** Done / ✕ / back: write the note (if changed) to the session, then close. */

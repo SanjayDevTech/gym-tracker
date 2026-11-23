@@ -74,6 +74,7 @@ import com.example.gymtracker.ui.components.atoms.AppTopBar
 import com.example.gymtracker.ui.components.atoms.EmptyState
 import com.example.gymtracker.ui.components.atoms.Eyebrow
 import com.example.gymtracker.ui.components.atoms.SectionHead
+import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.navigation.PickerMode
 import com.example.gymtracker.ui.rememberAppHaptics
 import com.example.gymtracker.ui.theme.AppText
@@ -139,7 +140,7 @@ fun ExercisePickerScreen(
                 ) {
                     AppDivider()
                     AppButton(
-                        text = "Add $selectedCount ${if (selectedCount == 1) "exercise" else "exercises"}",
+                        text = "Add $selectedCount ${plural(selectedCount, "exercise")}",
                         onClick = { haptics.confirm(); onPicked(state?.selected.orEmpty()) },
                         modifier = Modifier
                             .fillMaxWidth()

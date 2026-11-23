@@ -1,6 +1,8 @@
 package com.example.gymtracker.ui.screens.plans
 
+import com.example.gymtracker.data.MuscleGroup
 import com.example.gymtracker.data.db.SessionVolume
+import com.example.gymtracker.ui.format.NBSP
 import com.example.gymtracker.ui.screens.plans.components.agoLabel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -79,5 +81,17 @@ class PlanStatsTest {
         assertEquals("3 days ago", agoLabel(97, today = 100))
         assertEquals("2 weeks ago", agoLabel(86, today = 100))
         assertEquals("1 year ago", agoLabel(0, today = 400))
+    }
+
+    @Test
+    fun metaLines() {
+        val n = NBSP
+        assertEquals("No exercises", PlanStats.metaLine(0, null))
+        assertEquals(
+            "6 exercises · Chest, Shoulders · ~52${n}min",
+            PlanStats.metaLine(6, 52 * 60_000L, muscles = listOf(MuscleGroup.Chest, MuscleGroup.Shoulders, MuscleGroup.Arms)),
+        )
+        assertEquals("1 exercise · 1 set", PlanStats.metaLine(1, null, sets = 1))
+        assertEquals("No exercises · 0 sets", PlanStats.metaLine(0, null, sets = 0))
     }
 }

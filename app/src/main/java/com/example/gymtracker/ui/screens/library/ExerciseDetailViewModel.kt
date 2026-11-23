@@ -9,10 +9,10 @@ import com.example.gymtracker.data.db.ExerciseSetWithDate
 import com.example.gymtracker.data.db.LoggedSetEntity
 import com.example.gymtracker.data.db.PlannedExerciseEntity
 import com.example.gymtracker.domain.ExerciseProgress
-import com.example.gymtracker.domain.LoggedSetSample
 import com.example.gymtracker.domain.ProgressMetric
 import com.example.gymtracker.domain.ProgressPoint
 import com.example.gymtracker.domain.ProgressionRule
+import com.example.gymtracker.domain.toSample
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -81,15 +81,7 @@ class ExerciseDetailViewModel(
         history: List<ExerciseSetWithDate>,
         planned: List<PlannedExerciseEntity>,
     ): ExerciseDetailState {
-        val samples = history.map {
-            LoggedSetSample(
-                dateEpochDay = it.dateEpochDay,
-                repsDone = it.repsDone,
-                weightKg = it.weightKg,
-                isCompleted = it.isCompleted,
-                setType = it.setType,
-            )
-        }
+        val samples = history.map { it.toSample() }
         val series = ProgressMetric.entries.associateWith { ExerciseProgress.series(samples, it) }
         // A record's date is the first day the series reached its maximum.
         val records = series.mapNotNull { (metric, points) ->
