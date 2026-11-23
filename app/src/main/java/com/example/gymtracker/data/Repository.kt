@@ -68,6 +68,8 @@ class GymRepository(private val db: AppDatabase) {
     fun observeSessionWithSets(id: Long): Flow<SessionWithSets?> = sessionDao.observeSessionWithSets(id)
     fun observeSessionDays(): Flow<List<Long>> = sessionDao.observeSessionDays()
     suspend fun deleteSession(id: Long) = sessionDao.deleteSession(id)
+    suspend fun updateSessionNotes(id: Long, notes: String) = sessionDao.updateNotes(id, notes)
+    suspend fun recentExerciseIds(limit: Int = 8): List<Long> = sessionDao.recentExerciseIds(limit)
 
     suspend fun recentSetsForExercise(exerciseId: Long, limit: Int = 30): List<LoggedSetEntity> =
         sessionDao.recentSetsForExercise(exerciseId, limit)

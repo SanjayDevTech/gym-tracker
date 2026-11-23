@@ -17,8 +17,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         LoggedSetEntity::class,
         SessionDraftEntity::class,
     ],
-    version = 4,
-    exportSchema = false,
+    version = 5,
+    exportSchema = true,
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -62,13 +62,21 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v4 → v5 (decision 4): record when each workout started, so a session has a duration.
+         *  Nullable with no default — sessions logged before this stay NULL and show "—". */
+        internal val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE sessions ADD COLUMN started_at_millis INTEGER")
+            }
+        }
+
         fun get(context: Context): AppDatabase = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java,
                 "gym.db",
             )
-                .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 // Only used if no migration path exists (e.g. a much older dev build); the
                 // explicit migration above keeps real user data safe across the v2 → v3 bump.
                 .fallbackToDestructiveMigration(dropAllTables = true)

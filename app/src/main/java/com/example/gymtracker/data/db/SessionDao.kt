@@ -49,6 +49,21 @@ interface SessionDao {
         return sessionId
     }
 
+    @Query("UPDATE sessions SET notes = :notes WHERE id = :id")
+    suspend fun updateNotes(id: Long, notes: String)
+
+    /** The [limit] most recently logged distinct exercises, newest first (the picker's RECENT). */
+    @Query(
+        """
+        SELECT ls.exercise_id FROM logged_sets ls
+        INNER JOIN sessions s ON s.id = ls.session_id
+        GROUP BY ls.exercise_id
+        ORDER BY MAX(s.date_epoch_day) DESC, MAX(s.logged_at_millis) DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun recentExerciseIds(limit: Int): List<Long>
+
     @Query("DELETE FROM sessions WHERE id = :id")
     suspend fun deleteSession(id: Long)
 

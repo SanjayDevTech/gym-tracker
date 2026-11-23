@@ -62,7 +62,7 @@ import com.example.gymtracker.data.plan.PlanImportExercise
 import com.example.gymtracker.ui.AppViewModelFactory
 import com.example.gymtracker.ui.LocalAppContainer
 import com.example.gymtracker.data.displayName
-import com.example.gymtracker.ui.components.ExercisePickerSheet
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.gymtracker.ui.components.atoms.AppButton
 import com.example.gymtracker.ui.components.atoms.AppOutlinedButton
 import com.example.gymtracker.ui.components.atoms.AppTextButton
@@ -78,6 +78,9 @@ import com.example.gymtracker.ui.theme.Radius
 fun ImportPlanScreen(
     onBack: () -> Unit,
     onImported: (Long) -> Unit,
+    onPickExercise: () -> Unit,
+    pickedExerciseIds: List<Long>?,
+    onPickedHandled: () -> Unit,
     initialText: String? = null,
 ) {
     val container = LocalAppContainer.current
@@ -97,7 +100,17 @@ fun ImportPlanScreen(
         state.committedPlanId?.let(onImported)
     }
 
-    var pickerForIndex by remember { mutableStateOf<Int?>(null) }
+    // Saveable: the picker is a page now, so this must survive leaving composition.
+    var pickerForIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+    LaunchedEffect(pickedExerciseIds) {
+        val id = pickedExerciseIds?.firstOrNull() ?: return@LaunchedEffect
+        val idx = pickerForIndex
+        // Resolve before clearing: clearing the result restarts (cancels) this effect.
+        val exercise = container.repository.findExercise(id)
+        if (idx != null && exercise != null) viewModel.mapEntry(idx, exercise)
+        pickerForIndex = null
+        onPickedHandled()
+    }
     var createForIndex by remember { mutableStateOf<Int?>(null) }
 
     val pending = state.entries.count { it.resolution is Resolution.Pending }
@@ -139,7 +152,7 @@ fun ImportPlanScreen(
                     itemsIndexed(state.entries, key = { idx, _ -> idx }) { idx, entry ->
                         EntryRow(
                             entry = entry,
-                            onMap = { pickerForIndex = idx },
+                            onMap = { pickerForIndex = idx; onPickExercise() },
                             onCreate = { createForIndex = idx },
                             onSkip = { viewModel.skipEntry(idx) },
                             onUndo = { viewModel.unresolveEntry(idx) },
@@ -154,17 +167,6 @@ fun ImportPlanScreen(
                     modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.l),
                 )
             }
-        }
-
-        pickerForIndex?.let { idx ->
-            ExercisePickerSheet(
-                repository = container.repository,
-                onPick = { ex ->
-                    viewModel.mapEntry(idx, ex)
-                    pickerForIndex = null
-                },
-                onDismiss = { pickerForIndex = null },
-            )
         }
 
         createForIndex?.let { idx ->

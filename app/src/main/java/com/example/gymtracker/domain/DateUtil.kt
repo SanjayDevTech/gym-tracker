@@ -8,6 +8,17 @@ object DateUtil {
     fun todayEpochDay(zone: ZoneId = ZoneId.systemDefault()): Long =
         LocalDate.now(zone).toEpochDay()
 
+    private const val MILLIS_PER_DAY = 86_400_000L
+
+    /**
+     * Material's DatePicker speaks UTC-midnight millis for a *calendar date*, independent of
+     * the device zone. Convert with floor division (no zone) so the picked date is the logged
+     * date; "today" for capping is always judged in the local zone ([todayEpochDay]).
+     */
+    fun pickerMillisToEpochDay(utcMillis: Long): Long = Math.floorDiv(utcMillis, MILLIS_PER_DAY)
+
+    fun epochDayToPickerMillis(epochDay: Long): Long = epochDay * MILLIS_PER_DAY
+
     fun startOfWeek(epochDay: Long, weekStart: DayOfWeek = DayOfWeek.MONDAY): Long {
         val d = LocalDate.ofEpochDay(epochDay)
         val daysBack = ((d.dayOfWeek.value - weekStart.value) + 7) % 7

@@ -25,6 +25,9 @@ import com.example.gymtracker.ui.screens.library.ExerciseDetailScreen
 import com.example.gymtracker.ui.screens.library.ExerciseDetailViewModel
 import com.example.gymtracker.ui.screens.library.LibraryScreen
 import com.example.gymtracker.ui.screens.library.LibraryViewModel
+import com.example.gymtracker.ui.screens.logger.SessionLoggerHost
+import com.example.gymtracker.ui.screens.picker.ExercisePickerScreen
+import com.example.gymtracker.ui.screens.summary.SessionSummaryScreen
 import com.example.gymtracker.ui.screens.plans.PlanEditorScreen
 import com.example.gymtracker.ui.screens.plans.PlanListScreen
 import com.example.gymtracker.ui.screens.plans.PlanListViewModel
@@ -93,11 +96,14 @@ fun AppNav() {
             )
         }
 
-        composable<ImportPlanRoute> {
+        composable<ImportPlanRoute> { entry ->
             // Consume once on first composition: a deep-link's JSON pre-loads the review screen.
             val initialText = remember { container.consumePendingImport() }
             ImportPlanScreen(
                 initialText = initialText,
+                onPickExercise = { nav.navigate(ExercisePickerRoute(PickerMode.Single)) },
+                pickedExerciseIds = entry.pickedExercises(),
+                onPickedHandled = { entry.clearPickedExercises() },
                 onBack = { nav.popBackStack() },
                 onImported = { planId ->
                     nav.popBackStack()
@@ -163,15 +169,43 @@ fun AppNav() {
                 onBack = { nav.popBackStack() },
                 onLog = { nav.navigate(SessionLoggerRoute(planId = it)) },
                 onOpenExercise = { nav.navigate(ExerciseDetailRoute(it)) },
+                onAddExercises = { nav.navigate(ExercisePickerRoute(PickerMode.Plan, planId = route.planId)) },
+                pickedExerciseIds = entry.pickedExercises(),
+                onPickedHandled = { entry.clearPickedExercises() },
             )
         }
 
         composable<SessionLoggerRoute> { entry ->
             val route: SessionLoggerRoute = entry.toRoute<SessionLoggerRoute>()
-            com.example.gymtracker.ui.screens.logger.SessionLoggerHost(
+            SessionLoggerHost(
+                planId = route.planId,
+                pickedExerciseIds = entry.pickedExercises(),
+                onPickedHandled = { entry.clearPickedExercises() },
+                onMinimise = { nav.popBackStack() },
+                onDiscarded = { nav.popBackStack() },
+                onFinished = { sessionId ->
+                    // The summary replaces the logger in the stack (§5 back-stack rules).
+                    nav.navigate(SessionSummaryRoute(sessionId)) {
+                        popUpTo<SessionLoggerRoute> { inclusive = true }
+                    }
+                },
+                onAddExercises = { nav.navigate(ExercisePickerRoute(PickerMode.Session)) },
+                onOpenExercise = { nav.navigate(ExerciseDetailRoute(it)) },
+            )
+        }
+
+        composable<SessionSummaryRoute> { entry ->
+            val route: SessionSummaryRoute = entry.toRoute<SessionSummaryRoute>()
+            SessionSummaryScreen(sessionId = route.sessionId, onDone = { nav.popBackStack() })
+        }
+
+        composable<ExercisePickerRoute> { entry ->
+            val route: ExercisePickerRoute = entry.toRoute<ExercisePickerRoute>()
+            ExercisePickerScreen(
+                mode = route.mode,
                 planId = route.planId,
                 onBack = { nav.popBackStack() },
-                onSaved = { nav.popBackStack() },
+                onPicked = { ids -> nav.returnPickedExercises(ids) },
             )
         }
 

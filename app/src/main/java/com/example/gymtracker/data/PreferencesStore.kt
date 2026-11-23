@@ -11,12 +11,15 @@ import kotlinx.coroutines.flow.map
 
 private val Context.dataStore by preferencesDataStore(name = "gym_prefs")
 
+const val DEFAULT_REST_SECONDS = 90
+
 class PreferencesStore(private val context: Context) {
     private object Keys {
         val Haptics = booleanPreferencesKey("haptics_enabled")
         val WeightUnit = stringPreferencesKey("weight_unit")
         val VolumeMetric = stringPreferencesKey("volume_metric")
         val SeedVersion = intPreferencesKey("seed_version")
+        val DefaultRestSeconds = intPreferencesKey("default_rest_seconds")
     }
 
     val hapticsEnabled: Flow<Boolean> = context.dataStore.data
@@ -30,6 +33,13 @@ class PreferencesStore(private val context: Context) {
 
     val seedVersion: Flow<Int> = context.dataStore.data
         .map { it[Keys.SeedVersion] ?: 0 }
+
+    /** Rest target a new workout starts with (§6.3); today's constant, 90s, until changed. */
+    val defaultRestSeconds: Flow<Int> = context.dataStore.data
+        .map { it[Keys.DefaultRestSeconds] ?: DEFAULT_REST_SECONDS }
+
+    suspend fun setDefaultRestSeconds(value: Int) =
+        context.dataStore.edit { it[Keys.DefaultRestSeconds] = value }
 
     suspend fun setHapticsEnabled(value: Boolean) =
         context.dataStore.edit { it[Keys.Haptics] = value }

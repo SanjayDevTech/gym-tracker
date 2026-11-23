@@ -4,7 +4,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class BackupPayload(
-    val version: Int = 2,
+    // v3: sessions carry optional startedAtMillis. v2 files still import (field defaults).
+    val version: Int = 3,
     val exportedAtMillis: Long,
     val prefs: PrefsSnapshot,
     val customExercises: List<ExerciseSnapshot>,
@@ -62,6 +63,7 @@ data class SessionSnapshot(
     val loggedAtMillis: Long,
     val notes: String,
     val sets: List<SetSnapshot>,
+    val startedAtMillis: Long? = null,
 )
 
 @Serializable

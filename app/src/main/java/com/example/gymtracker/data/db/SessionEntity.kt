@@ -30,6 +30,9 @@ data class SessionEntity(
     @ColumnInfo(name = "date_epoch_day") val dateEpochDay: Long,
     @ColumnInfo(name = "logged_at_millis") val loggedAtMillis: Long,
     @ColumnInfo(name = "notes") val notes: String = "",
+    /** When the workout began (the draft's start). Null for sessions logged before v5, whose
+     *  duration is therefore unknown and shown as an em dash. */
+    @ColumnInfo(name = "started_at_millis") val startedAtMillis: Long? = null,
 )
 
 @Entity(

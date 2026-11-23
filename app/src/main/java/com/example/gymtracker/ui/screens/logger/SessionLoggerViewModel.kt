@@ -2,6 +2,7 @@ package com.example.gymtracker.ui.screens.logger
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.gymtracker.data.DEFAULT_REST_SECONDS
 import com.example.gymtracker.data.GymRepository
 import com.example.gymtracker.data.MovementType
 import com.example.gymtracker.data.PreferencesStore
@@ -16,9 +17,12 @@ import com.example.gymtracker.data.db.SessionDraftPayload
 import com.example.gymtracker.data.db.SessionDraftSet
 import com.example.gymtracker.data.db.SessionEntity
 import com.example.gymtracker.data.displayToKg
+import com.example.gymtracker.data.kgToDisplay
+import com.example.gymtracker.domain.DateUtil
 import com.example.gymtracker.domain.ExerciseProgress
 import com.example.gymtracker.domain.LoggedSetSample
 import com.example.gymtracker.domain.PersonalRecords
+import com.example.gymtracker.ui.format.trimDecimal
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.NonCancellable
@@ -32,8 +36,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import java.time.LocalDate
-import java.time.ZoneId
 import java.util.UUID
 
 data class SetDraft(
@@ -54,31 +56,44 @@ data class ExerciseGroup(
     val targetRepsLow: Int,
     val targetRepsHigh: Int,
     val sets: List<SetDraft>,
-)
+) {
+    val doneCount: Int get() = sets.count { it.isCompleted }
+    val allDone: Boolean get() = sets.isNotEmpty() && sets.all { it.isCompleted }
+}
+
+/** The Finish sheet is open. [planChanges] lists how this session differs from its plan
+ *  ("Bench press 3→4 sets", "added Dips"); empty when there is no plan or nothing changed,
+ *  in which case the sheet shows no plan-sync checkbox. */
+data class FinishPrompt(val planChanges: List<String>)
 
 data class SessionLoggerState(
     val planId: Long? = null,
+    /** The draft's plan name — the logger's title always comes from here, never from the route. */
     val planName: String? = null,
-    val dateEpochDay: Long = LocalDate.now(ZoneId.systemDefault()).toEpochDay(),
+    val dateEpochDay: Long = DateUtil.todayEpochDay(),
     val startedAtMillis: Long = 0L,
-    /** Wall-clock of the last set marked completed. Drives the rest timer (time since last set).
+    /** Wall-clock of the last set marked completed; 0 = rest cleared (Skip, or no set yet).
      *  Persisted in the draft so the rest clock keeps running while the logger is closed. */
     val lastSetCompletedAtMillis: Long = 0L,
+    /** This workout's rest target (§6.3). */
+    val restTargetSeconds: Int = DEFAULT_REST_SECONDS,
     val groups: List<ExerciseGroup> = emptyList(),
     val saving: Boolean = false,
-    val saved: Boolean = false,
+    /** Set once the session is committed; the UI navigates to its summary. */
+    val savedSessionId: Long? = null,
     val discarded: Boolean = false,
     val initialized: Boolean = false,
     val weightUnit: WeightUnit = WeightUnit.Kg,
-    /** True when Save was tapped on a plan-backed session whose structure now differs from the
-     *  parent plan — the UI asks whether to push the changes back to the plan. */
-    val askPlanSync: Boolean = false,
-    /** True when Finish was tapped and there's no plan-sync prompt to show — a plain confirmation
-     *  so finishing always takes a deliberate second tap (guards against accidental Finish). */
-    val askConfirmFinish: Boolean = false,
-    /** Pre-session all-time records per exercise — the bar a set must clear to earn a PR crown. */
+    val finish: FinishPrompt? = null,
+    /** Pre-session all-time records per exercise — the bar a set must clear to earn a PR. */
     val baselineRecords: Map<Long, PersonalRecords> = emptyMap(),
-)
+    /** One-shot: a group just added from the picker that the list should scroll to and focus. */
+    val revealGroupUid: String? = null,
+) {
+    val totalSets: Int get() = groups.sumOf { it.sets.size }
+    val doneSets: Int get() = groups.sumOf { it.doneCount }
+    val skippedSets: Int get() = totalSets - doneSets
+}
 
 @OptIn(FlowPreview::class)
 class SessionLoggerViewModel(
@@ -93,6 +108,13 @@ class SessionLoggerViewModel(
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    /** Single-level undo buffer for the last removed exercise or set (§6.6). */
+    private sealed interface Removed {
+        data class Group(val index: Int, val group: ExerciseGroup) : Removed
+        data class Set(val groupUid: String, val index: Int, val set: SetDraft) : Removed
+    }
+    private var lastRemoved: Removed? = null
+
     init {
         viewModelScope.launch {
             val unit = prefs.weightUnit.first()
@@ -100,7 +122,8 @@ class SessionLoggerViewModel(
             if (existing != null) {
                 hydrateFromDraft(existing, unit)
             } else {
-                _draft.update { it.copy(weightUnit = unit, planId = planId) }
+                val rest = prefs.defaultRestSeconds.first()
+                _draft.update { it.copy(weightUnit = unit, planId = planId, restTargetSeconds = rest) }
                 if (planId != null) loadFromPlan(planId)
                 _draft.update { it.copy(initialized = true, startedAtMillis = System.currentTimeMillis()) }
                 // Persist the initial draft immediately so resume works even with zero edits
@@ -112,20 +135,19 @@ class SessionLoggerViewModel(
             _draft
                 .drop(1)
                 .debounce(400L)
-                .collect { snapshot ->
-                    if (snapshot.initialized && !snapshot.saved && !snapshot.discarded) {
-                        persistDraft(snapshot)
-                    }
-                }
+                .collect { snapshot -> if (snapshot.shouldPersist) persistDraft(snapshot) }
         }
     }
+
+    private val SessionLoggerState.shouldPersist: Boolean
+        get() = initialized && savedSessionId == null && !saving && !discarded
 
     override fun onCleared() {
         super.onCleared()
         // Flush the latest draft on an app-scoped coroutine so a fast back-press
         // (which cancels viewModelScope) doesn't drop the last typed edit.
         val snapshot = _draft.value
-        if (snapshot.initialized && !snapshot.saved && !snapshot.discarded) {
+        if (snapshot.shouldPersist) {
             applicationScope.launch {
                 withContext(NonCancellable) { persistDraft(snapshot) }
             }
@@ -164,6 +186,7 @@ class SessionLoggerViewModel(
                 dateEpochDay = payload.dateEpochDay,
                 startedAtMillis = draft.startedAtMillis,
                 lastSetCompletedAtMillis = payload.lastSetCompletedAtMillis,
+                restTargetSeconds = payload.restTargetSeconds,
                 groups = groups,
                 weightUnit = unit,
                 initialized = true,
@@ -176,6 +199,7 @@ class SessionLoggerViewModel(
             planName = snapshot.planName,
             dateEpochDay = snapshot.dateEpochDay,
             lastSetCompletedAtMillis = snapshot.lastSetCompletedAtMillis,
+            restTargetSeconds = snapshot.restTargetSeconds,
             groups = snapshot.groups.map { g ->
                 SessionDraftGroup(
                     exerciseId = g.exerciseId,
@@ -236,40 +260,51 @@ class SessionLoggerViewModel(
         _draft.update { it.copy(planName = plan.plan.name, groups = groups) }
     }
 
-    fun setDate(epochDay: Long) {
+    // ---- Date -------------------------------------------------------------
+
+    /** Apply a date from the Material date picker (UTC-midnight millis). Future days — judged
+     *  against *local* today, not UTC — are refused (issue 15). */
+    fun setDateFromPicker(utcMillis: Long) {
+        val epochDay = DateUtil.pickerMillisToEpochDay(utcMillis)
+        if (epochDay > DateUtil.todayEpochDay()) return
         _draft.update { it.copy(dateEpochDay = epochDay) }
     }
 
-    fun addExerciseFreestyle(exercise: ExerciseEntity) {
+    // ---- Exercises --------------------------------------------------------
+
+    /** Append the picker's selection, in pick order, with type defaults and history hints. */
+    fun addExercises(ids: List<Long>) {
+        if (ids.isEmpty()) return
         viewModelScope.launch {
-            val hints = repository.lastLoggedSetsFor(exercise.id)
-            val defaults = defaultsFor(exercise.movementType)
-            val sets = (0 until defaults.sets).map { idx ->
-                val hint = hints[idx]
-                SetDraft(
-                    hintReps = hint?.repsDone ?: defaults.hint,
-                    hintWeightKg = hint?.weightKg,
-                )
-            }
-            _draft.update {
-                it.copy(
-                    groups = it.groups + ExerciseGroup(
-                        uid = UUID.randomUUID().toString(),
-                        exerciseId = exercise.id,
-                        exerciseName = exercise.name,
-                        movementType = exercise.movementType,
-                        targetSets = defaults.sets,
-                        targetRepsLow = defaults.low,
-                        targetRepsHigh = defaults.high,
-                        sets = sets,
-                    )
-                )
-            }
-            loadBaselines(listOf(exercise.id))
+            val added = ids.mapNotNull { id -> repository.findExercise(id)?.let { newGroup(it) } }
+            if (added.isEmpty()) return@launch
+            _draft.update { it.copy(groups = it.groups + added, revealGroupUid = added.first().uid) }
+            loadBaselines(added.map { it.exerciseId })
         }
     }
 
-    /** Snapshot each exercise's all-time records once, to compare live sets against for PR crowns. */
+    fun consumeReveal() = _draft.update { it.copy(revealGroupUid = null) }
+
+    private suspend fun newGroup(exercise: ExerciseEntity): ExerciseGroup {
+        val hints = repository.lastLoggedSetsFor(exercise.id)
+        val defaults = defaultsFor(exercise.movementType)
+        val sets = (0 until defaults.sets).map { idx ->
+            val hint = hints[idx]
+            SetDraft(hintReps = hint?.repsDone ?: defaults.hint, hintWeightKg = hint?.weightKg)
+        }
+        return ExerciseGroup(
+            uid = UUID.randomUUID().toString(),
+            exerciseId = exercise.id,
+            exerciseName = exercise.name,
+            movementType = exercise.movementType,
+            targetSets = defaults.sets,
+            targetRepsLow = defaults.low,
+            targetRepsHigh = defaults.high,
+            sets = sets,
+        )
+    }
+
+    /** Snapshot each exercise's all-time records once, to compare live sets against for PRs. */
     private suspend fun loadBaselines(exerciseIds: List<Long>) {
         val toLoad = exerciseIds.distinct().filter { it !in _draft.value.baselineRecords }
         if (toLoad.isEmpty()) return
@@ -291,62 +326,71 @@ class SessionLoggerViewModel(
         else -> TypeDefaults(sets = 3, low = 8, high = 12, hint = 10)
     }
 
-    fun removeGroup(index: Int) {
-        _draft.update {
-            it.copy(groups = it.groups.toMutableList().apply { if (index in indices) removeAt(index) })
-        }
+    /** Remove an exercise; [undoRemove] puts it back where it was. Returns what was removed. */
+    fun removeGroup(index: Int): ExerciseGroup? {
+        val group = _draft.value.groups.getOrNull(index) ?: return null
+        lastRemoved = Removed.Group(index, group)
+        _draft.update { s -> s.copy(groups = s.groups.filterNot { it.uid == group.uid }) }
+        return group
     }
 
-    /** Move an exercise group up (delta = -1) or down (delta = +1). */
-    fun moveGroup(index: Int, delta: Int) {
+    /** Commit a reorder made in reorder mode (one write per drag, on release). */
+    fun reorderGroups(orderedUids: List<String>) {
         _draft.update { s ->
-            val target = index + delta
-            if (index !in s.groups.indices || target !in s.groups.indices) return@update s
-            val list = s.groups.toMutableList()
-            val item = list.removeAt(index)
-            list.add(target, item)
-            s.copy(groups = list)
+            val byUid = s.groups.associateBy { it.uid }
+            val reordered = orderedUids.mapNotNull { byUid[it] }
+            // Anything not in the list (added meanwhile) keeps its place at the end.
+            s.copy(groups = reordered + s.groups.filter { it.uid !in orderedUids })
         }
     }
 
-    /** Start or restart the rest timer manually — both to kick it off before the first set is
-     *  logged and to reset it for sets finished without ticking the checkbox. */
-    fun resetRestTimer() {
-        _draft.update { it.copy(lastSetCompletedAtMillis = System.currentTimeMillis()) }
-    }
+    // ---- Sets -------------------------------------------------------------
 
     fun addSet(groupIndex: Int) {
-        _draft.update { s ->
-            val group = s.groups.getOrNull(groupIndex) ?: return@update s
-            val newSet = SetDraft(hintReps = group.sets.lastOrNull()?.hintReps, hintWeightKg = group.sets.lastOrNull()?.hintWeightKg)
-            val newGroups = s.groups.toMutableList().also {
-                it[groupIndex] = group.copy(sets = group.sets + newSet)
-            }
-            s.copy(groups = newGroups)
+        updateGroup(groupIndex) { group ->
+            val last = group.sets.lastOrNull()
+            group.copy(sets = group.sets + SetDraft(hintReps = last?.hintReps, hintWeightKg = last?.hintWeightKg))
         }
     }
 
-    /** Edit an exercise's target rep range mid-session. Kept valid: low ≥ 1 and high ≥ low. */
-    fun setRepTarget(groupIndex: Int, low: Int, high: Int) {
-        _draft.update { s ->
-            val group = s.groups.getOrNull(groupIndex) ?: return@update s
-            val lo = low.coerceAtLeast(1)
-            val hi = high.coerceAtLeast(lo)
-            val newGroups = s.groups.toMutableList().also {
-                it[groupIndex] = group.copy(targetRepsLow = lo, targetRepsHigh = hi)
-            }
-            s.copy(groups = newGroups)
-        }
-    }
-
+    /** Remove one set (the set menu's "Delete set"); the last remaining set can't be removed. */
     fun removeSet(groupIndex: Int, setIndex: Int) {
+        val group = _draft.value.groups.getOrNull(groupIndex) ?: return
+        if (group.sets.size <= 1 || setIndex !in group.sets.indices) return
+        lastRemoved = Removed.Set(group.uid, setIndex, group.sets[setIndex])
+        updateGroup(groupIndex) { g -> g.copy(sets = g.sets.filterIndexed { i, _ -> i != setIndex }) }
+    }
+
+    fun undoRemove() {
+        val removed = lastRemoved ?: return
+        lastRemoved = null
         _draft.update { s ->
-            val group = s.groups.getOrNull(groupIndex) ?: return@update s
-            if (setIndex !in group.sets.indices) return@update s
-            val newGroup = group.copy(sets = group.sets.toMutableList().apply { removeAt(setIndex) })
-            val newGroups = s.groups.toMutableList().also { it[groupIndex] = newGroup }
-            s.copy(groups = newGroups)
+            when (removed) {
+                is Removed.Group -> {
+                    if (s.groups.any { it.uid == removed.group.uid }) return@update s
+                    val list = s.groups.toMutableList()
+                    list.add(removed.index.coerceIn(0, list.size), removed.group)
+                    s.copy(groups = list)
+                }
+                is Removed.Set -> s.copy(
+                    groups = s.groups.map { g ->
+                        if (g.uid != removed.groupUid) g
+                        else g.copy(
+                            sets = g.sets.toMutableList().apply {
+                                add(removed.index.coerceIn(0, size), removed.set)
+                            }
+                        )
+                    }
+                )
+            }
         }
+    }
+
+    /** Edit an exercise's target range mid-session. Kept valid: low ≥ 1 and high ≥ low. */
+    fun setRepTarget(groupIndex: Int, low: Int, high: Int) {
+        val lo = low.coerceAtLeast(1)
+        val hi = high.coerceAtLeast(lo)
+        updateGroup(groupIndex) { it.copy(targetRepsLow = lo, targetRepsHigh = hi) }
     }
 
     fun updateSet(groupIndex: Int, setIndex: Int, update: (SetDraft) -> SetDraft) {
@@ -356,7 +400,7 @@ class SessionLoggerViewModel(
             val updated = update(current)
             val newSets = group.sets.toMutableList().also { it[setIndex] = updated }
             val newGroups = s.groups.toMutableList().also { it[groupIndex] = group.copy(sets = newSets) }
-            // A set transitioning into "completed" is the moment it's logged — reset the rest timer.
+            // A set transitioning into "completed" is the moment it's logged — restart rest.
             val justCompleted = !current.isCompleted && updated.isCompleted
             s.copy(
                 groups = newGroups,
@@ -366,6 +410,50 @@ class SessionLoggerViewModel(
         }
     }
 
+    /** The row's check. Ticking an empty row commits its hint values so they are shown (§6.2). */
+    fun setCompleted(groupIndex: Int, setIndex: Int, completed: Boolean) {
+        val unit = _draft.value.weightUnit
+        updateSet(groupIndex, setIndex) { set ->
+            if (!completed) set.copy(isCompleted = false)
+            else set.copy(
+                isCompleted = true,
+                repsInput = set.repsInput.ifEmpty { set.hintReps?.toString().orEmpty() },
+                weightInput = set.weightInput.ifEmpty {
+                    set.hintWeightKg?.let { trimDecimal(it.kgToDisplay(unit)) }.orEmpty()
+                },
+            )
+        }
+    }
+
+    private fun updateGroup(groupIndex: Int, transform: (ExerciseGroup) -> ExerciseGroup) {
+        _draft.update { s ->
+            val group = s.groups.getOrNull(groupIndex) ?: return@update s
+            s.copy(groups = s.groups.toMutableList().also { it[groupIndex] = transform(group) })
+        }
+    }
+
+    // ---- Rest -------------------------------------------------------------
+
+    fun adjustRestTarget(deltaSeconds: Int) =
+        setRestTarget(_draft.value.restTargetSeconds + deltaSeconds)
+
+    fun setRestTarget(seconds: Int) {
+        _draft.update { it.copy(restTargetSeconds = seconds.coerceIn(REST_MIN_SECONDS, REST_MAX_SECONDS)) }
+    }
+
+    /** Clear rest until the next completed set (dock shows "—"). */
+    fun skipRest() = _draft.update { it.copy(lastSetCompletedAtMillis = 0L) }
+
+    /** Rest sheet's "Restart now". */
+    fun restartRest() = _draft.update { it.copy(lastSetCompletedAtMillis = System.currentTimeMillis()) }
+
+    fun saveRestTargetAsDefault() {
+        val seconds = _draft.value.restTargetSeconds
+        viewModelScope.launch { prefs.setDefaultRestSeconds(seconds) }
+    }
+
+    // ---- Discard / finish -------------------------------------------------
+
     fun discard() {
         viewModelScope.launch {
             repository.clearSessionDraft()
@@ -374,51 +462,54 @@ class SessionLoggerViewModel(
         }
     }
 
-    /** Entry point for the Save/Done button. If this is a plan-backed session whose structure
-     *  changed mid-workout, raise [SessionLoggerState.askPlanSync] so the UI can ask whether to
-     *  push those edits back to the plan; otherwise just commit. */
-    fun attemptSave() {
+    /** Open the one Finish sheet: stats, skipped count and — for a plan session whose structure
+     *  changed — the plan-sync checkbox with its diff. */
+    fun openFinish() {
         val s = _draft.value
         if (s.saving || s.groups.isEmpty()) return
         viewModelScope.launch {
-            if (s.planId != null && planStructureChanged(s)) {
-                _draft.update { it.copy(askPlanSync = true) }
-            } else {
-                // No plan-sync prompt to gate the tap — show a plain confirmation instead so
-                // Finish is never a single accidental click.
-                _draft.update { it.copy(askConfirmFinish = true) }
-            }
+            _draft.update { it.copy(finish = FinishPrompt(planChanges(it))) }
         }
     }
 
-    fun dismissPlanSync() = _draft.update { it.copy(askPlanSync = false) }
+    fun dismissFinish() = _draft.update { it.copy(finish = null) }
 
-    fun dismissConfirmFinish() = _draft.update { it.copy(askConfirmFinish = false) }
-
-    /** Resolve the plain finish confirmation: commit the session as-is. */
-    fun confirmFinish() {
-        _draft.update { it.copy(askConfirmFinish = false) }
-        commitSave(updatePlan = false)
+    fun confirmFinish(updatePlan: Boolean) {
+        val prompt = _draft.value.finish ?: return
+        commitSave(updatePlan = updatePlan && prompt.planChanges.isNotEmpty())
     }
 
-    /** Resolve the plan-sync prompt: save the session, optionally rewriting the parent plan. */
-    fun confirmSave(updatePlan: Boolean) {
-        _draft.update { it.copy(askPlanSync = false) }
-        commitSave(updatePlan)
-    }
-
-    /** Compare the live session structure against the parent plan: exercise order, per-exercise set
-     *  count, and target rep range (all editable mid-session). Any difference offers a plan sync. */
-    private suspend fun planStructureChanged(s: SessionLoggerState): Boolean {
-        val planId = s.planId ?: return false
-        val plan = repository.observePlanWithExercises(planId).first() ?: return false
+    /** How the live session differs from its plan: per-exercise set counts and targets,
+     *  additions, removals, and (if nothing else changed) order. Empty when unchanged. */
+    private suspend fun planChanges(s: SessionLoggerState): List<String> {
+        val planId = s.planId ?: return emptyList()
+        val plan = repository.observePlanWithExercises(planId).first() ?: return emptyList()
         val baseline = plan.planned.sortedBy { it.planned.sortIndex }
-            .map { Quad(it.planned.exerciseId, it.planned.targetSets, it.planned.targetRepsLow, it.planned.targetRepsHigh) }
-        val current = s.groups.map { Quad(it.exerciseId, it.sets.size, it.targetRepsLow, it.targetRepsHigh) }
-        return baseline != current
+        val remaining = baseline.toMutableList()
+        val changes = mutableListOf<String>()
+        s.groups.forEach { g ->
+            val match = remaining.firstOrNull { it.planned.exerciseId == g.exerciseId }
+            if (match == null) {
+                changes += "added ${g.exerciseName}"
+            } else {
+                remaining.remove(match)
+                val p = match.planned
+                if (p.targetSets != g.sets.size) {
+                    changes += "${g.exerciseName} ${p.targetSets}→${g.sets.size} sets"
+                }
+                if (p.targetRepsLow != g.targetRepsLow || p.targetRepsHigh != g.targetRepsHigh) {
+                    changes += "${g.exerciseName} target ${rangeLabel(g.targetRepsLow, g.targetRepsHigh)}"
+                }
+            }
+        }
+        remaining.forEach { changes += "removed ${it.exercise.name}" }
+        if (changes.isEmpty() && baseline.map { it.planned.exerciseId } != s.groups.map { it.exerciseId }) {
+            changes += "reordered"
+        }
+        return changes
     }
 
-    private data class Quad(val exerciseId: Long, val sets: Int, val repsLow: Int, val repsHigh: Int)
+    private fun rangeLabel(low: Int, high: Int) = if (low == high) "$low" else "$low–$high"
 
     private fun commitSave(updatePlan: Boolean) {
         if (_draft.value.saving) return
@@ -444,31 +535,61 @@ class SessionLoggerViewModel(
                 planId = s.planId,
                 dateEpochDay = s.dateEpochDay,
                 loggedAtMillis = System.currentTimeMillis(),
+                startedAtMillis = s.startedAtMillis.takeIf { it > 0L },
             )
-            repository.saveSession(session) { sessionId ->
+            val sessionId = repository.saveSession(session) { id ->
                 s.groups.flatMap { group ->
                     group.sets.mapIndexed { idx, draft ->
-                        val resolvedReps = draft.repsInput.toIntOrNull() ?: draft.hintReps
-                        // Weight is optional — an empty field with no history means a bodyweight
-                        // movement (e.g. hanging leg raises) and stays null. The checkbox alone
-                        // determines whether the set counts.
-                        val resolvedWeightKg = draft.weightInput.toFloatOrNull()?.displayToKg(unit) ?: draft.hintWeightKg
-                        val completed = draft.isCompleted
+                        // Unticked sets are saved as skipped (decision 8): is_completed = false,
+                        // carrying the values the row showed so History can render them.
                         LoggedSetEntity(
-                            sessionId = sessionId,
+                            sessionId = id,
                             exerciseId = group.exerciseId,
                             setIndex = idx,
-                            repsDone = resolvedReps,
-                            weightKg = resolvedWeightKg,
-                            isCompleted = completed,
+                            repsDone = draft.repsInput.toIntOrNull() ?: draft.hintReps,
+                            // Weight is optional — empty with no history means bodyweight.
+                            weightKg = draft.weightInput.toFloatOrNull()?.displayToKg(unit) ?: draft.hintWeightKg,
+                            isCompleted = draft.isCompleted,
                             setType = draft.setType,
                         )
                     }
                 }
             }
             repository.clearSessionDraft()
-            // Order matters: flip saved last (this destroys the VM via nav).
-            _draft.update { it.copy(saving = false, saved = true) }
+            // Order matters: publishing the id navigates away (and destroys the VM).
+            _draft.update { it.copy(saving = false, finish = null, savedSessionId = sessionId) }
         }
     }
+
+    companion object {
+        const val REST_STEP_SECONDS = 15
+        const val REST_MIN_SECONDS = 15
+        const val REST_MAX_SECONDS = 600
+    }
+}
+
+/**
+ * Resolve each draft set (typed value, else its history hint) the same way Save does, then ask
+ * the domain which sets beat their exercise's pre-session records. Returns "groupUid#setIndex".
+ */
+fun sessionPrKeys(
+    groups: List<ExerciseGroup>,
+    baselines: Map<Long, PersonalRecords>,
+    unit: WeightUnit,
+): Set<String> {
+    val keys = HashSet<String>()
+    groups.forEach { group ->
+        val baseline = baselines[group.exerciseId] ?: return@forEach
+        val samples = group.sets.map { s ->
+            LoggedSetSample(
+                dateEpochDay = 0L,
+                repsDone = s.repsInput.toIntOrNull() ?: s.hintReps,
+                weightKg = s.weightInput.toFloatOrNull()?.displayToKg(unit) ?: s.hintWeightKg,
+                isCompleted = s.isCompleted,
+                setType = s.setType,
+            )
+        }
+        ExerciseProgress.sessionPrs(baseline, samples).keys.forEach { idx -> keys.add("${group.uid}#$idx") }
+    }
+    return keys
 }

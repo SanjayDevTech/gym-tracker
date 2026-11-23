@@ -10,6 +10,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -41,22 +42,25 @@ class PlanEditorViewModel(
         viewModelScope.launch { repository.updatePlan(current.copy(notes = newNotes)) }
     }
 
-    fun addExercise(exerciseId: Long) {
-        val existing = state.value?.planned ?: emptyList()
-        val nextIndex = (existing.maxOfOrNull { it.planned.sortIndex } ?: -1) + 1
+    /** Append the picker's selection, in pick order, with type defaults. */
+    fun addExercises(exerciseIds: List<Long>) {
+        if (exerciseIds.isEmpty()) return
         viewModelScope.launch {
-            val ex = repository.findExercise(exerciseId)
-            val d = defaultsFor(ex?.movementType ?: MovementType.Compound)
-            repository.insertPlanned(
+            // Read the current tail from the DB, not the (possibly not-yet-collected) state flow.
+            val existing = repository.observePlanWithExercises(planId).first()?.planned.orEmpty()
+            val firstIndex = (existing.maxOfOrNull { it.planned.sortIndex } ?: -1) + 1
+            val rows = exerciseIds.mapIndexed { i, exerciseId ->
+                val d = defaultsFor(repository.findExercise(exerciseId)?.movementType ?: MovementType.Compound)
                 PlannedExerciseEntity(
                     planId = planId,
                     exerciseId = exerciseId,
-                    sortIndex = nextIndex,
+                    sortIndex = firstIndex + i,
                     targetSets = d.sets,
                     targetRepsLow = d.low,
                     targetRepsHigh = d.high,
                 )
-            )
+            }
+            repository.insertPlannedAll(rows)
         }
     }
 

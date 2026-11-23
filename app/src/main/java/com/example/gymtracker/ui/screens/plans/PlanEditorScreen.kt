@@ -90,7 +90,6 @@ import com.example.gymtracker.ui.components.atoms.Stepper
 import com.example.gymtracker.ui.theme.Elevation
 import com.example.gymtracker.ui.theme.Sizes
 import com.example.gymtracker.ui.theme.Spacing
-import com.example.gymtracker.ui.components.ExercisePickerSheet
 import com.example.gymtracker.ui.rememberAppHaptics
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -104,6 +103,9 @@ fun PlanEditorScreen(
     onBack: () -> Unit,
     onLog: (Long) -> Unit,
     onOpenExercise: (Long) -> Unit,
+    onAddExercises: () -> Unit,
+    pickedExerciseIds: List<Long>?,
+    onPickedHandled: () -> Unit,
 ) {
     val container = LocalAppContainer.current
     val viewModel: PlanEditorViewModel = viewModel(
@@ -115,9 +117,14 @@ fun PlanEditorScreen(
         )
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+    LaunchedEffect(pickedExerciseIds) {
+        if (pickedExerciseIds != null) {
+            viewModel.addExercises(pickedExerciseIds)
+            onPickedHandled()
+        }
+    }
     val plan = state?.plan
     val planned = state?.planned?.sortedBy { it.planned.sortIndex }.orEmpty()
-    var showPicker by remember { mutableStateOf(false) }
     var showRename by remember { mutableStateOf(false) }
     var editingPlanned by remember { mutableStateOf<PlannedExerciseEntity?>(null) }
     var editingExercise by remember { mutableStateOf<ExerciseEntity?>(null) }
@@ -197,7 +204,7 @@ fun PlanEditorScreen(
             )
         },
         floatingActionButton = {
-            AppFab(text = "Add exercise", onClick = { showPicker = true }, icon = Icons.Outlined.Add)
+            AppFab(text = "Add exercise", onClick = onAddExercises, icon = Icons.Outlined.Add)
         },
         snackbarHost = { AppSnackbarHost(snackbarHostState) },
         modifier = Modifier.fillMaxSize(),
@@ -285,17 +292,6 @@ fun PlanEditorScreen(
                 }
             }
         }
-    }
-
-    if (showPicker) {
-        ExercisePickerSheet(
-            repository = container.repository,
-            onPick = { ex ->
-                viewModel.addExercise(ex.id)
-                showPicker = false
-            },
-            onDismiss = { showPicker = false },
-        )
     }
 
     if (showRename && plan != null) {

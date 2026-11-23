@@ -92,6 +92,7 @@ class BackupManager(
                 dateEpochDay = s.dateEpochDay,
                 loggedAtMillis = s.loggedAtMillis,
                 notes = s.notes,
+                startedAtMillis = s.startedAtMillis,
                 sets = withSets?.sets?.sortedBy { it.setIndex }?.map { st ->
                     SetSnapshot(
                         exerciseClientUuid = byId[st.exerciseId]?.clientUuid ?: "",
@@ -119,7 +120,7 @@ class BackupManager(
         }
 
         return BackupPayload(
-            version = 2,
+            version = 3,
             exportedAtMillis = System.currentTimeMillis(),
             prefs = PrefsSnapshot(
                 haptics = prefs.hapticsEnabled.first(),
@@ -195,6 +196,7 @@ class BackupManager(
                     dateEpochDay = s.dateEpochDay,
                     loggedAtMillis = s.loggedAtMillis,
                     notes = s.notes,
+                    startedAtMillis = s.startedAtMillis,
                 )
                 repository.saveSession(session) { sid ->
                     s.sets.mapNotNull { snap ->

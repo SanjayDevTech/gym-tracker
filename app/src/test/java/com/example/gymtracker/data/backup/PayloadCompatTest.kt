@@ -1,0 +1,46 @@
+package com.example.gymtracker.data.backup
+
+import com.example.gymtracker.data.db.SessionDraftPayload
+import kotlinx.serialization.json.Json
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+/** Formats written before phase 3 must still decode (additive, optional fields only). */
+class PayloadCompatTest {
+    private val json = Json { ignoreUnknownKeys = true }
+
+    @Test
+    fun v2BackupWithoutStartedAtStillImports() {
+        val v2 = """
+            {"version":2,"exportedAtMillis":1,"prefs":{"haptics":true,"weightUnit":"Kg","seedVersion":3},
+             "customExercises":[],"plans":[],
+             "sessions":[{"clientUuid":"a","planClientUuid":null,"dateEpochDay":20000,
+               "loggedAtMillis":5,"notes":"","sets":[]}]}
+        """.trimIndent()
+        val payload = json.decodeFromString(BackupPayload.serializer(), v2)
+        assertEquals(2, payload.version)
+        assertNull(payload.sessions.single().startedAtMillis)
+    }
+
+    @Test
+    fun v3BackupCarriesStartedAt() {
+        val payload = BackupPayload(
+            exportedAtMillis = 1,
+            prefs = PrefsSnapshot(haptics = true, weightUnit = "Kg", seedVersion = 1),
+            customExercises = emptyList(),
+            plans = emptyList(),
+            sessions = listOf(SessionSnapshot("a", null, 1, 10, "", emptyList(), startedAtMillis = 4)),
+        )
+        val back = json.decodeFromString(BackupPayload.serializer(), json.encodeToString(BackupPayload.serializer(), payload))
+        assertEquals(3, back.version)
+        assertEquals(4L, back.sessions.single().startedAtMillis)
+    }
+
+    @Test
+    fun draftWithoutRestTargetDefaultsTo90() {
+        val old = """{"planName":"Push A","dateEpochDay":20000,"groups":[],"lastSetCompletedAtMillis":0}"""
+        val payload = json.decodeFromString(SessionDraftPayload.serializer(), old)
+        assertEquals(90, payload.restTargetSeconds)
+    }
+}
