@@ -1,102 +1,102 @@
 package com.example.gymtracker.ui.screens.plans
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.DragHandle
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.FileUpload
-import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material.icons.outlined.Remove
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.SheetValue
-import androidx.compose.material3.rememberBottomSheetState
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.example.gymtracker.data.db.PlannedWithExercise
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.gymtracker.data.MovementType
-import com.example.gymtracker.data.formatTarget
-import com.example.gymtracker.data.plan.PlanExport
-import com.example.gymtracker.data.repUnit
 import com.example.gymtracker.data.db.ExerciseEntity
 import com.example.gymtracker.data.db.PlannedExerciseEntity
+import com.example.gymtracker.data.db.PlannedWithExercise
+import com.example.gymtracker.data.displayName
+import com.example.gymtracker.data.formatTarget
+import com.example.gymtracker.data.plan.PlanExport
 import com.example.gymtracker.ui.AppViewModelFactory
 import com.example.gymtracker.ui.LocalAppContainer
-import com.example.gymtracker.data.displayName
+import com.example.gymtracker.ui.components.TargetSheet
 import com.example.gymtracker.ui.components.atoms.AppButton
-import com.example.gymtracker.ui.components.atoms.AppFab
+import com.example.gymtracker.ui.components.atoms.AppDivider
 import com.example.gymtracker.ui.components.atoms.AppSnackbarHost
 import com.example.gymtracker.ui.components.atoms.AppTextButton
 import com.example.gymtracker.ui.components.atoms.AppTopBar
+import com.example.gymtracker.ui.components.atoms.ConfirmSheet
 import com.example.gymtracker.ui.components.atoms.EmptyState
-import com.example.gymtracker.ui.components.atoms.Stepper
-import com.example.gymtracker.ui.theme.Elevation
+import com.example.gymtracker.ui.components.atoms.SectionHead
+import com.example.gymtracker.ui.format.formatDuration
+import com.example.gymtracker.ui.rememberAppHaptics
+import com.example.gymtracker.ui.screens.logger.components.LoggerMenuItem
+import com.example.gymtracker.ui.screens.logger.components.OverflowMenu
+import com.example.gymtracker.ui.screens.plans.components.TextEntrySheet
+import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Sizes
 import com.example.gymtracker.ui.theme.Spacing
-import com.example.gymtracker.ui.rememberAppHaptics
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.example.gymtracker.ui.theme.Radius
+import kotlinx.coroutines.withTimeoutOrNull
 
-@OptIn(ExperimentalMaterial3Api::class)
+private const val UNDO_MILLIS = 5_000L
+
+/** The index column fits two digits at any font scale; a size, not a gap. */
+private val IndexColumn = 28.dp
+
+private enum class EditorSheet { Rename, Note, Delete }
+
+/**
+ * Plan editor — design-plan §4.2. Name (tap → rename), a meta line with the typical duration
+ * (decision 4), the plan note (tap → edit), then the exercises as text on hairlines: index,
+ * name, `Chest · Barbell`, the target in tertiary, and a drag handle that is the only drag zone
+ * (issue 8). Row tap → the shared [TargetSheet] with View progress and Remove (undoable). ⋮ holds
+ * Rename, Export and Delete plan; Start workout is pinned above the navigation inset.
+ */
 @Composable
 fun PlanEditorScreen(
     planId: Long,
@@ -112,11 +112,12 @@ fun PlanEditorScreen(
         key = "plan-$planId",
         factory = AppViewModelFactory(
             mapOf(PlanEditorViewModel::class.java to {
-                PlanEditorViewModel(container.repository, planId)
+                PlanEditorViewModel(container.repository, planId, container.database.sessionDao())
             })
         )
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val typicalDuration by viewModel.typicalDurationMillis.collectAsStateWithLifecycle()
     LaunchedEffect(pickedExerciseIds) {
         if (pickedExerciseIds != null) {
             viewModel.addExercises(pickedExerciseIds)
@@ -125,9 +126,8 @@ fun PlanEditorScreen(
     }
     val plan = state?.plan
     val planned = state?.planned?.sortedBy { it.planned.sortIndex }.orEmpty()
-    var showRename by remember { mutableStateOf(false) }
-    var editingPlanned by remember { mutableStateOf<PlannedExerciseEntity?>(null) }
-    var editingExercise by remember { mutableStateOf<ExerciseEntity?>(null) }
+    var sheet by rememberSaveable { mutableStateOf<EditorSheet?>(null) }
+    var editing by remember { mutableStateOf<PlannedWithExercise?>(null) }
     val haptics = rememberAppHaptics()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -151,8 +151,24 @@ fun PlanEditorScreen(
         }
     }
 
-    // Drag-and-drop reorder state. localOrder is the display order; it mirrors the DB while idle
-    // and is mutated live during a drag, then committed on drop.
+    fun remove(row: PlannedWithExercise) {
+        haptics.light()
+        viewModel.removePlanned(row.planned.id)
+        scope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            val result = withTimeoutOrNull(UNDO_MILLIS) {
+                snackbarHostState.showSnackbar(
+                    "Removed ${row.exercise.name}",
+                    actionLabel = "Undo",
+                    duration = SnackbarDuration.Indefinite,
+                )
+            }
+            if (result == SnackbarResult.ActionPerformed) viewModel.restorePlanned(row.planned)
+        }
+    }
+
+    // Drag-and-drop reorder. localOrder is the display order; it mirrors the DB while idle and is
+    // mutated live during a drag, then committed on drop.
     val listState = rememberLazyListState()
     var localOrder by remember { mutableStateOf<List<PlannedWithExercise>>(emptyList()) }
     var draggingId by remember { mutableStateOf<Long?>(null) }
@@ -160,77 +176,121 @@ fun PlanEditorScreen(
 
     LaunchedEffect(planned, draggingId) {
         if (draggingId != null) return@LaunchedEffect
-        if (localOrder.isEmpty()) {
-            localOrder = planned
-            return@LaunchedEffect
-        }
-        // Preserve current order, refresh row content, append new rows, drop removed ones.
+        // Keep the local order while a dropped order is still being written row by row (so the
+        // list doesn't jump through half-written states); take the DB's order whenever the set of
+        // rows changes (add, remove, undo).
         val byId = planned.associateBy { it.planned.id }
-        val merged = localOrder.mapNotNull { byId[it.planned.id] }.toMutableList()
-        val existing = merged.map { it.planned.id }.toSet()
-        planned.forEach { if (it.planned.id !in existing) merged.add(it) }
-        if (merged != localOrder) localOrder = merged
+        val sameRows = localOrder.size == planned.size && localOrder.all { it.planned.id in byId }
+        localOrder = if (sameRows) localOrder.map { byId.getValue(it.planned.id) } else planned
     }
+
+    val totalSets = planned.sumOf { it.planned.targetSets }
 
     Scaffold(
         topBar = {
+            // Loading: no title, no menu, no placeholder name (§4.2).
             AppTopBar(
-                title = plan?.name ?: "Plan",
+                title = "",
                 onBack = onBack,
                 actions = {
                     if (plan != null) {
-                        IconButton(onClick = { showRename = true }) {
-                            Icon(Icons.Outlined.Edit, contentDescription = "Rename")
-                        }
-                    }
-                    if (plan != null && planned.isNotEmpty()) {
-                        IconButton(onClick = {
-                            exportLauncher.launch(PlanExport.suggestedFileName(plan.name))
-                        }) {
-                            Icon(Icons.Outlined.FileUpload, contentDescription = "Export plan")
-                        }
-                        FilledIconButton(
-                            onClick = { onLog(planId) },
-                            colors = IconButtonDefaults.filledIconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                        OverflowMenu(
+                            items = listOf(
+                                LoggerMenuItem("Rename", { sheet = EditorSheet.Rename }),
+                                LoggerMenuItem(
+                                    "Export",
+                                    { exportLauncher.launch(PlanExport.suggestedFileName(plan.name)) },
+                                    enabled = planned.isNotEmpty(),
+                                ),
+                                LoggerMenuItem("Delete plan", { sheet = EditorSheet.Delete }, destructive = true),
                             ),
-                            modifier = Modifier.padding(end = Spacing.s),
-                        ) {
-                            Icon(Icons.Outlined.PlayArrow, contentDescription = "Log session")
-                        }
+                        )
                     }
                 },
             )
         },
-        floatingActionButton = {
-            AppFab(text = "Add exercise", onClick = onAddExercises, icon = Icons.Outlined.Add)
+        bottomBar = {
+            if (plan != null) {
+                StartBar(
+                    enabled = planned.isNotEmpty(),
+                    onStart = { haptics.light(); onLog(planId) },
+                )
+            }
         },
         snackbarHost = { AppSnackbarHost(snackbarHostState) },
         modifier = Modifier.fillMaxSize(),
     ) { padding ->
-        if (planned.isEmpty()) {
-            EmptyState(
-                title = "No exercises yet",
-                message = "Tap Add exercise to start building this plan.",
-                modifier = Modifier.padding(padding).padding(horizontal = Spacing.gutter),
-            )
-        } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(start = Spacing.l, end = Spacing.l, top = Spacing.s, bottom = Sizes.fabClearance),
-                verticalArrangement = Arrangement.spacedBy(Spacing.m),
-            ) {
+        if (plan == null) return@Scaffold
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(
+                start = Spacing.gutter,
+                end = Spacing.gutter,
+                bottom = Spacing.l,
+            ),
+        ) {
+            item(key = "header") {
+                Column(Modifier.fillMaxWidth()) {
+                    Text(
+                        plan.name,
+                        style = AppText.titleL,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClickLabel = "Rename plan") { sheet = EditorSheet.Rename },
+                    )
+                    Text(
+                        metaLine(planned.size, totalSets, typicalDuration),
+                        style = AppText.bodyS,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    NoteLine(note = plan.notes, onEdit = { sheet = EditorSheet.Note })
+                    Spacer(Modifier.height(Spacing.l))
+                }
+            }
+            item(key = "exercises-head") {
+                SectionHead(title = "Exercises") {
+                    if (totalSets > 0) {
+                        Text(
+                            "$totalSets set${if (totalSets == 1) "" else "s"}",
+                            style = AppText.bodyS,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(Spacing.s))
+                AppDivider()
+            }
+            if (localOrder.isEmpty()) {
+                item(key = "empty") {
+                    EmptyState(
+                        title = "No exercises yet",
+                        message = "Add the first one.",
+                        actionLabel = "Add exercise",
+                        onAction = onAddExercises,
+                    )
+                }
+            } else {
                 itemsIndexed(localOrder, key = { _, row -> row.planned.id }) { index, row ->
                     val dragging = row.planned.id == draggingId
-                    PlannedCard(
-                        modifier = Modifier
+                    Column(
+                        Modifier
                             .zIndex(if (dragging) 1f else 0f)
                             .then(if (dragging) Modifier else Modifier.animateItem())
                             .graphicsLayer { translationY = if (dragging) dragDeltaY else 0f }
-                            .pointerInput(row.planned.id) {
-                                detectDragGesturesAfterLongPress(
+                            .background(
+                                if (dragging) MaterialTheme.colorScheme.surfaceContainerHigh
+                                else MaterialTheme.colorScheme.background,
+                            ),
+                    ) {
+                        PlannedRow(
+                            index = index,
+                            planned = row.planned,
+                            exercise = row.exercise,
+                            onClick = { editing = row },
+                            handleModifier = Modifier.pointerInput(row.planned.id) {
+                                detectDragGestures(
                                     onDragStart = {
                                         draggingId = row.planned.id
                                         dragDeltaY = 0f
@@ -248,294 +308,226 @@ fun PlanEditorScreen(
                                     onDrag = { change, amount ->
                                         change.consume()
                                         dragDeltaY += amount.y
-                                        val curIndex = localOrder.indexOfFirst { it.planned.id == draggingId }
-                                        if (curIndex < 0) return@detectDragGesturesAfterLongPress
-                                        val curInfo = listState.layoutInfo.visibleItemsInfo
-                                            .firstOrNull { it.index == curIndex }
-                                            ?: return@detectDragGesturesAfterLongPress
+                                        val id = draggingId ?: return@detectDragGestures
+                                        val visible = listState.layoutInfo.visibleItemsInfo
+                                        val curInfo = visible.firstOrNull { it.key == id }
+                                            ?: return@detectDragGestures
                                         val center = curInfo.offset + curInfo.size / 2 + dragDeltaY
-                                        val target = listState.layoutInfo.visibleItemsInfo.firstOrNull { info ->
-                                            info.index != curIndex &&
+                                        // Only planned rows (Long keys) are drop targets, never
+                                        // the header, section head or foot.
+                                        val target = visible.firstOrNull { info ->
+                                            info.key != id && info.key is Long &&
                                                 center.toInt() in info.offset..(info.offset + info.size)
-                                        }
-                                        if (target != null) {
-                                            val newList = localOrder.toMutableList()
-                                                .apply { add(target.index, removeAt(curIndex)) }
-                                            // Re-anchor the floating card so it stays under the finger after the
-                                            // slot shift. Moving DOWN, the card lands one neighbour lower, so its
-                                            // new top depends on THAT neighbour's height — using the dragged
-                                            // card's own height (the old formula) made a two-line card jump and
-                                            // oscillate, so the reorder looked stuck. Moving UP it lands exactly
-                                            // on the target's slot.
-                                            val newBase = if (target.index > curIndex)
-                                                target.offset + target.size - curInfo.size
-                                            else
-                                                target.offset
-                                            dragDeltaY = (curInfo.offset + dragDeltaY) - newBase
-                                            localOrder = newList
-                                            haptics.reorder()
-                                        }
+                                        } ?: return@detectDragGestures
+                                        val from = localOrder.indexOfFirst { it.planned.id == id }
+                                        val to = localOrder.indexOfFirst { it.planned.id == target.key }
+                                        if (from < 0 || to < 0) return@detectDragGestures
+                                        // Re-anchor the floating row so it stays under the finger
+                                        // after the slot shift. Moving down, it lands one
+                                        // neighbour lower, so its new top depends on that
+                                        // neighbour's height; moving up it lands on the target.
+                                        val newBase = if (to > from)
+                                            target.offset + target.size - curInfo.size
+                                        else
+                                            target.offset
+                                        dragDeltaY = (curInfo.offset + dragDeltaY) - newBase
+                                        localOrder = localOrder.toMutableList().apply { add(to, removeAt(from)) }
+                                        haptics.reorder()
                                     },
                                 )
                             },
-                        index = index,
-                        dragging = dragging,
-                        planned = row.planned,
-                        exercise = row.exercise,
-                        onRemove = { haptics.light(); viewModel.removePlanned(row.planned.id) },
-                        onEdit = {
-                            editingPlanned = row.planned
-                            editingExercise = row.exercise
-                        },
-                        onOpenExercise = onOpenExercise,
-                    )
+                        )
+                        AppDivider()
+                    }
+                }
+                item(key = "add") {
+                    AppTextButton(text = "Add exercise", onClick = onAddExercises, icon = Icons.Outlined.Add)
                 }
             }
         }
     }
 
-    if (showRename && plan != null) {
-        RenameSheet(
-            current = plan.name,
-            onDismiss = { showRename = false },
-            onConfirm = { new ->
-                viewModel.renamePlan(new)
-                showRename = false
-            },
-        )
+    when (sheet) {
+        EditorSheet.Rename -> if (plan != null) {
+            TextEntrySheet(
+                title = "Rename plan",
+                initial = plan.name,
+                placeholder = "Plan name",
+                confirmLabel = "Save",
+                onDismiss = { sheet = null },
+                onConfirm = { name ->
+                    viewModel.renamePlan(name)
+                    sheet = null
+                },
+            )
+        }
+        EditorSheet.Note -> if (plan != null) {
+            TextEntrySheet(
+                title = "Plan note",
+                caption = "Shown under the plan's name.",
+                initial = plan.notes,
+                placeholder = "Heavy day. 2 min rests on compounds.",
+                confirmLabel = "Save",
+                singleLine = false,
+                allowBlank = true,
+                onDismiss = { sheet = null },
+                onConfirm = { note ->
+                    viewModel.updateNotes(note.trim())
+                    sheet = null
+                },
+            )
+        }
+        EditorSheet.Delete -> if (plan != null) {
+            ConfirmSheet(
+                title = "Delete ${plan.name}?",
+                message = "The plan and its exercise list go. Logged sessions stay in History.",
+                confirmLabel = "Delete plan",
+                onConfirm = {
+                    sheet = null
+                    viewModel.deletePlan(onDeleted = onBack)
+                },
+                onDismiss = { sheet = null },
+            )
+        }
+        null -> Unit
     }
 
-    editingPlanned?.let { ep ->
-        TargetsSheet(
-            exerciseName = editingExercise?.name.orEmpty(),
-            movementType = editingExercise?.movementType ?: MovementType.Compound,
-            initial = ep,
-            onDismiss = { editingPlanned = null; editingExercise = null },
-            onApply = { updated ->
-                viewModel.updatePlanned(updated)
-                editingPlanned = null
-                editingExercise = null
+    editing?.let { row ->
+        TargetSheet(
+            exerciseName = row.exercise.name,
+            movementType = row.exercise.movementType,
+            initialSets = row.planned.targetSets,
+            initialLow = row.planned.targetRepsLow,
+            initialHigh = row.planned.targetRepsHigh,
+            onApply = { sets, low, high ->
+                viewModel.updatePlanned(
+                    row.planned.copy(
+                        targetSets = sets ?: row.planned.targetSets,
+                        targetRepsLow = low,
+                        targetRepsHigh = high,
+                    ),
+                )
+                editing = null
+            },
+            onDismiss = { editing = null },
+            onViewProgress = {
+                editing = null
+                onOpenExercise(row.exercise.id)
+            },
+            removeLabel = "Remove from plan",
+            onRemove = {
+                editing = null
+                remove(row)
             },
         )
     }
 }
 
+private fun metaLine(exercises: Int, sets: Int, typicalMillis: Long?): String = buildList {
+    add(if (exercises == 1) "1 exercise" else "$exercises exercises")
+    add(if (sets == 1) "1 set" else "$sets sets")
+    typicalMillis?.let { add("~" + formatDuration(it)) }
+}.joinToString(" · ")
+
+/** The plan note (issue 9): the text itself, or a quiet prompt to add one. Tap → edit. */
 @Composable
-private fun PlannedCard(
+private fun NoteLine(note: String, onEdit: () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = Sizes.touchTarget)
+            .clickable(onClickLabel = "Edit note", onClick = onEdit)
+            .padding(vertical = Spacing.s),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        if (note.isBlank()) {
+            Text("Add a note", style = AppText.bodyS, color = scheme.onSurfaceVariant)
+        } else {
+            Text(note, style = AppText.body, color = scheme.onSurface)
+        }
+    }
+}
+
+/**
+ * §3 `PlannedRow`: index `numberM` · name `titleM` over `Chest · Barbell` · target in tertiary ·
+ * drag handle. Only [handleModifier]'s 48dp target starts a drag; the rest of the row is a tap.
+ */
+@Composable
+private fun PlannedRow(
     index: Int,
-    dragging: Boolean,
     planned: PlannedExerciseEntity,
     exercise: ExerciseEntity,
-    onRemove: () -> Unit,
-    onEdit: () -> Unit,
-    onOpenExercise: (Long) -> Unit,
-    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    handleModifier: Modifier,
 ) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onEdit),
-        shape = RoundedCornerShape(Radius.lg),
-        colors = CardDefaults.cardColors(
-            containerColor = if (dragging) MaterialTheme.colorScheme.surfaceContainerHighest
-            else MaterialTheme.colorScheme.surfaceContainer,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = Elevation.none, pressedElevation = Elevation.none),
-    ) {
-        Row(
-            modifier = Modifier.padding(start = Spacing.m, end = Spacing.s, top = Spacing.m, bottom = Spacing.m),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.m),
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    (index + 1).toString(),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(exercise.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
-                Text(
-                    formatTarget(
-                        sets = planned.targetSets,
-                        low = planned.targetRepsLow,
-                        high = planned.targetRepsHigh,
-                        type = exercise.movementType,
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (exercise.primaryMuscles.isNotEmpty()) {
-                    Text(
-                        exercise.primaryMuscles.joinToString { it.displayName },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                Text(
-                    "${exercise.movementType.displayName} · ${exercise.equipment.displayName}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            IconButton(onClick = { onOpenExercise(exercise.id) }) {
-                Icon(
-                    Icons.AutoMirrored.Outlined.TrendingUp,
-                    contentDescription = "View progress",
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-            IconButton(onClick = onRemove) {
-                Icon(
-                    Icons.Outlined.DeleteOutline,
-                    contentDescription = "Remove",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Icon(
-                Icons.Outlined.DragHandle,
-                contentDescription = "Drag to reorder",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = Spacing.xs),
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun RenameSheet(
-    current: String,
-    onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit,
-) {
-    val sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden, enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded))
-    var text by remember { mutableStateOf(current) }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(Spacing.xxl),
-            verticalArrangement = Arrangement.spacedBy(Spacing.l),
-        ) {
-            Text("Rename plan", style = MaterialTheme.typography.headlineSmall)
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                label = { Text("Plan name") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(Radius.md),
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.m, Alignment.End),
-            ) {
-                AppTextButton(text = "Cancel", onClick = onDismiss)
-                AppButton(text = "Save", onClick = { onConfirm(text) }, enabled = text.isNotBlank())
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TargetsSheet(
-    exerciseName: String,
-    movementType: MovementType,
-    initial: PlannedExerciseEntity,
-    onDismiss: () -> Unit,
-    onApply: (PlannedExerciseEntity) -> Unit,
-) {
-    val sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden, enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded))
-    var sets by remember(initial.id) { mutableStateOf(initial.targetSets) }
-    var low by remember(initial.id) { mutableStateOf(initial.targetRepsLow) }
-    var high by remember(initial.id) { mutableStateOf(initial.targetRepsHigh) }
-
-    LaunchedEffect(low) { if (high < low) high = low }
-    LaunchedEffect(high) { if (low > high) low = high }
-
-    val unit = movementType.repUnit
-    val (minMax, perSetCap) = when (movementType) {
-        MovementType.Cardio -> 1..120 to 120
-        MovementType.Mobility -> 1..180 to 180
-        else -> 1..50 to 50
-    }
-
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(start = Spacing.xxl, end = Spacing.xxl, top = Spacing.xs, bottom = Spacing.xxl),
-            verticalArrangement = Arrangement.spacedBy(Spacing.l),
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                Text("Targets", style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(exerciseName, style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold)
-            }
-            StepperRow(
-                label = if (movementType == MovementType.Cardio) "Rounds" else "Sets",
-                value = sets,
-                onChange = { sets = it.coerceIn(1, 10) },
-                min = 1, max = 10,
-            )
-            StepperRow(
-                label = "Min $unit",
-                value = low,
-                onChange = { low = it.coerceIn(minMax.first, perSetCap) },
-                min = minMax.first, max = perSetCap,
-            )
-            StepperRow(
-                label = "Max $unit",
-                value = high,
-                onChange = { high = it.coerceIn(low, perSetCap) },
-                min = low, max = perSetCap,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.m, Alignment.End),
-            ) {
-                AppTextButton(text = "Cancel", onClick = onDismiss)
-                AppButton(
-                    text = "Apply",
-                    onClick = {
-                        onApply(initial.copy(
-                            targetSets = sets,
-                            targetRepsLow = low,
-                            targetRepsHigh = high,
-                        ))
-                    },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun StepperRow(
-    label: String,
-    value: Int,
-    onChange: (Int) -> Unit,
-    min: Int,
-    max: Int,
-) {
+    val scheme = MaterialTheme.colorScheme
+    val caption = listOfNotNull(
+        exercise.primaryMuscles.firstOrNull()?.displayName,
+        exercise.equipment.displayName,
+    ).joinToString(" · ")
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .heightIn(min = Sizes.touchTarget)
+            .padding(vertical = Spacing.s),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Stepper(
-            value = value,
-            onValueChange = onChange,
-            range = min..max.coerceAtLeast(min),
-            decrementLabel = "Decrease $label",
-            incrementLabel = "Increase $label",
+        Text(
+            "${index + 1}",
+            style = AppText.numberM,
+            color = scheme.onSurfaceVariant,
+            modifier = Modifier.widthIn(min = IndexColumn),
         )
+        Spacer(Modifier.width(Spacing.s))
+        Column(Modifier.weight(1f)) {
+            Text(exercise.name, style = AppText.titleM, color = scheme.onSurface)
+            Text(caption, style = AppText.bodyS, color = scheme.onSurfaceVariant)
+        }
+        Spacer(Modifier.width(Spacing.m))
+        Text(
+            formatTarget(planned.targetSets, planned.targetRepsLow, planned.targetRepsHigh, exercise.movementType),
+            style = AppText.bodyS,
+            color = scheme.tertiary,
+        )
+        Box(
+            handleModifier
+                .size(Sizes.touchTarget)
+                .semantics { contentDescription = "Drag to reorder ${exercise.name}" },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.DragHandle, contentDescription = null, tint = scheme.onSurfaceVariant)
+        }
+    }
+}
+
+/** Start workout, pinned above the navigation inset; disabled with a caption while empty. */
+@Composable
+private fun StartBar(enabled: Boolean, onStart: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.background)
+            .navigationBarsPadding()
+            .padding(horizontal = Spacing.gutter, vertical = Spacing.s),
+    ) {
+        AppDivider()
+        Spacer(Modifier.height(Spacing.s))
+        AppButton(
+            text = "Start workout",
+            onClick = onStart,
+            enabled = enabled,
+            icon = Icons.Outlined.PlayArrow,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (!enabled) {
+            Text(
+                "Add an exercise to start",
+                style = AppText.bodyS,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = Spacing.xs),
+            )
+        }
     }
 }

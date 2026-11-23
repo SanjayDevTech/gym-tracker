@@ -6,12 +6,14 @@ import com.example.gymtracker.data.GymRepository
 import com.example.gymtracker.data.MovementType
 import com.example.gymtracker.data.db.PlanWithExercises
 import com.example.gymtracker.data.db.PlannedExerciseEntity
+import com.example.gymtracker.data.db.SessionDao
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -19,11 +21,21 @@ import kotlinx.coroutines.launch
 class PlanEditorViewModel(
     private val repository: GymRepository,
     private val planId: Long,
+    sessionDao: SessionDao,
 ) : ViewModel() {
     private val idFlow = MutableStateFlow(planId)
 
     val state: StateFlow<PlanWithExercises?> = idFlow
         .flatMapLatest { repository.observePlanWithExercises(it) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = null,
+        )
+
+    /** Median length of this plan's timed sessions (decision 4); null when none is timed. */
+    val typicalDurationMillis: StateFlow<Long?> = sessionDao.observeSessionVolumes()
+        .map { rows -> PlanStats.medianDurationMillis(rows.filter { it.planId == planId }) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
@@ -77,6 +89,20 @@ class PlanEditorViewModel(
 
     fun removePlanned(plannedId: Long) {
         viewModelScope.launch { repository.deletePlanned(plannedId) }
+    }
+
+    /** Undo of [removePlanned]: re-insert the row as it was (same id and sort index). */
+    fun restorePlanned(planned: PlannedExerciseEntity) {
+        viewModelScope.launch { repository.insertPlanned(planned) }
+    }
+
+    /** Whole-plan deletion; the caller confirms first (house rule 10). Logged sessions are kept.
+     *  [onDeleted] runs after the write, so popping the screen cannot cancel it. */
+    fun deletePlan(onDeleted: () -> Unit) {
+        viewModelScope.launch {
+            repository.deletePlan(planId)
+            onDeleted()
+        }
     }
 
     /** Persist a new ordering of planned exercises (from drag-and-drop). Only rows whose

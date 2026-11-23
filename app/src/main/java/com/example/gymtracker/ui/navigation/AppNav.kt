@@ -53,8 +53,8 @@ import com.example.gymtracker.ui.screens.library.LibraryViewModel
 import com.example.gymtracker.ui.screens.logger.SessionLoggerHost
 import com.example.gymtracker.ui.screens.picker.ExercisePickerScreen
 import com.example.gymtracker.ui.screens.plans.PlanEditorScreen
-import com.example.gymtracker.ui.screens.plans.PlanListScreen
 import com.example.gymtracker.ui.screens.plans.PlanListViewModel
+import com.example.gymtracker.ui.screens.plans.TrainScreen
 import com.example.gymtracker.ui.screens.plans.importplan.ImportPlanScreen
 import com.example.gymtracker.ui.screens.settings.SettingsScreen
 import com.example.gymtracker.ui.screens.settings.SettingsViewModel
@@ -178,7 +178,7 @@ fun AppNav() {
                 val vm: PlanListViewModel = viewModel(
                     factory = AppViewModelFactory(
                         mapOf(PlanListViewModel::class.java to {
-                            PlanListViewModel(container.repository)
+                            PlanListViewModel(container.repository, container.database.sessionDao(), container.prefs)
                         })
                     )
                 )
@@ -196,7 +196,7 @@ fun AppNav() {
                         }
                     }
                 }
-                PlanListScreen(
+                TrainScreen(
                     viewModel = vm,
                     snackbarHostState = trainSnackbar,
                     onSettings = { nav.navigate(SettingsRoute) },

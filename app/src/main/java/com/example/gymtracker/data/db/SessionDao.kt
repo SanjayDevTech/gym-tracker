@@ -126,4 +126,34 @@ interface SessionDao {
         """
     )
     fun observeExerciseSetsWithDate(exerciseId: Long): Flow<List<ExerciseSetWithDate>>
+
+    /** Every session with its volume and completed-set count, oldest first (see [SessionVolume]). */
+    @Query(
+        """
+        SELECT s.id AS session_id, s.plan_id, s.date_epoch_day, s.logged_at_millis, s.started_at_millis,
+            COALESCE(SUM(CASE WHEN ls.is_completed = 1 AND ls.set_type != 'Warmup'
+                THEN COALESCE(ls.reps_done, 0) * COALESCE(ls.weight_kg, 0) ELSE 0 END), 0) AS volume_kg,
+            COALESCE(SUM(CASE WHEN ls.is_completed = 1 THEN 1 ELSE 0 END), 0) AS done_sets
+        FROM sessions s
+        LEFT JOIN logged_sets ls ON ls.session_id = s.id
+        GROUP BY s.id
+        ORDER BY s.date_epoch_day ASC, s.logged_at_millis ASC
+        """
+    )
+    fun observeSessionVolumes(): Flow<List<SessionVolume>>
 }
+
+/**
+ * One session with its training volume folded in SQL — Train's week hero, per-plan sparklines and
+ * typical durations. [volumeKg] follows the tonnage rule used elsewhere: Σ reps × load over
+ * completed, non-warm-up sets (bodyweight sets add 0). [doneSets] counts every completed set.
+ */
+data class SessionVolume(
+    @ColumnInfo(name = "session_id") val sessionId: Long,
+    @ColumnInfo(name = "plan_id") val planId: Long?,
+    @ColumnInfo(name = "date_epoch_day") val dateEpochDay: Long,
+    @ColumnInfo(name = "logged_at_millis") val loggedAtMillis: Long,
+    @ColumnInfo(name = "started_at_millis") val startedAtMillis: Long?,
+    @ColumnInfo(name = "volume_kg") val volumeKg: Double,
+    @ColumnInfo(name = "done_sets") val doneSets: Int,
+)
