@@ -965,7 +965,7 @@ Create plan, Rename plan, Delete plan, Discard session, Delete session → `Conf
 
 ### 4.18 Notification & splash — **revise**
 
-Notification: title "Push A · 7 of 18 sets"; when resting, text "Rest · target 1:30" with the chronometer based on the last completed set (count-up; switches back to session time on the next tick). A second channel, **Rest timer** (decision 5), posts once when rest reaches its target while the logger is not in the foreground: high importance so it vibrates, `setSound(null)`, no actions, auto-cancelled by the next completed set or on finish/discard. Splash and launcher background `#8E5226` → `#000000` with the existing foreground.
+Notification: title "Push A · 7 of 18 sets"; when resting, text "Rest · target 1:30" with the chronometer based on the last completed set (count-up; switches back to session time on the next tick). A second channel, **Rest timer** (decision 5), posts once when rest reaches its target while the logger is not in the foreground: high importance so it vibrates, `setSound(null)`, no actions, auto-cancelled by the next completed set or on finish/discard. While that post is pending the service holds a `PARTIAL_WAKE_LOCK` (acquired with a timeout of remaining rest + 10 s, released when the alert posts, is re-keyed or cancelled, or the service is destroyed) so the vibration is on time with the phone in a pocket and the screen off. Splash and launcher background `#8E5226` → `#000000` with the existing foreground.
 
 ### 4.19 Custom exercise form (full page; from Exercises FAB, Exercise detail ⋮ Edit, Import Create) — **new, phase 9 (decision 2)**
 

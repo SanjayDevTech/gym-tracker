@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.core.app.NotificationManagerCompat
 import com.example.gymtracker.GymTrackerApp
 import com.example.gymtracker.data.GymRepository
@@ -32,6 +33,14 @@ class SessionTrackingService : Service() {
     private var restKey: Pair<Long, Int>? = null
     private var restJob: Job? = null
     private var postedRestBase: Long = 0L
+
+    // Held only while a rest alert is pending, so the delay() still fires on time with the screen
+    // off (Handler time stops in deep sleep). Not reference-counted: one acquire, one release.
+    private val restWakeLock: PowerManager.WakeLock by lazy {
+        (getSystemService(Context.POWER_SERVICE) as PowerManager)
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "GymTracker:RestAlert")
+            .apply { setReferenceCounted(false) }
+    }
 
     private val repository: GymRepository
         get() = (application as GymTrackerApp).container.repository
@@ -95,13 +104,14 @@ class SessionTrackingService : Service() {
         if (key == restKey) return
         if (base != restKey?.first) cancelRestAlert()
         restKey = key
-        restJob?.cancel()
-        restJob = null
+        clearRestJob()
         if (payload == null || base <= 0L) return
 
         val wait = base + target * 1000L - System.currentTimeMillis()
         if (wait <= 0L) return
         val planName = payload.planName
+        // Safety timeout: the lock can never outlive the rest by more than the margin.
+        restWakeLock.acquire(wait + WAKE_LOCK_MARGIN_MILLIS)
         restJob = scope.launch {
             delay(wait)
             if (!LoggerPresence.resumed.value && postedRestBase != base) {
@@ -111,12 +121,24 @@ class SessionTrackingService : Service() {
                     SessionNotification.buildRestReached(this@SessionTrackingService, target, planName),
                 )
             }
+            // Not in a finally: a cancelled job resumes later, after a re-key may have re-acquired.
+            releaseRestWakeLock()
         }
     }
 
-    private fun cancelRestAlert() {
+    /** Cancels the pending rest alert job (if any) and drops its wake lock. */
+    private fun clearRestJob() {
         restJob?.cancel()
         restJob = null
+        releaseRestWakeLock()
+    }
+
+    private fun releaseRestWakeLock() {
+        if (restWakeLock.isHeld) restWakeLock.release()
+    }
+
+    private fun cancelRestAlert() {
+        clearRestJob()
         NotificationManagerCompat.from(this).cancel(SessionNotification.REST_NOTIFICATION_ID)
     }
 
@@ -160,6 +182,8 @@ class SessionTrackingService : Service() {
     }.isSuccess
 
     companion object {
+        private const val WAKE_LOCK_MARGIN_MILLIS = 10_000L
+
         fun start(context: Context) {
             val intent = Intent(context, SessionTrackingService::class.java)
             context.startForegroundService(intent)
