@@ -39,7 +39,8 @@ import com.example.gymtracker.ui.theme.Spacing
 @Composable
 fun FinishSheet(
     title: String,
-    elapsed: String,
+    /** Read inside the sheet, so the per-second tick doesn't recompose the logger screen. */
+    elapsed: () -> String,
     doneSets: Int,
     totalSets: Int,
     prCount: Int,
@@ -57,7 +58,7 @@ fun FinishSheet(
         Text(title, style = AppText.titleL, color = scheme.onSurface)
         Text(
             buildString {
-                append("$elapsed · $doneSets of $totalSets sets")
+                append("${elapsed()} · $doneSets of $totalSets sets")
                 if (prCount > 0) append(" · $prCount ${plural(prCount, "PR")}")
             },
             style = AppText.bodyS,

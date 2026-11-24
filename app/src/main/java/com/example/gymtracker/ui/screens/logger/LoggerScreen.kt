@@ -38,6 +38,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.LongState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -47,6 +49,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -54,7 +57,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.gymtracker.ui.AppHaptics
 import com.example.gymtracker.ui.components.MenuItem
 import com.example.gymtracker.ui.components.TargetSheet
@@ -128,22 +134,25 @@ fun LoggerScreen(
     }
     LaunchedEffect(state.discarded) { if (state.discarded) onDiscarded() }
 
-    // One clock drives both the elapsed and the rest readouts.
-    var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            nowMillis = System.currentTimeMillis()
-            delay(1_000L)
+    // One clock drives both the elapsed and the rest readouts. It is read only through these
+    // lambdas, by the leaves that show it (top bar clock, dock, Rest and Finish sheets), so a
+    // tick never recomposes this screen or the list.
+    val clock = rememberSessionClock()
+    val startedAt = state.startedAtMillis
+    val restBase = state.lastSetCompletedAtMillis
+    val elapsed: () -> String = remember(clock, startedAt) { { elapsedLabel(clock.longValue, startedAt) } }
+    val restElapsed: () -> Long? = remember(clock, restBase) { { restElapsedMillis(clock.longValue, restBase) } }
+    RestReachedHaptic(restElapsed, state.restTargetSeconds, restBase, haptics)
+
+    // PRs: sets that currently beat the pre-session records. Structural equality keeps the same
+    // instance while typing doesn't change which sets are PRs, so the per-group index sets below
+    // keep their identity too and untouched blocks skip recomposition.
+    val prKeys by remember {
+        derivedStateOf(structuralEqualityPolicy()) {
+            sessionPrKeys(state.groups, state.baselineRecords, state.weightUnit)
         }
     }
-    val elapsed = if (state.startedAtMillis > 0L) formatClock(nowMillis - state.startedAtMillis) else formatClock(0)
-    val restElapsed = state.lastSetCompletedAtMillis.takeIf { it > 0L }?.let { (nowMillis - it).coerceAtLeast(0L) }
-    RestReachedHaptic(restElapsed, state.restTargetSeconds, state.lastSetCompletedAtMillis, haptics)
-
-    // PRs: sets that currently beat the pre-session records.
-    val prKeys = remember(state.groups, state.baselineRecords, state.weightUnit) {
-        sessionPrKeys(state.groups, state.baselineRecords, state.weightUnit)
-    }
+    val prIndexes = remember(prKeys) { prSetIndexesByGroup(prKeys) }
     PrHaptic(state, prKeys, haptics)
 
     val collapse = rememberCollapseState()
@@ -162,17 +171,25 @@ fun LoggerScreen(
     val density = LocalDensity.current
     val imeOpen = WindowInsets.imeAnimationTarget.getBottom(density) > 0
 
-    fun showUndo(message: String) {
-        scope.launch {
-            snackbar.currentSnackbarData?.dismiss()
-            val result = withTimeoutOrNull(UNDO_MILLIS) {
-                snackbar.showSnackbar(message, actionLabel = "Undo", duration = SnackbarDuration.Indefinite)
+    // Remembered (a local fun is a new closure per composition) so the per-item callbacks that
+    // capture it keep their identity and the blocks can skip.
+    val showUndo: (String) -> Unit = remember(scope, snackbar, viewModel) {
+        { message ->
+            scope.launch {
+                snackbar.currentSnackbarData?.dismiss()
+                val result = withTimeoutOrNull(UNDO_MILLIS) {
+                    snackbar.showSnackbar(message, actionLabel = "Undo", duration = SnackbarDuration.Indefinite)
+                }
+                if (result == SnackbarResult.ActionPerformed) viewModel.undoRemove()
             }
-            if (result == SnackbarResult.ActionPerformed) viewModel.undoRemove()
         }
     }
 
-    val isToday = state.dateEpochDay == DateUtil.todayEpochDay()
+    // Re-checked on every clock tick (this screen used to recompose each second), so "Today"
+    // still turns into the date at midnight; it recomposes the screen only when it flips.
+    val isToday by remember {
+        derivedStateOf { clock.longValue; state.dateEpochDay == DateUtil.todayEpochDay() }
+    }
     val dateLabel = remember(state.dateEpochDay, isToday) {
         if (isToday) "Today" else formatShortDate(state.dateEpochDay)
     }
@@ -225,7 +242,7 @@ fun LoggerScreen(
                 // (not the live `ime` value) because the animated value can stick at its last frame
                 // when the keyboard is dismissed with system back (Google issue 229769102).
                 LoggerDock(
-                    restElapsedMillis = restElapsed,
+                    restElapsed = restElapsed,
                     targetSeconds = state.restTargetSeconds,
                     enabled = state.initialized && state.groups.isNotEmpty(),
                     compact = imeOpen,
@@ -262,15 +279,22 @@ fun LoggerScreen(
                     bottom = padding.calculateBottomPadding() + Spacing.l,
                 ),
             ) {
-                itemsIndexed(state.groups, key = { _, g -> g.uid }) { groupIndex, group ->
+                itemsIndexed(
+                    state.groups,
+                    key = { _, g -> g.uid },
+                    contentType = { _, _ -> "block" },
+                ) { groupIndex, group ->
+                    // Kept across keystrokes: a new SetActions would recompose every set row.
+                    val uid = group.uid
+                    val sets = remember(groupIndex, uid, haptics, showUndo) {
+                        setActions(viewModel, groupIndex, haptics, showUndo) { setIndex -> pulseKey = "$uid#$setIndex" }
+                    }
                     ExerciseBlock(
                         group = group,
                         unit = state.weightUnit,
                         collapsed = collapse.isCollapsed(group),
-                        prSetIndexes = group.sets.indices.filterTo(HashSet()) { "${group.uid}#$it" in prKeys },
-                        sets = setActions(viewModel, groupIndex, group, haptics, ::showUndo) { setIndex ->
-                            pulseKey = "${group.uid}#$setIndex"
-                        },
+                        prSetIndexes = prIndexes[uid] ?: emptySet(),
+                        sets = sets,
                         onToggleCollapsed = { haptics.light(); collapse.toggle(group) },
                         onEditTarget = { targetFor = group.uid },
                         onViewProgress = { onOpenExercise(group.exerciseId) },
@@ -293,7 +317,7 @@ fun LoggerScreen(
                         modifier = Modifier.animateItem(),
                     )
                 }
-                item(key = "foot") {
+                item(key = "foot", contentType = "foot") {
                     AppTextButton(
                         text = "Add exercises",
                         onClick = onAddExercises,
@@ -328,7 +352,7 @@ fun LoggerScreen(
 
     if (showRest) {
         RestSheet(
-            restElapsedMillis = restElapsed,
+            restElapsed = restElapsed,
             targetSeconds = state.restTargetSeconds,
             range = REST_MIN_SECONDS..REST_MAX_SECONDS,
             step = REST_STEP_SECONDS,
@@ -387,11 +411,12 @@ fun LoggerScreen(
 }
 
 /** Per-set callbacks for one block. Typing auto-completes a set (the fast path, §4.3) unless it
- *  would complete the exercise; then [onNudge] pulses that set's check instead. */
+ *  would complete the exercise; then [onNudge] pulses that set's check instead. They read the
+ *  group from the VM at call time rather than capturing it, so one instance serves the block
+ *  across edits. */
 private fun setActions(
     viewModel: SessionLoggerViewModel,
     groupIndex: Int,
-    group: ExerciseGroup,
     haptics: AppHaptics,
     showUndo: (String) -> Unit,
     onNudge: (setIndex: Int) -> Unit,
@@ -408,8 +433,9 @@ private fun setActions(
     },
     onDelete = { setIndex ->
         haptics.light()
+        val name = viewModel.state.value.groups.getOrNull(groupIndex)?.exerciseName.orEmpty()
         viewModel.removeSet(groupIndex, setIndex)
-        showUndo("Removed set ${setIndex + 1} · ${group.exerciseName}")
+        showUndo("Removed set ${setIndex + 1} · $name")
     },
 )
 
@@ -428,14 +454,56 @@ private fun input(
     }
 }
 
-/** One `confirm` haptic when rest crosses its target — only if we saw it below target first,
- *  so resuming a long-rested workout doesn't buzz. Re-arms when the base or target changes. */
+/** The top bar's elapsed clock; 0:00 until the session has a start time. */
+internal fun elapsedLabel(nowMillis: Long, startedAtMillis: Long): String =
+    if (startedAtMillis > 0L) formatClock(nowMillis - startedAtMillis) else formatClock(0)
+
+/** Rest so far, or null while rest is cleared (no set ticked yet, or Skip). */
+internal fun restElapsedMillis(nowMillis: Long, lastSetCompletedAtMillis: Long): Long? =
+    lastSetCompletedAtMillis.takeIf { it > 0L }?.let { (nowMillis - it).coerceAtLeast(0L) }
+
+/** Rest has reached its target; false while rest is cleared. */
+internal fun restReached(restElapsedMillis: Long?, targetSeconds: Int): Boolean =
+    restElapsedMillis != null && restElapsedMillis >= targetSeconds * 1000L
+
+/** [sessionPrKeys]' `"groupUid#setIndex"` keys as set indexes per group uid. */
+internal fun prSetIndexesByGroup(prKeys: Set<String>): Map<String, Set<Int>> =
+    prKeys.groupBy({ it.substringBeforeLast('#') }, { it.substringAfterLast('#').toInt() })
+        .mapValues { (_, indexes) -> indexes.toSet() }
+
+/**
+ * Wall-clock millis, refreshed every second while the screen is at least STARTED. While stopped
+ * (screen locked between sets, app in background) nothing draws, so ticking then only woke the
+ * main thread every second; on return it restarts with a fresh reading, and every readout is
+ * derived from timestamps, so it is exact at once.
+ */
 @Composable
-private fun RestReachedHaptic(restElapsed: Long?, targetSeconds: Int, base: Long, haptics: AppHaptics) {
-    val reached = restElapsed != null && restElapsed >= targetSeconds * 1000L
+private fun rememberSessionClock(): LongState {
+    val clock = remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                clock.longValue = System.currentTimeMillis()
+                delay(1_000L)
+            }
+        }
+    }
+    return clock
+}
+
+/** One `confirm` haptic when rest crosses its target — only if we saw it below target first,
+ *  so resuming a long-rested workout doesn't buzz. Re-arms when the base or target changes.
+ *  It watches derived booleans, so a clock tick recomposes it only when one of them flips. */
+@Composable
+private fun RestReachedHaptic(restElapsed: () -> Long?, targetSeconds: Int, base: Long, haptics: AppHaptics) {
+    val running by remember(restElapsed) { derivedStateOf { restElapsed() != null } }
+    val reached by remember(restElapsed, targetSeconds) {
+        derivedStateOf { restReached(restElapsed(), targetSeconds) }
+    }
     var armed by remember(base, targetSeconds) { mutableStateOf(false) }
-    LaunchedEffect(reached, restElapsed != null, base, targetSeconds) {
-        if (restElapsed != null && !reached) armed = true
+    LaunchedEffect(reached, running, base, targetSeconds) {
+        if (running && !reached) armed = true
         if (reached && armed) {
             haptics.confirm()
             armed = false

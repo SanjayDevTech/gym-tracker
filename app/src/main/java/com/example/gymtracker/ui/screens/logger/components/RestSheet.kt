@@ -47,7 +47,8 @@ private val Presets: List<Int?> = listOf(60, 90, 120, 180)
  */
 @Composable
 fun RestSheet(
-    restElapsedMillis: Long?,
+    /** Read inside the sheet, so the per-second tick doesn't recompose the logger screen. */
+    restElapsed: () -> Long?,
     targetSeconds: Int,
     range: IntRange,
     step: Int,
@@ -59,9 +60,10 @@ fun RestSheet(
     val scheme = MaterialTheme.colorScheme
     var asDefault by remember { mutableStateOf(false) }
     val targetMillis = targetSeconds * 1000L
-    val reached = restElapsedMillis != null && restElapsedMillis >= targetMillis
 
     AppSheet(onDismiss = onDismiss) {
+        val restElapsedMillis = restElapsed()
+        val reached = restElapsedMillis != null && restElapsedMillis >= targetMillis
         Eyebrow("Rest")
         Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
             Text(

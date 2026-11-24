@@ -43,7 +43,8 @@ private const val DOCK_EDGE_ALPHA = 0.3f
  * (the goal colour); at target the meter and the clock turn `primary` and stay there.
  *
  * [compact] collapses everything to one 56dp line while the IME is open so the focused set row
- * is never hidden. [restElapsedMillis] is null while rest is cleared (no set yet, or Skip).
+ * is never hidden. [restElapsed] returns null while rest is cleared (no set yet, or Skip); it is
+ * read here, not by the caller, so the per-second tick recomposes the dock only.
  *
  * The caller owns insets: this composable must be the *only* IME consumer on the screen. It
  * paints its background down through [insets] (nav bar, or keyboard) so scrolled content never
@@ -52,7 +53,7 @@ private const val DOCK_EDGE_ALPHA = 0.3f
  */
 @Composable
 fun LoggerDock(
-    restElapsedMillis: Long?,
+    restElapsed: () -> Long?,
     targetSeconds: Int,
     enabled: Boolean,
     compact: Boolean,
@@ -64,6 +65,7 @@ fun LoggerDock(
     modifier: Modifier = Modifier,
     stepSeconds: Int = 15,
 ) {
+    val restElapsedMillis = restElapsed()
     val scheme = MaterialTheme.colorScheme
     val targetMillis = targetSeconds * 1000L
     val reached = restElapsedMillis != null && restElapsedMillis >= targetMillis

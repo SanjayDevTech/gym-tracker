@@ -205,7 +205,7 @@ fun ExercisePickerScreen(
 }
 
 private fun LazyListScope.section(key: String, title: String, trailing: String?) {
-    item(key = "head-$key") {
+    item(key = "head-$key", contentType = "head") {
         Column(Modifier.padding(horizontal = Spacing.gutter).padding(top = Spacing.section)) {
             SectionHead(
                 title = title,
@@ -226,7 +226,7 @@ private fun LazyListScope.rows(
     multi: Boolean,
     onRow: (ExerciseEntity) -> Unit,
 ) {
-    items(exercises, key = { "$keyPrefix-${it.id}" }) { ex ->
+    items(exercises, key = { "$keyPrefix-${it.id}" }, contentType = { "row" }) { ex ->
         val order = s.selected.indexOf(ex.id)
         PickerRow(
             exercise = ex,

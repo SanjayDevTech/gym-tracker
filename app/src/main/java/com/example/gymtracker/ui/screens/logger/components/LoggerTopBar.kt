@@ -44,7 +44,8 @@ import com.example.gymtracker.ui.theme.Spacing
  */
 @Composable
 fun LoggerTopBar(
-    elapsed: String,
+    /** Read only by the clock text, so the per-second tick doesn't recompose the bar. */
+    elapsed: () -> String,
     title: String,
     meta: String?,
     dateLabel: String,
@@ -88,7 +89,7 @@ fun LoggerTopBar(
                 )
                 OverflowMenu(menu)
             }
-            Text(elapsed, style = AppText.numberL, color = scheme.onSurface, maxLines = 1)
+            ElapsedText(elapsed)
             Text(
                 title,
                 style = AppText.label,
@@ -105,6 +106,13 @@ fun LoggerTopBar(
         )
         Spacer(Modifier.height(Spacing.s))
     }
+}
+
+/** The elapsed clock in its own scope: the per-second tick recomposes this text, not the bar.
+ *  It emits a single Text, so it is still one centre row of [CentredBar]. */
+@Composable
+private fun ElapsedText(elapsed: () -> String) {
+    Text(elapsed(), style = AppText.numberL, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
 }
 
 /** `3 of 12 sets · Today` — muted, smaller than the title; the date part in [dateColor]. */
