@@ -6,6 +6,7 @@ import com.example.gymtracker.data.GymRepository
 import com.example.gymtracker.data.PreferencesStore
 import com.example.gymtracker.data.backup.BackupManager
 import com.example.gymtracker.data.db.AppDatabase
+import com.example.gymtracker.data.plan.PlanTemplateInstaller
 import com.example.gymtracker.data.plan.PlansTransferManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,6 +25,7 @@ class AppContainer(applicationContext: Context) {
     val prefs: PreferencesStore = PreferencesStore(applicationContext)
     val backup: BackupManager = BackupManager(applicationContext, database, repository, prefs)
     val plansTransfer: PlansTransferManager = PlansTransferManager(applicationContext, repository)
+    val planTemplates: PlanTemplateInstaller = PlanTemplateInstaller(repository)
 
     /** Outlives ViewModels — used to flush pending writes that would otherwise be cancelled
      *  when a screen is popped (e.g. session-draft persistence on back press). */

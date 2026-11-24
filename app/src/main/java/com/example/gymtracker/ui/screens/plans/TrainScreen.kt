@@ -59,6 +59,7 @@ fun TrainScreen(
     onOpenPlan: (Long) -> Unit,
     onLogPlan: (Long) -> Unit,
     onResumeSession: (planId: Long?) -> Unit,
+    onOpenTemplates: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -161,6 +162,11 @@ fun TrainScreen(
             initial = "",
             placeholder = "Push day, Upper, Full body…",
             confirmLabel = "Create plan",
+            secondaryLabel = "Start from a template",
+            onSecondary = {
+                showCreate = false
+                onOpenTemplates()
+            },
             onDismiss = { showCreate = false },
             onConfirm = { name ->
                 showCreate = false

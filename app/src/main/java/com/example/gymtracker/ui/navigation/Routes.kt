@@ -45,6 +45,10 @@ import kotlinx.serialization.Serializable
 @Serializable data class PlanEditorRoute(val planId: Long)
 @Serializable object ImportPlanRoute
 
+/** Plan templates (§4.20), from New plan and Plans & backup. */
+@Serializable object TemplatesRoute
+@Serializable data class TemplateDetailRoute(val templateId: String)
+
 @Serializable data class SessionDetailRoute(val sessionId: Long)
 
 @Serializable data class SessionLoggerRoute(val planId: Long? = null)

@@ -42,6 +42,7 @@ import com.example.gymtracker.ui.AppViewModelFactory
 import com.example.gymtracker.ui.LocalAppContainer
 import com.example.gymtracker.ui.components.RunningDraft
 import com.example.gymtracker.ui.components.SessionGuardSheet
+import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.screens.analytics.ProgressScreen
 import com.example.gymtracker.ui.screens.exerciseform.ExerciseFormScreen
 import com.example.gymtracker.ui.screens.exerciseform.ExerciseFormViewModel
@@ -60,6 +61,8 @@ import com.example.gymtracker.ui.screens.plans.PlanEditorScreen
 import com.example.gymtracker.ui.screens.plans.PlanListViewModel
 import com.example.gymtracker.ui.screens.plans.TrainScreen
 import com.example.gymtracker.ui.screens.plans.importplan.ImportPlanScreen
+import com.example.gymtracker.ui.screens.plans.templates.TemplateDetailScreen
+import com.example.gymtracker.ui.screens.plans.templates.TemplateListScreen
 import com.example.gymtracker.ui.screens.settings.SettingsScreen
 import com.example.gymtracker.ui.screens.settings.SettingsViewModel
 import com.example.gymtracker.ui.screens.summary.SessionSummaryScreen
@@ -211,6 +214,7 @@ fun AppNav() {
                     onOpenPlan = { nav.navigate(PlanEditorRoute(it)) },
                     onLogPlan = { startSession(it) },
                     onResumeSession = { nav.navigate(SessionLoggerRoute(planId = it)) },
+                    onOpenTemplates = { nav.navigate(TemplatesRoute) },
                 )
             }
 
@@ -243,6 +247,27 @@ fun AppNav() {
                 DataScreen(
                     onBack = { nav.popBackStack() },
                     onImportPlan = { nav.navigate(ImportPlanRoute) },
+                    onOpenTemplates = { nav.navigate(TemplatesRoute) },
+                )
+            }
+
+            composable<TemplatesRoute> {
+                TemplateListScreen(
+                    onBack = { nav.popBackStack() },
+                    onOpen = { nav.navigate(TemplateDetailRoute(it)) },
+                )
+            }
+
+            composable<TemplateDetailRoute> { entry ->
+                val route: TemplateDetailRoute = entry.toRoute<TemplateDetailRoute>()
+                TemplateDetailScreen(
+                    templateId = route.templateId,
+                    onBack = { nav.popBackStack() },
+                    onAdded = { count ->
+                        // Back to Train, where the new plans now sit at the end of the list.
+                        nav.popBackStack(TrainRoute, inclusive = false)
+                        scope.launch { trainSnackbar.showSnackbar("Added $count ${plural(count, "plan")}") }
+                    },
                 )
             }
 

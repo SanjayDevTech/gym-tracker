@@ -50,8 +50,9 @@ private enum class DataOp { PlansExport, PlansImport, BackupExport, BackupRestor
 private enum class DataConfirm { PlansImport, BackupRestore }
 
 /**
- * Plans & backup — design-plan §4.15. Three [Section]s, each a one-line description and a foot of
- * text-button actions: IMPORT A PLAN (one reviewed plan → §4.16, always a new plan), ALL PLANS
+ * Plans & backup — design-plan §4.15. Four [Section]s, each a one-line description and a foot of
+ * text-button actions: IMPORT A PLAN (one reviewed plan → §4.16, always a new plan), PLAN
+ * TEMPLATES (→ §4.20, always new plans), ALL PLANS
  * (bundle export/import, upserts by name) and FULL BACKUP (export/restore). The running
  * operation shows a [Spinner] in its own foot; results arrive by snackbar. The two imports that
  * overwrite are confirmed first: plans import by [ConfirmSheet], backup restore by an
@@ -61,6 +62,7 @@ private enum class DataConfirm { PlansImport, BackupRestore }
 fun DataScreen(
     onBack: () -> Unit,
     onImportPlan: () -> Unit,
+    onOpenTemplates: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val container = LocalAppContainer.current
@@ -160,6 +162,19 @@ fun DataScreen(
                 AppTextButton(
                     text = "Choose file…",
                     onClick = { haptics.light(); onImportPlan() },
+                    enabled = idle,
+                )
+            }
+
+            DataSection(
+                title = "Plan templates",
+                description = "Ready-made splits such as Push / Pull / Legs and Upper / Lower. " +
+                    "Adding one creates new plans; your own plans aren't changed.",
+                running = false,
+            ) {
+                AppTextButton(
+                    text = "Browse",
+                    onClick = { haptics.light(); onOpenTemplates() },
                     enabled = idle,
                 )
             }

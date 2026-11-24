@@ -956,7 +956,7 @@ Selection order is insertion order (numbered `1`, `2` in place of ☑ once two o
 
 ### 4.15 Plans & backup (full page) — **new, merges Settings' Plans + Backup cards and the Import-plan entry**
 
-Three sections, each with a one-line description and text-button actions: **IMPORT A PLAN** (`Choose file…` → §4.16, reviewed, always creates a new plan) · **ALL PLANS** (`Export`, `Import` — upserts by name; confirm dialog kept) · **FULL BACKUP** (`Export`, `Restore` — confirm dialog kept). Running operation shows `Spinner` in its row; results by snackbar. **vs today:** split across a Settings card pair and the Plans overflow, with different feedback (Toast vs Snackbar).
+Four sections, each with a one-line description and text-button actions: **IMPORT A PLAN** (`Choose file…` → §4.16, reviewed, always creates a new plan) · **PLAN TEMPLATES** (`Browse` → §4.20) · **ALL PLANS** (`Export`, `Import` — upserts by name; confirm dialog kept) · **FULL BACKUP** (`Export`, `Restore` — confirm dialog kept). Running operation shows `Spinner` in its row; results by snackbar. **vs today:** split across a Settings card pair and the Plans overflow, with different feedback (Toast vs Snackbar).
 
 ### 4.16 Import plan (full page) — **revise**
 
@@ -999,6 +999,16 @@ Notification: title "Push A · 7 of 18 sets"; when resting, text "Rest · target
 **Empty:** n/a (a form). **Loading:** edit mode shows top bar only until the exercise loads. Duplicate names are **blocked**: a name matching (ignoring case) any exercise that isn't deleted shows an inline error under the field ("You already have Landmine press") and Save stays disabled; a deleted exercise's name is free to reuse. Built-in exercises never reach this page.
 **Delete** (custom only, from Exercise detail ⋮) soft-deletes the exercise and, in the same transaction, removes it from every plan; the `ConfirmSheet` says so when it is planned: "Its logged sets stay in History. It will be removed from 2 plans." A workout in progress keeps it (its sets are saved), but Finish never syncs it back into a plan. Backup restore, plan import and plan transfer match exercises by name among live exercises only; restore still matches by `clientUuid` first, deleted rows included, so history of a deleted exercise comes back attached to it.
 **vs today:** the only way to make an exercise is the Import screen's "Create" sheet with chip rows; there is no edit or delete.
+
+### 4.20 Plan templates (full pages; from New plan and Plans & backup) — **new**
+
+Ready-made splits, reachable but never prompted: a **Start from a template** text action in the New plan sheet (between Create plan and Cancel) and a **PLAN TEMPLATES** section on Plans & backup. No banner, empty-state action or first-run prompt.
+
+**List:** one `bodyS` line ("Ready-made splits… your own plans aren't changed"), then rows on hairlines — name `titleM`, summary `bodyS` (`4 plans · 4 days a week`), chevron. **Detail:** top bar with the template name; description `body`; for templates run twice a week an `UnderlineSelector` **A + B · 6 plans** (default) / **A only · 3 plans**; then each plan it adds as a `Section` (head = plan name, figure = `18 sets`), its note in `tertiary`, and `exercise · 3 × 8–12` rows with any exercise note under the name. Pinned `AppButton Add 6 plans`; on success, back to Train with a snackbar "Added 6 plans".
+
+**Adding** copies the plans in as ordinary plans in one transaction, in template order — no link back to the template. It never overwrites: a name already in use gets a number ("Push A 2"), unlike the plans bundle import, which upserts by name. Exercises match live library rows by name; a built-in the user deleted is recreated as a custom copy with its muscles and equipment. Weights are left blank (the logger's hints fill them).
+
+**Catalogue** (`data/plan/PlanTemplates.kt`, every name a seeded library name — checked by `PlanTemplatesTest`): Full body · 5×5 strength · Upper / Lower · Push / Pull / Legs (A + B / A only) · Chest & triceps / Back & biceps / Legs & shoulders (A + B / A only) · Body-part split · Chest & back / Shoulders & arms / Legs · Minimal full body · Dumbbells only · Calisthenics beginner · Glutes & legs (add-on) · Core (add-on) · Joint & tendon prep (add-on). B days swap one or two main lifts for a close equivalent; leg days lean quads on A and hamstrings on B, while A only keeps one balanced leg day; calves alternate standing (A) and seated (B). Percentage-based programs (5/3/1, nSuns, GZCLP) are left out: a target holds only sets × a rep range.
 
 ---
 

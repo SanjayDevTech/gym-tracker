@@ -33,7 +33,8 @@ import com.example.gymtracker.ui.theme.Spacing
 /**
  * One-field sheet for plan text — New plan (Train foot), Rename and Note (Plan editor). Title,
  * an optional caption, a borderless field on a hairline (no outlined box, §1), then the primary
- * action and a quiet Cancel. [allowBlank] lets the note be cleared.
+ * action and a quiet Cancel. [allowBlank] lets the note be cleared. [secondaryLabel] adds a text
+ * action between them (New plan's "Start from a template").
  */
 @Composable
 fun TextEntrySheet(
@@ -46,6 +47,8 @@ fun TextEntrySheet(
     caption: String? = null,
     singleLine: Boolean = true,
     allowBlank: Boolean = false,
+    secondaryLabel: String? = null,
+    onSecondary: () -> Unit = {},
 ) {
     val scheme = MaterialTheme.colorScheme
     var text by rememberSaveable { mutableStateOf(initial) }
@@ -85,6 +88,13 @@ fun TextEntrySheet(
             enabled = canConfirm,
             modifier = Modifier.fillMaxWidth().padding(top = Spacing.xl),
         )
+        if (secondaryLabel != null) {
+            AppTextButton(
+                text = secondaryLabel,
+                onClick = onSecondary,
+                modifier = Modifier.fillMaxWidth().padding(top = Spacing.s),
+            )
+        }
         AppTextButton(
             text = "Cancel",
             onClick = onDismiss,
