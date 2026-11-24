@@ -24,3 +24,13 @@ fun AnalyticsWindow.rangeEpochDays(
     val end = today.toEpochDay() - offset.coerceAtLeast(0).toLong() * days
     return (end - (days - 1))..end
 }
+
+/**
+ * The furthest [rangeEpochDays] offset worth paging back to: the period that holds [firstDay],
+ * the earliest logged session. 0 when nothing is logged (or [firstDay] is after [today]).
+ */
+fun AnalyticsWindow.maxOffset(today: LocalDate, firstDay: Long?): Int {
+    if (firstDay == null) return 0
+    val back = today.toEpochDay() - firstDay
+    return if (back <= 0) 0 else (back / days).toInt()
+}

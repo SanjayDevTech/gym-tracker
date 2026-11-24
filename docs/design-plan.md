@@ -373,7 +373,7 @@ New package `ui/components/atoms/`.
 | `Haptics` | **keep** | Untouched; gating by pref stays. |
 | `Sparkline` | **new** (S2-a) | 96×28dp, 2dp primary stroke, last point a 3dp dot, no axes, no wash. Plan rows only. |
 | `TooltipTag` | **new** (S4-b, S6-b) | `primaryContainer` fill, `Radius.sm`, `label` in onPrimaryContainer, 4dp pointer; sits above a selected bar/point, clamped inside the plot. |
-| `PeriodPager` | **new** (S6-b) | `‹  4 – 10 Nov  ›`: 48dp chevron targets, `label` centred, `›` disabled at the current period. |
+| `PeriodPager` | **new** (S6-b) | `‹  4 – 10 Nov  ›`: 48dp chevron targets, `label` centred, `›` disabled at the current period, `‹` disabled at the period holding the first logged session (both when nothing is logged). |
 | `RestTransport` | **new** (S5-g) | `−15 s` text button · 56dp `Radius.md` primary-filled `Skip` · `+15 s` text button. |
 
 ## 3. Molecules

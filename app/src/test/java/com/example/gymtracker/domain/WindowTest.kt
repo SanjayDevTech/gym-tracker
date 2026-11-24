@@ -1,6 +1,7 @@
 package com.example.gymtracker.domain
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 
@@ -33,5 +34,22 @@ class WindowTest {
             AnalyticsWindow.Week.rangeEpochDays(today),
             AnalyticsWindow.Week.rangeEpochDays(today, offset = -3),
         )
+    }
+
+    @Test
+    fun `max offset is the period holding the first session`() {
+        assertEquals(0, AnalyticsWindow.Week.maxOffset(today, firstDay = null))
+        assertEquals(0, AnalyticsWindow.Week.maxOffset(today, firstDay = t))
+        assertEquals(0, AnalyticsWindow.Week.maxOffset(today, firstDay = t - 6))
+        assertEquals(1, AnalyticsWindow.Week.maxOffset(today, firstDay = t - 7))
+        assertEquals(8, AnalyticsWindow.Week.maxOffset(today, firstDay = t - 56))
+        assertEquals(3, AnalyticsWindow.Today.maxOffset(today, firstDay = t - 3))
+        assertEquals(0, AnalyticsWindow.Year.maxOffset(today, firstDay = t - 364))
+        assertEquals(0, AnalyticsWindow.Week.maxOffset(today, firstDay = t + 2))
+        // The period at max offset contains the first session.
+        for (w in AnalyticsWindow.entries) {
+            val first = t - 100
+            assertTrue(first in w.rangeEpochDays(today, w.maxOffset(today, first)))
+        }
     }
 }

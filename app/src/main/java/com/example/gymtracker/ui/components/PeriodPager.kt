@@ -30,7 +30,8 @@ import java.time.format.DateTimeFormatter
 
 /**
  * §2 `PeriodPager` (S6-b): `‹  17 – 23 Nov 2026  ›` — 48dp chevron targets, [AppText.label]
- * centred; `›` is disabled at the current period ([canGoNext] false). The label crossfades 200ms;
+ * centred; `›` is disabled at the current period ([canGoNext] false) and `‹` at the period
+ * holding the first logged session ([canGoPrevious] false). The label crossfades 200ms;
  * no horizontal slide (§1 motion).
  */
 @Composable
@@ -39,6 +40,7 @@ fun PeriodPager(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     canGoNext: Boolean,
+    canGoPrevious: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val haptics = rememberAppHaptics()
@@ -48,7 +50,7 @@ fun PeriodPager(
         disabledContentColor = scheme.outline,
     )
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { haptics.light(); onPrevious() }, colors = colors) {
+        IconButton(onClick = { haptics.light(); onPrevious() }, enabled = canGoPrevious, colors = colors) {
             Icon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, contentDescription = "Previous period")
         }
         AnimatedContent(

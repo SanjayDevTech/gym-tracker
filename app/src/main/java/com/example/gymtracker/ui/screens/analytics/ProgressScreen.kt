@@ -89,6 +89,7 @@ fun ProgressScreen(onOpenExercises: () -> Unit, modifier: Modifier = Modifier) {
     )
     val selection by vm.selection.collectAsStateWithLifecycle()
     val state by vm.state.collectAsStateWithLifecycle()
+    val canGoPrevious by vm.canGoPrevious.collectAsStateWithLifecycle()
     val unit by container.prefs.weightUnit.collectAsStateWithLifecycle(initialValue = WeightUnit.Kg)
     var drilled by remember { mutableStateOf<Muscle?>(null) }
 
@@ -116,6 +117,7 @@ fun ProgressScreen(onOpenExercises: () -> Unit, modifier: Modifier = Modifier) {
                     onPrevious = vm::previousPeriod,
                     onNext = vm::nextPeriod,
                     canGoNext = selection.offset > 0,
+                    canGoPrevious = canGoPrevious,
                 )
                 AppDivider()
             }

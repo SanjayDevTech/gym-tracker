@@ -19,6 +19,7 @@ import com.example.gymtracker.domain.VolumeTrend
 import com.example.gymtracker.domain.WeekVolume
 import com.example.gymtracker.domain.WeeklyTarget
 import com.example.gymtracker.domain.WeeksOnTarget
+import com.example.gymtracker.domain.maxOffset
 import com.example.gymtracker.domain.rangeEpochDays
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -140,8 +141,21 @@ class ProgressViewModel(
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /** Earliest logged session day; null when nothing is logged. Bounds the pager's `‹`. */
+    private val firstSessionDay: StateFlow<Long?> = repository.observeSessions()
+        .map { sessions -> sessions.minOfOrNull { it.dateEpochDay } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** `‹` is live until the period holding the first session is on screen. */
+    val canGoPrevious: StateFlow<Boolean> = combine(_selection, firstSessionDay) { sel, first ->
+        sel.offset < sel.window.maxOffset(LocalDate.ofEpochDay(DateUtil.todayEpochDay()), first)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     fun setWindow(window: AnalyticsWindow) = _selection.update { PeriodSelection(window, 0) }
-    fun previousPeriod() = _selection.update { it.copy(offset = it.offset + 1) }
+    fun previousPeriod() = _selection.update {
+        val max = it.window.maxOffset(LocalDate.ofEpochDay(DateUtil.todayEpochDay()), firstSessionDay.value)
+        it.copy(offset = (it.offset + 1).coerceAtMost(max))
+    }
     fun nextPeriod() = _selection.update { it.copy(offset = (it.offset - 1).coerceAtLeast(0)) }
     fun setMetric(value: VolumeMetric) { metricChoice.value = value }
 
