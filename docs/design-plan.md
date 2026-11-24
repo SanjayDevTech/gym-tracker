@@ -833,8 +833,8 @@ Phase 9 (decision 2) adds a `+ New exercise` FAB (bottom-end, flat pill) opening
 │ 23 Nov   60×10 · 62.5×9 · 62.5×8           │
 │ 19 Nov   60×10 · 60×10 · 60×9              │
 ├────────────────────────────────────────────┤
-│ MUSCLES                                    │  BodyDiagram pair, 160dp
-│   (front)        (back)                    │  primary = primary, secondary =
+│ MUSCLES                                    │  BodyDiagram pair, full width,
+│   FRONT          BACK                      │  ≤360dp; primary = primary, secondary =
 │ Chest · Triceps, Front delts               │  inversePrimary; names under
 ├────────────────────────────────────────────┤
 │ CUES                                       │
@@ -877,7 +877,7 @@ Phase 9 (decision 2) adds a top-bar ⋮ on custom exercises only: Edit → §4.1
 │ MUSCLES                                    │
 │ ────────────────────────────────────────── │
 │   FRONT          BACK                      │  BodyDiagram pair, heat ramp
-│   (diagram)      (diagram)                 │  tap → breakdown sheet
+│   (diagram)      (diagram)                 │  tap → breakdown sheet; tapped muscle outlined onSurface while open
 │ Less ▪▪▪▪▪ More                            │
 │ Chest           ━━━━━━┊━━━━━━┊━   22 sets  │  MuscleRankRow, top 6; ┊ = 10 and 20
 │ Quads           ━━━━━━┊━━━━      14 sets   │  band tertiary, WEEK only (dec. 11)

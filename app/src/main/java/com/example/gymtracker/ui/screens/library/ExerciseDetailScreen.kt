@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -63,8 +64,8 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-/** Body diagram height on this page (§4.11: 160dp). A size. */
-private val DiagramHeight = 160.dp
+/** Cap on the Muscles figure pair (§4.11): about half a phone screen, labels included. A size. */
+private val DiagramMaxHeight = 360.dp
 
 /** Width of the RECENT date column, so the set lists align. A size. */
 private val RecentDateWidth = 64.dp
@@ -362,13 +363,22 @@ private fun MusclesSection(ex: ExerciseEntity) {
     val fills = ex.secondaryMuscles.associateWith { scheme.inversePrimary } +
         ex.primaryMuscles.associateWith { scheme.primary }
     Section(title = "Muscles") {
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.l)) {
-            listOf(BodyView.Front, BodyView.Back).forEach { view ->
-                BodyDiagram(
-                    view = view,
-                    fills = fills,
-                    modifier = Modifier.weight(1f).height(DiagramHeight),
-                )
+        // Near full content width, front and back side by side; each figure keeps the viewbox's
+        // aspect ratio, capped so the pair never outgrows a phone screen.
+        Row(
+            Modifier.fillMaxWidth().heightIn(max = DiagramMaxHeight),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+        ) {
+            listOf(BodyView.Front to "Front", BodyView.Back to "Back").forEach { (view, label) ->
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Eyebrow(label)
+                    Spacer(Modifier.height(Spacing.xs))
+                    BodyDiagram(
+                        view = view,
+                        fills = fills,
+                        modifier = Modifier.aspectRatio(100f / 220f),
+                    )
+                }
             }
         }
         Spacer(Modifier.height(Spacing.m))

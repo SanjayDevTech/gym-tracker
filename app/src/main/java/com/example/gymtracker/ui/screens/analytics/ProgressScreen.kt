@@ -130,7 +130,12 @@ fun ProgressScreen(onOpenExercises: () -> Unit, modifier: Modifier = Modifier) {
             ) {
                 ConsistencyBlock(s)
                 VolumeSection(s, unit, onMetric = vm::setMetric)
-                MusclesSection(s, onMuscle = { drilled = it })
+                MusclesSection(
+                    s,
+                    selected = drilled,
+                    // Tapping the selected muscle again clears it (and closes its sheet).
+                    onMuscle = { drilled = if (drilled == it) null else it },
+                )
             }
         }
     }
@@ -246,7 +251,7 @@ private fun VolumeSection(s: ProgressState, unit: WeightUnit, onMetric: (VolumeM
 }
 
 @Composable
-private fun MusclesSection(s: ProgressState, onMuscle: (Muscle) -> Unit) {
+private fun MusclesSection(s: ProgressState, selected: Muscle?, onMuscle: (Muscle) -> Unit) {
     val m = s.muscles
     val scheme = MaterialTheme.colorScheme
     Section(title = "Muscles") {
@@ -263,6 +268,8 @@ private fun MusclesSection(s: ProgressState, onMuscle: (Muscle) -> Unit) {
                     BodyDiagram(
                         view = view,
                         fills = fills,
+                        // The drilled muscle stays outlined while its breakdown sheet is open.
+                        selectedMuscle = selected,
                         onMuscleTap = onMuscle,
                         modifier = Modifier.fillMaxWidth().aspectRatio(100f / 220f),
                     )
