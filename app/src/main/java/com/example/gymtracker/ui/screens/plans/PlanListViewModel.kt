@@ -17,9 +17,11 @@ import com.example.gymtracker.data.toMuscleGroups
 import com.example.gymtracker.domain.DateUtil
 import com.example.gymtracker.domain.WeeklyTarget
 import com.example.gymtracker.domain.WeeksOnTarget
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -120,6 +122,9 @@ class PlanListViewModel(
         )
         TrainState(live = inputs.draft?.toLive(), week = week, plans = cards, unit = unit)
     }
+        // Folds every session and decodes the draft JSON on each emission (Train is the start
+        // destination, so this ran on Main during startup): keep it off Main.
+        .flowOn(Dispatchers.Default)
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),

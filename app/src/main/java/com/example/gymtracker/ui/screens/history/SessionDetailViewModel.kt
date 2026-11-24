@@ -13,6 +13,7 @@ import com.example.gymtracker.data.formatTarget
 import com.example.gymtracker.domain.LoggedSetSample
 import com.example.gymtracker.domain.Records
 import com.example.gymtracker.domain.toSample
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -82,6 +84,8 @@ class SessionDetailViewModel(
         prefs.weightUnit,
     ) { withSets, unit -> withSets to unit }
         .mapLatest { (withSets, unit) -> load(withSets, unit) }
+        // load() replays each exercise's whole history for PR flags: keep that CPU off Main.
+        .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private val _deleted = MutableStateFlow(false)

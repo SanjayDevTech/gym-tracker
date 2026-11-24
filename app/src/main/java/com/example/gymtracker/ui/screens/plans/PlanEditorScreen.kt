@@ -126,7 +126,9 @@ fun PlanEditorScreen(
         }
     }
     val plan = state?.plan
-    val planned = state?.planned?.sortedBy { it.planned.sortIndex }.orEmpty()
+    // Remembered: the screen recomposes on every drag start/stop, sheet and edit; re-sort only
+    // when Room emits a new plan.
+    val planned = remember(state) { state?.planned?.sortedBy { it.planned.sortIndex }.orEmpty() }
     var sheet by rememberSaveable { mutableStateOf<EditorSheet?>(null) }
     var editing by remember { mutableStateOf<PlannedWithExercise?>(null) }
     val haptics = rememberAppHaptics()

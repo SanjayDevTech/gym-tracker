@@ -13,7 +13,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -91,10 +90,13 @@ fun StatusCell(
     modifier: Modifier = Modifier,
     size: Dp = 10.dp,
 ) {
+    // background(color, shape) draws the rounded rect directly. clip() + background() gave every
+    // cell its own clipped graphics layer — 84 of them in the training calendar alone.
     Box(
         modifier
             .size(size)
-            .clip(RoundedCornerShape(3.dp))
-            .background(color),
+            .background(color, StatusCellShape),
     )
 }
+
+private val StatusCellShape = RoundedCornerShape(3.dp)

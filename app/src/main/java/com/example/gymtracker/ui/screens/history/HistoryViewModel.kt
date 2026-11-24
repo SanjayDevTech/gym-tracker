@@ -9,9 +9,11 @@ import com.example.gymtracker.data.WeightUnit
 import com.example.gymtracker.data.db.SessionEntity
 import com.example.gymtracker.data.db.SessionWithSets
 import com.example.gymtracker.domain.WeeklyTarget
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 
 /** One History row — §4.8: plan name (or "Quick log"), counts, duration, volume. */
@@ -60,7 +62,10 @@ class HistoryViewModel(
             .map { (week, rows) -> HistoryWeek(week, rows) }
             .sortedByDescending { it.weekStartEpochDay }
         HistoryState(weeks, unit)
-    }.stateIn(
+    }
+        // Every session with every set is folded here on each emission: keep it off Main.
+        .flowOn(Dispatchers.Default)
+        .stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = null,

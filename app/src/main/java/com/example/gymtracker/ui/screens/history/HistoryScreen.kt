@@ -41,6 +41,7 @@ import com.example.gymtracker.ui.theme.Spacing
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * History — §4.8, bar destination 2 (no back arrow). Sessions by ISO week: a standing head per
@@ -206,4 +207,15 @@ private fun dayLabel(epochDay: Long, today: Long): String = when (today - epochD
     else -> LocalDate.ofEpochDay(epochDay).format(fmt("EEEE d"))
 }
 
-private fun fmt(pattern: String) = DateTimeFormatter.ofPattern(pattern, Locale.getDefault())
+/**
+ * Formatters by pattern for the current default locale. Every History row and week head that
+ * scrolls into view formats a date, and `DateTimeFormatter.ofPattern` parses its pattern on each
+ * call; caching keeps that out of the scroll path. Keyed by locale too, so a locale change still
+ * gets formatters for the new one.
+ */
+private val formatters = ConcurrentHashMap<Pair<String, Locale>, DateTimeFormatter>()
+
+internal fun fmt(pattern: String): DateTimeFormatter {
+    val locale = Locale.getDefault()
+    return formatters.getOrPut(pattern to locale) { DateTimeFormatter.ofPattern(pattern, locale) }
+}

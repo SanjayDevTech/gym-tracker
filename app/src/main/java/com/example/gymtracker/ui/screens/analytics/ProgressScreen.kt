@@ -261,7 +261,9 @@ private fun MusclesSection(s: ProgressState, selected: Muscle?, onMuscle: (Muscl
             NothingInPeriod()
             return@Section
         }
-        val fills = heatFill(m.levels)
+        // Remembered so toggling "Show all" (state read in this lambda) hands both BodyDiagrams
+        // the same map and they skip instead of recomposing and redrawing every region.
+        val fills = remember(m.levels) { heatFill(m.levels) }
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.l)) {
             listOf(BodyView.Front to "Front", BodyView.Back to "Back").forEach { (view, label) ->
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {

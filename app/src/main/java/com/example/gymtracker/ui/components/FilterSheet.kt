@@ -35,6 +35,7 @@ import com.example.gymtracker.ui.components.atoms.AppDivider
 import com.example.gymtracker.ui.components.atoms.AppSheet
 import com.example.gymtracker.ui.components.atoms.AppTextButton
 import com.example.gymtracker.ui.components.atoms.Section
+import com.example.gymtracker.ui.AppHaptics
 import com.example.gymtracker.ui.rememberAppHaptics
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Sizes
@@ -81,6 +82,9 @@ fun FilterSheet(
     onDismiss: () -> Unit,
     resultCount: Int? = null,
 ) {
+    // One haptics handle for the whole sheet: each rememberAppHaptics() starts its own DataStore
+    // collector, and the sheet has an option per movement type, equipment and muscle.
+    val haptics = rememberAppHaptics()
     AppSheet(onDismiss = onDismiss) {
         Text("Filter", style = AppText.titleL, color = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(Spacing.l))
@@ -89,13 +93,13 @@ fun FilterSheet(
                 .weight(1f, fill = false)
                 .verticalScroll(rememberScrollState()),
         ) {
-            FilterSection("Type", MovementType.entries, filters.types, { it.displayName }) {
+            FilterSection("Type", MovementType.entries, filters.types, { it.displayName }, haptics) {
                 onChange(filters.copy(types = it))
             }
-            FilterSection("Equipment", Equipment.entries, filters.equipment, { it.displayName }) {
+            FilterSection("Equipment", Equipment.entries, filters.equipment, { it.displayName }, haptics) {
                 onChange(filters.copy(equipment = it))
             }
-            FilterSection("Muscle", Muscle.entries, filters.muscles, { it.displayName }) {
+            FilterSection("Muscle", Muscle.entries, filters.muscles, { it.displayName }, haptics) {
                 onChange(filters.copy(muscles = it))
             }
         }
@@ -120,6 +124,7 @@ private fun <T : Any> FilterSection(
     options: List<T>,
     selected: Set<T>,
     label: (T) -> String,
+    haptics: AppHaptics,
     onChange: (Set<T>) -> Unit,
 ) {
     Section(title = title, trailing = {
@@ -129,7 +134,7 @@ private fun <T : Any> FilterSection(
     }) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.l)) {
             options.forEach { option ->
-                FilterOption(label(option), option in selected) { on ->
+                FilterOption(label(option), option in selected, haptics) { on ->
                     onChange(if (on) selected + option else selected - option)
                 }
             }
@@ -140,9 +145,8 @@ private fun <T : Any> FilterSection(
 
 /** One text option: label over a 24×2dp rule, `onSurface` when on (house rule 3, no chip). */
 @Composable
-private fun FilterOption(text: String, on: Boolean, onToggle: (Boolean) -> Unit) {
+private fun FilterOption(text: String, on: Boolean, haptics: AppHaptics, onToggle: (Boolean) -> Unit) {
     val scheme = MaterialTheme.colorScheme
-    val haptics = rememberAppHaptics()
     Box(
         Modifier
             .heightIn(min = Sizes.touchTarget)

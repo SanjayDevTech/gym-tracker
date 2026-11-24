@@ -98,8 +98,11 @@ fun AppNav() {
 
     // ---- Starting a workout (§6.1) and the session guard (§4.6) --------------------------------
     // Hoisted here so Train's Start / Quick log and the editor's Start workout share one guard.
-    val draft by container.repository.observeSessionDraft()
-        .collectAsStateWithLifecycle(initialValue = null)
+    // Remembered: Room hands back a new Flow per call, and collectAsStateWithLifecycle restarts
+    // (re-subscribing and re-querying) whenever its flow instance changes. AppNav recomposes on
+    // every navigation, so an un-remembered call re-ran the draft query on each one.
+    val draftFlow = remember(container) { container.repository.observeSessionDraft() }
+    val draft by draftFlow.collectAsStateWithLifecycle(initialValue = null)
     var pendingStart by remember { mutableStateOf<PendingStart?>(null) }
 
     fun startSession(planId: Long?) {
