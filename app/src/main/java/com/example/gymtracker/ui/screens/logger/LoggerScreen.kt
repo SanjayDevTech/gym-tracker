@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -66,6 +65,7 @@ import com.example.gymtracker.ui.components.atoms.AppTextButton
 import com.example.gymtracker.ui.components.atoms.AppTopBar
 import com.example.gymtracker.ui.components.atoms.ConfirmSheet
 import com.example.gymtracker.ui.format.formatClock
+import com.example.gymtracker.ui.format.formatShortDate
 import com.example.gymtracker.domain.DateUtil
 import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.rememberAppHaptics
@@ -85,8 +85,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 /** Undo snackbars stay 5s (§6.6) — between Material's Short (4s) and Long (10s). */
 private const val UNDO_MILLIS = 5_000L
@@ -174,11 +172,15 @@ fun LoggerScreen(
         }
     }
 
-    val dateLabel = remember(state.dateEpochDay) {
-        if (state.dateEpochDay == DateUtil.todayEpochDay()) null
-        else LocalDate.ofEpochDay(state.dateEpochDay).format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault()))
+    val isToday = state.dateEpochDay == DateUtil.todayEpochDay()
+    val dateLabel = remember(state.dateEpochDay, isToday) {
+        if (isToday) "Today" else formatShortDate(state.dateEpochDay)
     }
     val title = state.planName ?: "Quick log"
+    // Discard until a set is ticked (nothing to save yet), then Finish; Discard moves into ⋮.
+    val finishing = state.primaryAction == PrimaryAction.Finish
+    // The set whose check is nudging: "groupUid#setIndex".
+    var pulseKey by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -190,23 +192,28 @@ fun LoggerScreen(
             } else {
                 LoggerTopBar(
                     elapsed = elapsed,
-                    eyebrow = listOfNotNull(
-                        title,
-                        "${state.doneSets}/${state.totalSets}".takeIf { state.totalSets > 0 },
-                        dateLabel,
-                    ).joinToString(" · "),
+                    title = title,
+                    meta = "${state.doneSets} of ${state.totalSets} ${plural(state.totalSets, "set")}"
+                        .takeIf { state.totalSets > 0 },
+                    dateLabel = dateLabel,
+                    dateHighlighted = !isToday,
                     progress = if (state.totalSets == 0) 0f else state.doneSets.toFloat() / state.totalSets,
-                    finishEnabled = state.initialized && state.groups.isNotEmpty() && !state.saving,
+                    primaryLabel = if (finishing) "Finish" else "Discard",
+                    primaryDestructive = !finishing,
+                    primaryEnabled = state.initialized && !state.saving,
                     onMinimise = onMinimise,
-                    onFinish = { haptics.light(); viewModel.openFinish() },
-                    menu = listOf(
+                    onPrimary = {
+                        haptics.light()
+                        if (finishing) viewModel.openFinish() else showDiscard = true
+                    },
+                    menu = listOfNotNull(
                         MenuItem("Change date", { showDatePicker = true }, enabled = state.initialized),
                         MenuItem(
                             "Reorder exercises",
                             { haptics.light(); reorderMode = true },
                             enabled = state.groups.size >= 2,
                         ),
-                        MenuItem("Discard workout", { showDiscard = true }, destructive = true),
+                        MenuItem("Discard workout", { showDiscard = true }, destructive = true).takeIf { finishing },
                     ),
                 )
             }
@@ -227,9 +234,8 @@ fun LoggerScreen(
                     onPlus = { haptics.light(); viewModel.adjustRestTarget(REST_STEP_SECONDS) },
                     onSkip = { haptics.light(); viewModel.skipRest() },
                     stepSeconds = REST_STEP_SECONDS,
-                    modifier = Modifier.windowInsetsPadding(
-                        WindowInsets.imeAnimationTarget.union(WindowInsets.navigationBars),
-                    ),
+                    // Padding inside the dock's background, so it paints through the inset.
+                    insets = WindowInsets.imeAnimationTarget.union(WindowInsets.navigationBars),
                 )
             }
         },
@@ -262,7 +268,9 @@ fun LoggerScreen(
                         unit = state.weightUnit,
                         collapsed = collapse.isCollapsed(group),
                         prSetIndexes = group.sets.indices.filterTo(HashSet()) { "${group.uid}#$it" in prKeys },
-                        sets = setActions(viewModel, groupIndex, group, haptics, ::showUndo),
+                        sets = setActions(viewModel, groupIndex, group, haptics, ::showUndo) { setIndex ->
+                            pulseKey = "${group.uid}#$setIndex"
+                        },
                         onToggleCollapsed = { haptics.light(); collapse.toggle(group) },
                         onEditTarget = { targetFor = group.uid },
                         onViewProgress = { onOpenExercise(group.exerciseId) },
@@ -270,9 +278,18 @@ fun LoggerScreen(
                             haptics.light()
                             viewModel.removeGroup(groupIndex)?.let { showUndo("Removed ${it.exerciseName}") }
                         },
+                        onSkipChange = { skip ->
+                            haptics.light()
+                            if (skip) collapse.collapseNow(group)
+                            if (skip) viewModel.skipGroup(groupIndex) else viewModel.unskipGroup(groupIndex)
+                        },
                         onAddSet = { haptics.light(); viewModel.addSet(groupIndex) },
                         focusFirstSet = focusUid == group.uid,
                         onFocusConsumed = { focusUid = null },
+                        pulseSetIndex = pulseKey
+                            ?.takeIf { it.substringBefore('#') == group.uid }
+                            ?.substringAfter('#')?.toIntOrNull(),
+                        onPulseEnd = { pulseKey = null },
                         modifier = Modifier.animateItem(),
                     )
                 }
@@ -299,7 +316,7 @@ fun LoggerScreen(
 
     if (showDiscard) {
         ConfirmSheet(
-            title = "Discard workout?",
+            title = "Discard this session?",
             message = if (state.doneSets > 0) "${state.doneSets} logged ${plural(state.doneSets, "set")} will be lost."
             else "Nothing from this workout will be saved.",
             confirmLabel = "Discard",
@@ -357,7 +374,8 @@ fun LoggerScreen(
             title = "Finish ${state.planName ?: "workout"}?",
             elapsed = elapsed,
             doneSets = state.doneSets,
-            totalSets = state.totalSets,
+            // Every set is saved; unticked ones (skipped exercises included) as skipped.
+            totalSets = state.allSets,
             prCount = prKeys.map { it.substringBefore('#') }.distinct().size,
             planName = state.planName,
             planChanges = prompt.planChanges,
@@ -368,16 +386,18 @@ fun LoggerScreen(
     }
 }
 
-/** Per-set callbacks for one block. Typing still auto-completes a set (the fast path, §4.3). */
+/** Per-set callbacks for one block. Typing auto-completes a set (the fast path, §4.3) unless it
+ *  would complete the exercise; then [onNudge] pulses that set's check instead. */
 private fun setActions(
     viewModel: SessionLoggerViewModel,
     groupIndex: Int,
     group: ExerciseGroup,
     haptics: AppHaptics,
     showUndo: (String) -> Unit,
+    onNudge: (setIndex: Int) -> Unit,
 ) = SetActions(
-    onWeightChange = { setIndex, v -> autoComplete(viewModel, groupIndex, group, setIndex, haptics) { it.copy(weightInput = v) } },
-    onRepsChange = { setIndex, v -> autoComplete(viewModel, groupIndex, group, setIndex, haptics) { it.copy(repsInput = v) } },
+    onWeightChange = { setIndex, v -> input(viewModel, groupIndex, setIndex, haptics, onNudge) { it.copy(weightInput = v) } },
+    onRepsChange = { setIndex, v -> input(viewModel, groupIndex, setIndex, haptics, onNudge) { it.copy(repsInput = v) } },
     onCompletedChange = { setIndex, done ->
         haptics.toggle()
         viewModel.setCompleted(groupIndex, setIndex, done)
@@ -393,21 +413,18 @@ private fun setActions(
     },
 )
 
-private fun autoComplete(
+private fun input(
     viewModel: SessionLoggerViewModel,
     groupIndex: Int,
-    group: ExerciseGroup,
     setIndex: Int,
     haptics: AppHaptics,
+    onNudge: (setIndex: Int) -> Unit,
     edit: (SetDraft) -> SetDraft,
 ) {
-    val before = group.sets.getOrNull(setIndex) ?: return
-    val after = edit(before)
-    val completes = !before.isCompleted && (after.repsInput.isNotEmpty() || after.weightInput.isNotEmpty())
-    if (completes) haptics.toggle()
-    viewModel.updateSet(groupIndex, setIndex) {
-        val edited = edit(it)
-        edited.copy(isCompleted = it.isCompleted || edited.repsInput.isNotEmpty() || edited.weightInput.isNotEmpty())
+    when (viewModel.inputSet(groupIndex, setIndex, edit)) {
+        InputOutcome.Ticked -> haptics.toggle()
+        InputOutcome.NudgeTick -> onNudge(setIndex)
+        InputOutcome.None -> Unit
     }
 }
 
@@ -442,8 +459,9 @@ private fun PrHaptic(state: SessionLoggerState, prKeys: Set<String>, haptics: Ap
 }
 
 /**
- * Which finished blocks are folded (§7 phase 3: derived from `sets.all { isCompleted }` plus a
- * user override, never stored in the draft). A block that isn't finished is always expanded.
+ * Which settled blocks are folded (§7 phase 3: derived from `sets.all { isCompleted }` or the
+ * group's skipped flag, plus a user override never stored in the draft). A block that isn't
+ * settled is always expanded.
  */
 private class CollapseState(
     autoCollapsed: Set<String>,
@@ -456,7 +474,7 @@ private class CollapseState(
     var userCollapsed by mutableStateOf(collapsed)
     var seeded by mutableStateOf(seeded)
 
-    fun isCollapsed(group: ExerciseGroup): Boolean = group.allDone && when (group.uid) {
+    fun isCollapsed(group: ExerciseGroup): Boolean = group.settled && when (group.uid) {
         in userCollapsed -> true
         in userExpanded -> false
         else -> group.uid in autoCollapsed
@@ -470,6 +488,13 @@ private class CollapseState(
             userExpanded = userExpanded - group.uid
             userCollapsed = userCollapsed + group.uid
         }
+    }
+
+    /** Skip exercise folds the block at once — the user chose it, no delay. */
+    fun collapseNow(group: ExerciseGroup) {
+        userExpanded = userExpanded - group.uid
+        userCollapsed = userCollapsed - group.uid
+        autoCollapsed = autoCollapsed + group.uid
     }
 }
 
@@ -498,7 +523,7 @@ private fun CollapseEffects(
     collapse: CollapseState,
     listState: androidx.compose.foundation.lazy.LazyListState,
 ) {
-    val doneUids = state.groups.filter { it.allDone }.map { it.uid }.toSet()
+    val doneUids = state.groups.filter { it.settled }.map { it.uid }.toSet()
     LaunchedEffect(state.initialized, doneUids) {
         if (!state.initialized) return@LaunchedEffect
         if (!collapse.seeded) {
@@ -506,15 +531,18 @@ private fun CollapseEffects(
             collapse.seeded = true
             return@LaunchedEffect
         }
-        // Unticking a set re-opens its block immediately.
+        // Unticking a set (or unskipping) re-opens its block immediately and forgets the user's
+        // fold/unfold choice, so the block folds again once it settles.
         collapse.autoCollapsed = collapse.autoCollapsed intersect doneUids
+        collapse.userExpanded = collapse.userExpanded intersect doneUids
+        collapse.userCollapsed = collapse.userCollapsed intersect doneUids
         val fresh = doneUids - collapse.autoCollapsed - collapse.userExpanded
         if (fresh.isEmpty()) return@LaunchedEffect
         delay(COLLAPSE_DELAY_MILLIS)
         collapse.autoCollapsed = collapse.autoCollapsed + fresh
         val lastFresh = state.groups.indexOfLast { it.uid in fresh }
         val next = state.groups.withIndex()
-            .firstOrNull { (i, g) -> i > lastFresh && !g.allDone }?.index
+            .firstOrNull { (i, g) -> i > lastFresh && !g.settled }?.index
         if (next != null) listState.animateScrollToItem(next)
     }
 }

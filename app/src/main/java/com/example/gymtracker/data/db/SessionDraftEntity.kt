@@ -56,6 +56,8 @@ data class SessionDraftGroup(
     val sets: List<SessionDraftSet>,
     // Stable id so reorder animations and list keys survive across draft round-trips.
     val uid: String = "",
+    // "Skip exercise" in the logger. Drafts written before the field existed decode to false.
+    val skipped: Boolean = false,
 )
 
 @Serializable

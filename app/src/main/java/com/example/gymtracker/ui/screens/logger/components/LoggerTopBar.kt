@@ -2,7 +2,6 @@ package com.example.gymtracker.ui.screens.logger.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material3.Icon
@@ -21,11 +19,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import com.example.gymtracker.ui.components.MenuItem
 import com.example.gymtracker.ui.components.OverflowMenu
 import com.example.gymtracker.ui.components.atoms.AppOutlinedButton
-import com.example.gymtracker.ui.components.atoms.Eyebrow
 import com.example.gymtracker.ui.components.atoms.Meter
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Spacing
@@ -33,19 +34,26 @@ import com.example.gymtracker.ui.theme.Spacing
 /**
  * The logger's top bar — §3 `LoggerTopBar` (S2-b).
  *
- * `↓` minimise (leaving does not end the session, issue 4) · the elapsed clock centred in
- * [AppText.numberL] over a `PLAN · 7/18` eyebrow · an outlined `Finish` pill · ⋮. Under it a
- * 2dp meter of sets done over total. Finish is a once-a-session action, so it lives up here,
- * away from the thumb that ticks sets (house rule 11).
+ * `↓` minimise (leaving does not end the session, issue 4) · centred, the elapsed clock in
+ * [AppText.numberL] over two rows: the workout title (one line, ellipsised) and a muted meta line
+ * `3 of 12 sets · Today` whose date part turns `tertiary` when the session is not today · an
+ * outlined primary pill (`Discard` in `error` until a set is ticked, then `Finish`) · ⋮. Under it a
+ * 2dp meter of sets done over total. Finish is a once-a-session action, so it lives up here, away
+ * from the thumb that ticks sets (house rule 11).
  */
 @Composable
 fun LoggerTopBar(
     elapsed: String,
-    eyebrow: String,
+    title: String,
+    meta: String?,
+    dateLabel: String,
+    dateHighlighted: Boolean,
     progress: Float,
-    finishEnabled: Boolean,
+    primaryLabel: String,
+    primaryDestructive: Boolean,
+    primaryEnabled: Boolean,
     onMinimise: () -> Unit,
-    onFinish: () -> Unit,
+    onPrimary: () -> Unit,
     menu: List<MenuItem>,
     modifier: Modifier = Modifier,
 ) {
@@ -56,30 +64,36 @@ fun LoggerTopBar(
             .background(scheme.background)
             .statusBarsPadding(),
     ) {
-        // A size: the bar is a two-line title plus a 48dp button row.
-        Box(Modifier.fillMaxWidth().heightIn(min = 64.dp)) {
-            IconButton(onClick = onMinimise, modifier = Modifier.align(Alignment.CenterStart)) {
+        // A size: the bar is a three-line title block beside a 48dp button row.
+        CentredBar(Modifier.fillMaxWidth().heightIn(min = 64.dp)) {
+            IconButton(onClick = onMinimise) {
                 Icon(
                     Icons.Outlined.KeyboardArrowDown,
                     contentDescription = "Minimise workout",
                     tint = scheme.onSurfaceVariant,
                 )
             }
-            Column(
-                modifier = Modifier.align(Alignment.Center),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(elapsed, style = AppText.numberL, color = scheme.onSurface, maxLines = 1)
-                Eyebrow(eyebrow, modifier = Modifier.widthIn(max = 160.dp))
-            }
             Row(
-                modifier = Modifier.align(Alignment.CenterEnd),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
-                AppOutlinedButton(text = "Finish", onClick = onFinish, enabled = finishEnabled)
+                AppOutlinedButton(
+                    text = primaryLabel,
+                    onClick = onPrimary,
+                    enabled = primaryEnabled,
+                    color = if (primaryDestructive) scheme.error else scheme.primary,
+                )
                 OverflowMenu(menu)
             }
+            Text(elapsed, style = AppText.numberL, color = scheme.onSurface, maxLines = 1)
+            Text(
+                title,
+                style = AppText.label,
+                color = scheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            MetaLine(meta, dateLabel, if (dateHighlighted) scheme.tertiary else scheme.onSurfaceVariant)
         }
         Meter(
             fraction = progress,
@@ -87,5 +101,55 @@ fun LoggerTopBar(
             modifier = Modifier.padding(horizontal = Spacing.gutter),
         )
         Spacer(Modifier.height(Spacing.s))
+    }
+}
+
+/** `3 of 12 sets · Today` — muted, smaller than the title; the date part in [dateColor]. */
+@Composable
+private fun MetaLine(meta: String?, dateLabel: String, dateColor: Color) {
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    Row {
+        if (meta != null) {
+            Text(
+                "$meta · ",
+                style = AppText.eyebrow,
+                color = muted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+        }
+        Text(dateLabel, style = AppText.eyebrow, color = dateColor, maxLines = 1)
+    }
+}
+
+/**
+ * Start and end slots, then centre rows stacked between them. Each row sits on the bar's
+ * midline when it fits between the side slots and is nudged toward the narrower side only when
+ * it doesn't — so a long meta line never moves the clock.
+ */
+@Composable
+private fun CentredBar(modifier: Modifier, content: @Composable () -> Unit) {
+    Layout(content = content, modifier = modifier) { measurables, constraints ->
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val start = measurables[0].measure(loose)
+        val end = measurables[1].measure(loose)
+        val width = constraints.maxWidth
+        val rowConstraints = Constraints(maxWidth = (width - start.width - end.width).coerceAtLeast(0))
+        val rows = measurables.drop(2).map { it.measure(rowConstraints) }
+        val rowsHeight = rows.sumOf { it.height }
+        val height = maxOf(constraints.minHeight, start.height, end.height, rowsHeight)
+        layout(width, height) {
+            start.placeRelative(0, (height - start.height) / 2)
+            end.placeRelative(width - end.width, (height - end.height) / 2)
+            var y = (height - rowsHeight) / 2
+            rows.forEach { row ->
+                val x = ((width - row.width) / 2)
+                    .coerceAtMost(width - end.width - row.width)
+                    .coerceAtLeast(start.width)
+                row.placeRelative(x, y)
+                y += row.height
+            }
+        }
     }
 }

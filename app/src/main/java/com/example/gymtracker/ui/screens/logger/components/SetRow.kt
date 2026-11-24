@@ -1,6 +1,7 @@
 package com.example.gymtracker.ui.screens.logger.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -27,9 +28,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +40,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.example.gymtracker.data.SetType
@@ -55,6 +60,11 @@ import com.example.gymtracker.ui.theme.Radius
 import com.example.gymtracker.ui.theme.Sizes
 import com.example.gymtracker.ui.theme.Spacing
 
+/** The check's nudge (§6.2): three accent pulses over ~2s. */
+private const val PULSE_COUNT = 3
+private const val PULSE_HALF_MILLIS = 330
+private const val PULSE_SCALE = 0.25f
+
 /** Size tokens local to the set table (sizes, not gaps). */
 internal object SetTable {
     val rowMinHeight = 64.dp
@@ -69,6 +79,9 @@ internal object SetTable {
  * the full-bleed [DoneRow] tint (house rule 3's gym exception) that fades in over 150ms, and its
  * numerals tween from `onSurfaceVariant` to `onSurface`. A PR turns the numerals `primary` and
  * adds a `PR` badge. The row draws its own gutter so the tint can run edge to edge.
+ *
+ * [pulse] nudges the empty check — a few `primary` pulses — when typing has filled the set that
+ * would complete its exercise, which is left for the user to tick (§6.2).
  */
 @Composable
 fun SetRow(
@@ -85,9 +98,25 @@ fun SetRow(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
+    pulse: Boolean = false,
+    onPulseEnd: () -> Unit = {},
 ) {
     val scheme = MaterialTheme.colorScheme
     val done = set.isCompleted
+    val pulseLevel = remember { Animatable(0f) }
+    val endPulse by rememberUpdatedState(onPulseEnd)
+    val pulsing = pulse && !done
+    LaunchedEffect(pulsing) {
+        if (!pulsing) {
+            pulseLevel.snapTo(0f)
+            return@LaunchedEffect
+        }
+        repeat(PULSE_COUNT) {
+            pulseLevel.animateTo(1f, tween(PULSE_HALF_MILLIS))
+            pulseLevel.animateTo(0f, tween(PULSE_HALF_MILLIS))
+        }
+        endPulse()
+    }
     val tint by animateColorAsState(
         if (done) DoneRow else Color.Transparent,
         animationSpec = tween(150),
@@ -157,7 +186,12 @@ fun SetRow(
             Icon(
                 if (done) Icons.Filled.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
                 contentDescription = if (done) "Mark set ${index + 1} not done" else "Mark set ${index + 1} done",
-                tint = if (done) scheme.primary else scheme.outline,
+                tint = if (done) scheme.primary else lerp(scheme.outline, scheme.primary, pulseLevel.value),
+                modifier = Modifier.graphicsLayer {
+                    val scale = 1f + PULSE_SCALE * pulseLevel.value
+                    scaleX = scale
+                    scaleY = scale
+                },
             )
         }
     }

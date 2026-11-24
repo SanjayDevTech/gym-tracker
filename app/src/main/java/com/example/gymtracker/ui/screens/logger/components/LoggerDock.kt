@@ -7,10 +7,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +31,9 @@ import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Sizes
 import com.example.gymtracker.ui.theme.Spacing
 
+/** The dock's top hairline: primary at low alpha, a step brighter than list rules. */
+private const val DOCK_EDGE_ALPHA = 0.3f
+
 /**
  * The logger's bottom dock — §3 `LoggerDock`, §4.3, §6.3.
  *
@@ -39,7 +44,10 @@ import com.example.gymtracker.ui.theme.Spacing
  * [compact] collapses everything to one 56dp line while the IME is open so the focused set row
  * is never hidden. [restElapsedMillis] is null while rest is cleared (no set yet, or Skip).
  *
- * The caller owns insets: this composable must be the *only* IME consumer on the screen.
+ * The caller owns insets: this composable must be the *only* IME consumer on the screen. It
+ * paints its background down through [insets] (nav bar, or keyboard) so scrolled content never
+ * shows beneath it, and keeps its content above them. The top edge is a primary-tinted hairline,
+ * so the dock doesn't read as one more list divider.
  */
 @Composable
 fun LoggerDock(
@@ -51,6 +59,7 @@ fun LoggerDock(
     onMinus: () -> Unit,
     onPlus: () -> Unit,
     onSkip: () -> Unit,
+    insets: WindowInsets,
     modifier: Modifier = Modifier,
     stepSeconds: Int = 15,
 ) {
@@ -70,8 +79,8 @@ fun LoggerDock(
     val meterColor = if (reached) scheme.primary else scheme.tertiary
     val fraction = restElapsedMillis?.let { (it.toFloat() / targetMillis).coerceIn(0f, 1f) } ?: 0f
 
-    Column(modifier.fillMaxWidth().background(scheme.background)) {
-        AppDivider()
+    Column(modifier.fillMaxWidth().background(scheme.background).windowInsetsPadding(insets)) {
+        AppDivider(color = scheme.primary.copy(alpha = DOCK_EDGE_ALPHA))
         if (compact) {
             Column(
                 Modifier

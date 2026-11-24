@@ -57,10 +57,60 @@ data class ExerciseGroup(
     val targetRepsLow: Int,
     val targetRepsHigh: Int,
     val sets: List<SetDraft>,
+    /** "Skip exercise": its unticked sets stay unticked (saved as skipped, decision 8) and the
+     *  block folds. Cleared by ticking any of its sets, or "Unskip exercise". */
+    val skipped: Boolean = false,
 ) {
     val doneCount: Int get() = sets.count { it.isCompleted }
     val allDone: Boolean get() = sets.isNotEmpty() && sets.all { it.isCompleted }
+    /** Finished one way or the other: every set ticked, or skipped. Settled blocks fold. */
+    val settled: Boolean get() = allDone || skipped
+    /** Sets that count toward the session's "x of y": a skipped exercise counts only what it ticked. */
+    val countedSets: Int get() = if (skipped) doneCount else sets.size
+
+    /**
+     * Replace one set. A set turning completed un-skips the exercise ("ticking any set brings
+     * it back").
+     */
+    fun withSet(setIndex: Int, updated: SetDraft): ExerciseGroup {
+        val current = sets.getOrNull(setIndex) ?: return this
+        val newSets = sets.toMutableList().also { it[setIndex] = updated }
+        val justCompleted = !current.isCompleted && updated.isCompleted
+        return copy(sets = newSets, skipped = skipped && !justCompleted)
+    }
+
+    /**
+     * A typed edit into a set row. Typing auto-ticks the set (the fast path, §4.3) — except the
+     * set that would complete the exercise (the only one left unticked): ticking that one is
+     * left to the user, so the block doesn't fold while they are still adjusting it. On the first
+     * input into such a set the outcome asks the row to nudge its check.
+     */
+    fun withInput(setIndex: Int, edit: (SetDraft) -> SetDraft): Pair<ExerciseGroup, InputOutcome> {
+        val before = sets.getOrNull(setIndex) ?: return this to InputOutcome.None
+        val after = edit(before)
+        val hasInput = after.repsInput.isNotEmpty() || after.weightInput.isNotEmpty()
+        if (before.isCompleted || !hasInput) return withSet(setIndex, after) to InputOutcome.None
+        val wouldComplete = sets.withIndex().all { (i, s) -> i == setIndex || s.isCompleted }
+        if (wouldComplete) {
+            val firstInput = before.repsInput.isEmpty() && before.weightInput.isEmpty()
+            return withSet(setIndex, after) to
+                if (firstInput) InputOutcome.NudgeTick else InputOutcome.None
+        }
+        return withSet(setIndex, after.copy(isCompleted = true)) to InputOutcome.Ticked
+    }
 }
+
+/** What a typed edit did to its set. */
+enum class InputOutcome {
+    None,
+    /** The set auto-ticked. */
+    Ticked,
+    /** Not ticked because it would complete the exercise: the row pulses its check instead. */
+    NudgeTick,
+}
+
+/** The top bar's primary button: Discard until a set is ticked, then Finish. */
+enum class PrimaryAction { Discard, Finish }
 
 /** The Finish sheet is open. [planChanges] lists how this session differs from its plan
  *  ("Bench press 3→4 sets", "added Dips"); empty when there is no plan or nothing changed,
@@ -91,9 +141,13 @@ data class SessionLoggerState(
     /** One-shot: a group just added from the picker that the list should scroll to and focus. */
     val revealGroupUid: String? = null,
 ) {
-    val totalSets: Int get() = groups.sumOf { it.sets.size }
+    /** Progress denominator ("3 of 12 sets"): a skipped exercise counts only its ticked sets. */
+    val totalSets: Int get() = groups.sumOf { it.countedSets }
     val doneSets: Int get() = groups.sumOf { it.doneCount }
-    val skippedSets: Int get() = totalSets - doneSets
+    /** Every set in the draft — what Finish saves, ticked or not. */
+    val allSets: Int get() = groups.sumOf { it.sets.size }
+    val skippedSets: Int get() = allSets - doneSets
+    val primaryAction: PrimaryAction get() = if (doneSets > 0) PrimaryAction.Finish else PrimaryAction.Discard
 }
 
 @OptIn(FlowPreview::class)
@@ -178,6 +232,7 @@ class SessionLoggerViewModel(
                         setType = runCatching { SetType.valueOf(s.setType) }.getOrDefault(SetType.Working),
                     )
                 },
+                skipped = g.skipped,
             )
         }
         _draft.update {
@@ -209,6 +264,7 @@ class SessionLoggerViewModel(
                     targetRepsLow = g.targetRepsLow,
                     targetRepsHigh = g.targetRepsHigh,
                     uid = g.uid,
+                    skipped = g.skipped,
                     sets = g.sets.map { s ->
                         SessionDraftSet(
                             repsInput = s.repsInput,
@@ -393,18 +449,37 @@ class SessionLoggerViewModel(
         _draft.update { s ->
             val group = s.groups.getOrNull(groupIndex) ?: return@update s
             val current = group.sets.getOrNull(setIndex) ?: return@update s
-            val updated = update(current)
-            val newSets = group.sets.toMutableList().also { it[setIndex] = updated }
-            val newGroups = s.groups.toMutableList().also { it[groupIndex] = group.copy(sets = newSets) }
-            // A set transitioning into "completed" is the moment it's logged — restart rest.
-            val justCompleted = !current.isCompleted && updated.isCompleted
-            s.copy(
-                groups = newGroups,
-                lastSetCompletedAtMillis =
-                    if (justCompleted) System.currentTimeMillis() else s.lastSetCompletedAtMillis,
-            )
+            s.withGroup(groupIndex, group.withSet(setIndex, update(current)))
         }
     }
+
+    /** A typed edit into a set row; see [ExerciseGroup.withInput] for the auto-tick rule. */
+    fun inputSet(groupIndex: Int, setIndex: Int, edit: (SetDraft) -> SetDraft): InputOutcome {
+        var outcome = InputOutcome.None
+        _draft.update { s ->
+            val group = s.groups.getOrNull(groupIndex) ?: return@update s
+            val (updated, result) = group.withInput(setIndex, edit)
+            outcome = result
+            s.withGroup(groupIndex, updated)
+        }
+        return outcome
+    }
+
+    /** Swap in [updated]; a set that just became completed is the moment it's logged — restart rest. */
+    private fun SessionLoggerState.withGroup(groupIndex: Int, updated: ExerciseGroup): SessionLoggerState {
+        val previous = groups[groupIndex]
+        val newGroups = groups.toMutableList().also { it[groupIndex] = updated }
+        return copy(
+            groups = newGroups,
+            lastSetCompletedAtMillis =
+                if (updated.doneCount > previous.doneCount) System.currentTimeMillis() else lastSetCompletedAtMillis,
+        )
+    }
+
+    /** "Skip exercise": leave its unticked sets unticked (saved as skipped) and fold it. */
+    fun skipGroup(groupIndex: Int) = updateGroup(groupIndex) { it.copy(skipped = true) }
+
+    fun unskipGroup(groupIndex: Int) = updateGroup(groupIndex) { it.copy(skipped = false) }
 
     /** The row's check. Ticking an empty row commits its hint values so they are shown (§6.2). */
     fun setCompleted(groupIndex: Int, setIndex: Int, completed: Boolean) {
@@ -462,7 +537,7 @@ class SessionLoggerViewModel(
      *  changed — the plan-sync checkbox with its diff. */
     fun openFinish() {
         val s = _draft.value
-        if (s.saving || s.groups.isEmpty()) return
+        if (s.saving || s.primaryAction != PrimaryAction.Finish) return
         viewModelScope.launch {
             _draft.update { it.copy(finish = FinishPrompt(planChanges(it))) }
         }

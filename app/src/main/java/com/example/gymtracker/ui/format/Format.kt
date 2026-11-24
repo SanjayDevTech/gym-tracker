@@ -80,3 +80,8 @@ fun plural(count: Long, noun: String): String = if (count == 1L) noun else "${no
 
 /** [Int] twin of [plural]. */
 fun plural(count: Int, noun: String): String = plural(count.toLong(), noun)
+
+/** A day without its year: `Mon 23 Nov`, in the device locale. */
+fun formatShortDate(epochDay: Long): String =
+    java.time.LocalDate.ofEpochDay(epochDay)
+        .format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM", java.util.Locale.getDefault()))

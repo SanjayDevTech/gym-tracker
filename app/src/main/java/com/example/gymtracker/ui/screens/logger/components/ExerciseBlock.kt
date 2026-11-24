@@ -4,6 +4,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -60,9 +61,9 @@ val MovementType.logsWeight: Boolean
 /**
  * One exercise in the logger — §3 `ExerciseBlock`, §4.3 (was a bordered `Section` card).
  *
- * Expanded: name + `2/3` + ⋮ (Edit target, Progress, Remove) · amber `TARGET` eyebrow (tap →
+ * Expanded: name + `2/3` + ⋮ (Edit target, Progress, Skip/Unskip, Remove) · amber `TARGET` eyebrow (tap →
  * Target sheet) · rule · column eyebrows once · set rows on hairlines · `+ Add set` foot.
- * Collapsed (S2-b): one 48dp line `✓ name 3/3 ⌄`; tap re-expands. Whether a block is collapsed is
+ * Collapsed (S2-b): one 48dp line `✓ name 3/3 ⌄` (`Skipped name 1/3 ⌄` when skipped); tap re-expands. Whether a block is collapsed is
  * decided by the screen, not stored in the draft.
  *
  * The block pads itself (not the list) so done rows can tint edge to edge.
@@ -78,10 +79,13 @@ fun ExerciseBlock(
     onEditTarget: () -> Unit,
     onViewProgress: () -> Unit,
     onRemove: () -> Unit,
+    onSkipChange: (skipped: Boolean) -> Unit,
     onAddSet: () -> Unit,
     modifier: Modifier = Modifier,
     focusFirstSet: Boolean = false,
     onFocusConsumed: () -> Unit = {},
+    pulseSetIndex: Int? = null,
+    onPulseEnd: () -> Unit = {},
 ) {
     Column(modifier.fillMaxWidth().animateContentSize(tween(200))) {
         if (collapsed) {
@@ -96,9 +100,12 @@ fun ExerciseBlock(
                 onEditTarget = onEditTarget,
                 onViewProgress = onViewProgress,
                 onRemove = onRemove,
+                onSkipChange = onSkipChange,
                 onAddSet = onAddSet,
                 focusFirstSet = focusFirstSet,
                 onFocusConsumed = onFocusConsumed,
+                pulseSetIndex = pulseSetIndex,
+                onPulseEnd = onPulseEnd,
             )
         }
         AppDivider()
@@ -116,12 +123,18 @@ private fun CollapsedHead(group: ExerciseGroup, onExpand: () -> Unit) {
             .padding(start = Spacing.gutter, end = Spacing.m),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Outlined.Check, contentDescription = "Done", tint = scheme.primary, modifier = Modifier.size(Sizes.icon))
+        // A skipped exercise reads as skipped, not done: muted label and name instead of ✓.
+        val skipped = group.skipped && !group.allDone
+        if (skipped) {
+            Text("Skipped", style = AppText.label, color = scheme.onSurfaceVariant)
+        } else {
+            Icon(Icons.Outlined.Check, contentDescription = "Done", tint = scheme.primary, modifier = Modifier.size(Sizes.icon))
+        }
         Spacer(Modifier.width(Spacing.s))
         Text(
             group.exerciseName,
             style = AppText.titleM,
-            color = scheme.onSurface,
+            color = if (skipped) scheme.onSurfaceVariant else scheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
@@ -146,9 +159,12 @@ private fun ExpandedBlock(
     onEditTarget: () -> Unit,
     onViewProgress: () -> Unit,
     onRemove: () -> Unit,
+    onSkipChange: (skipped: Boolean) -> Unit,
     onAddSet: () -> Unit,
     focusFirstSet: Boolean,
     onFocusConsumed: () -> Unit,
+    pulseSetIndex: Int?,
+    onPulseEnd: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val showWeight = group.movementType.logsWeight
@@ -181,7 +197,7 @@ private fun ExpandedBlock(
             color = if (group.allDone) scheme.primary else scheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = Spacing.s),
         )
-        if (group.allDone) {
+        if (group.settled) {
             IconButton(onClick = onCollapse) {
                 Icon(Icons.Outlined.KeyboardArrowUp, contentDescription = "Collapse", tint = scheme.onSurfaceVariant)
             }
@@ -190,6 +206,11 @@ private fun ExpandedBlock(
             items = listOf(
                 MenuItem("Edit target", onEditTarget),
                 MenuItem("Progress", onViewProgress),
+                if (group.skipped) {
+                    MenuItem("Unskip exercise", { onSkipChange(false) })
+                } else {
+                    MenuItem("Skip exercise", { onSkipChange(true) }, enabled = !group.allDone)
+                },
                 MenuItem("Remove exercise", onRemove, destructive = true),
             ),
             contentDescription = "${group.exerciseName} options",
@@ -216,7 +237,8 @@ private fun ExpandedBlock(
         Eyebrow("Set", modifier = Modifier.width(SetTable.badge))
         if (showWeight) Eyebrow(unit.label, modifier = Modifier.weight(1f))
         Eyebrow(group.movementType.repUnitShort, modifier = Modifier.weight(1f))
-        Eyebrow("✓", modifier = Modifier.width(Sizes.touchTarget))
+        // Same 48dp slot as SetRow's check, centred, so ✓ sits over the circles.
+        Box(Modifier.width(Sizes.touchTarget), contentAlignment = Alignment.Center) { Eyebrow("✓") }
     }
 
     group.sets.forEachIndexed { setIndex, set ->
@@ -234,6 +256,8 @@ private fun ExpandedBlock(
             onSetTypeChange = { sets.onSetTypeChange(setIndex, it) },
             onDelete = { sets.onDelete(setIndex) },
             focusRequester = if (setIndex == 0) focusRequester else null,
+            pulse = setIndex == pulseSetIndex,
+            onPulseEnd = onPulseEnd,
         )
     }
     AppDivider(Modifier.padding(horizontal = Spacing.gutter))

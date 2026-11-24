@@ -384,9 +384,9 @@ New package `ui/components/atoms/`.
 | `WeekHero` | **new** | Train hero: sessions this week vs the weekly target (`numberXL` + `of 4`), 7 `StatusCell`s Mon–Sun, 2dp `Meter` to target, three `StatColumns` (weeks on target of last 12, volume, sets). Decision 7. |
 | `PlanRow` | **rewrite** | No card, tile, chips or trash. Name `titleM` + trailing `Start` text button in primary; `Last · 3 days ago` + `Sparkline` (S2-a); `6 exercises · Chest, Shoulders` `bodyS`. |
 | `SetRow` | **rewrite** | See §4.3. Badge (set number / W / F) · weight `NumberField` · reps `NumberField` · 48dp check. Columns per movement type. PR → numeral in primary + `PR` badge. |
-| `ExerciseBlock` | **rewrite** (was a `Section` card) | Head: name `titleM` + `2/3` trailing; target eyebrow in tertiary; ⋮ menu (Edit target, Progress, Remove). Column eyebrows once; set rows divided by hairlines, done rows tinted; foot `+ Add set`. Collapsed state (S2-b): one 48dp line `✓ name  3/3  ⌄`. |
+| `ExerciseBlock` | **rewrite** (was a `Section` card) | Head: name `titleM` + `2/3` trailing; target eyebrow in tertiary; ⋮ menu (Edit target, Progress, Skip / Unskip exercise, Remove). Column eyebrows once; set rows divided by hairlines, done rows tinted; foot `+ Add set`. Collapsed state (S2-b): one 48dp line `✓ name  3/3  ⌄` (`Skipped` in muted text instead of `✓` for a skipped exercise). |
 | `LoggerDock` | **new** | Bottom bar: `REST` / `TARGET` eyebrows, `numberXL` clock, 2dp meter, `RestTransport` (S5-g). One-line compact state while the IME is open. Replaces the chips row and the Add/Finish bar. |
-| `LoggerTopBar` | **new** (S2-b) | ↓ · centred `numberL` elapsed over a plan-name eyebrow · outlined `Finish` pill · ⋮. |
+| `LoggerTopBar` | **new** (S2-b) | ↓ · centred `numberL` elapsed over two rows — the workout title (one line, ellipsised) and a muted meta line `3 of 12 sets · Today` (a past date in tertiary) · outlined pill: `Discard` (error) until a set is ticked, then `Finish` · ⋮. |
 | `PlannedRow` | **rewrite** | Index `numberM`, name, `Chest · Barbell`, target in tertiary, real drag handle. |
 | `SessionRow` | **rewrite** | Date column (eyebrow weekday over `numberM` day) · plan name + meta · trailing sets `numberL`. |
 | `RecordRow` | **new** | Exercise · record kind · value · delta in primary. Summary and Exercise detail. |
@@ -503,8 +503,8 @@ Laid out after S2-b, built in the family voice.
 ```
 ┌────────────────────────────────────────────┐
 │ ↓            23:41        ╭────────╮  ⋮    │  ↓ minimise · elapsed numberL centred
-│           PUSH A · 7/18   │ Finish │       │  eyebrow · outlined pill (S2-b)
-│                           ╰────────╯       │  ⋮: Change date, Reorder, Discard
+│              Push A       │ Finish │       │  title, one line · outlined pill (S2-b)
+│     7 of 18 sets · Today  ╰────────╯       │  muted meta; ⋮: Change date, Reorder, Discard
 │ ━━━━━━━━━━━━━━━━────────────────────────   │  2dp Meter: sets done / total
 ├────────────────────────────────────────────┤
 │ ✓ Warm-up rower              1/1     ⌄     │  collapsed: done exercise, 48dp
@@ -540,7 +540,10 @@ Set row anatomy: 64dp min height. Badge 40dp (number, `W` muted, `F` in Effort) 
 **Warm-up / Working / Failure / — / Delete set** (issue 13). `NumberField`s for weight and reps (weight
 first: "62.5 × 9" is how lifters say it). Check is a 48dp target; tapping it on an empty row commits the
 hint values (as today's save already does). Typing still auto-completes the set (kept: it is the fast
-path), and the row's tint and brightened numerals make the auto-tick visible instead of silent.
+path), and the row's tint and brightened numerals make the auto-tick visible instead of silent —
+except the set that would complete the exercise (the only one left unticked): typing never ticks it,
+its check pulses in primary (~2s) on the first input instead, and the block folds only once the user
+ticks it.
 
 The dock collapses to a single 56dp line (`REST 1:12 / 1:30` + meter) while the IME is open, so the
 focused row is never hidden; it expands again when the keyboard closes.
@@ -549,13 +552,13 @@ focused row is never hidden; it expands again when the keyboard closes.
 order is preserved and a tap re-expands one. `imePadding` on the dock only — one inset consumer.
 **Above the fold:** clock, Finish, progress meter, the current exercise's set table, and the rest
 transport — every per-set action in the bottom 40% (rule 11).
-**Empty (quick log, no exercises):** "Add your first exercise" + `AppButton Add exercises` centred; dock shows REST `—` and transport disabled; Finish disabled.
+**Empty (quick log, no exercises):** "Add your first exercise" + `AppButton Add exercises` centred; dock shows REST `—` and transport disabled; the top-bar pill reads Discard.
 **Loading:** while the draft hydrates, top bar + dock only (today shows "Tap Add exercise" briefly).
 
 Changes:
 1. **The chip row goes.** Date → top-bar ⋮ **Change date** (picker capped at today, converted with the
-   local zone — issue 15), beside **Reorder exercises** and **Discard workout**. Elapsed → the centred
-   clock. `x/y done` → the eyebrow and a 2dp meter. Rest → the dock.
+   local zone — issue 15), beside **Reorder exercises** and **Discard workout** (in ⋮ once a set is ticked; before that Discard
+   is the top-bar pill). Elapsed → the centred clock. `x/y done` → the meta row and a 2dp meter. Rest → the dock.
 2. **Finish moves to the top bar** (S2-b). It is used once per session; at the top it is out of the
    way of the thumb that is ticking sets, and the dock is freed for rest.
 3. **Rest becomes the dock** with a target and an S5-g transport (minimal feature, §4.4, §6.3).
@@ -564,7 +567,7 @@ Changes:
 5. **Add exercise moves to the end of the list** and opens the multi-select picker (§4.13).
 6. **Back is a ↓ minimise icon**, not ←, because leaving does not end the session (issue 4). First minimise of a session shows a snackbar on Train: "Push A is still running · Resume".
 7. **Remove exercise** goes into the block's ⋮ with an undo snackbar above the dock (issue 7).
-8. **Title is the draft's, not the route's** (fault 5): the eyebrow always reads the draft's plan name. The guard (§4.6) stops the mismatch arising at all.
+8. **Title is the draft's, not the route's** (fault 5): the title row always reads the draft's plan name. The guard (§4.6) stops the mismatch arising at all.
 
 Reorder mode keeps its behaviour (entered from the top-bar ⋮); compact rows adopt `PlannedRow` styling with the handle.
 
@@ -961,7 +964,7 @@ Pick phase: `bodyS` helper, `AppButton Choose JSON file`, error line in `error`,
 
 ### 4.17 Small sheets — **restyle**
 
-Create plan, Rename plan, Delete plan, Discard session, Delete session → `ConfirmSheet` / one-field sheet (`NumberField`-style underline text field, `AppButton`). Copy unchanged except Discard: "Discard Push A? 7 logged sets are lost."
+Create plan, Rename plan, Delete plan, Discard session, Delete session → `ConfirmSheet` / one-field sheet (`NumberField`-style underline text field, `AppButton`). Copy unchanged except Discard: "Discard this session?" / "7 logged sets will be lost."
 
 ### 4.18 Notification & splash — **revise**
 
@@ -1065,7 +1068,7 @@ Why three and not four: logging is an *action* (Start / Quick log / Resume), not
 | Step | Action | Feedback |
 |---|---|---|
 | 1 | Tap weight field | 2dp primary underline; numeric keyboard, `Next` → reps; dock shrinks to one line |
-| 2 | Type reps | set auto-completes: row tint fades in 150ms, numerals → onSurface, `toggle` haptic, rest restarts, meter advances 450ms |
+| 2 | Type reps | set auto-completes: row tint fades in 150ms, numerals → onSurface, `toggle` haptic, rest restarts, meter advances 450ms — unless it is the only unticked set of its exercise: then no tick, and its check pulses in primary (~2s) on the first input |
 | 3 | Or tap ✓ on an empty row | hint values committed and shown |
 | 4 | Value beats baseline | `PR` badge + value in primary; `confirm` haptic |
 | 5 | Last set of an exercise ticked | 600ms later the block collapses to one line; the next block scrolls up |
@@ -1133,7 +1136,7 @@ Eight phases plus one follow-up (phase 9, decision 2), each shippable and each *
 ### Phase 3 — Logger (reference implementation)
 - `SessionLoggerScreen.kt` split into `LoggerScreen.kt`, `components/LoggerTopBar.kt`, `ExerciseBlock.kt` (incl. collapsed state), `SetRow.kt` (incl. `DoneRow` tint), `LoggerDock.kt` + `RestTransport`, `RestSheet.kt`, `FinishSheet.kt`, `TargetSheet.kt`.
 - `ui/components/ExercisePickerSheet.kt` → `ui/screens/picker/ExercisePickerScreen.kt` + `ExercisePickerRoute(mode, planId?)`; result returned via `savedStateHandle` (list of ids). Logger/editor VMs gain `addExercises(ids)`.
-- Collapse rule lives in the screen (derived from `sets.all { it.isCompleted }` + user override set), not in the draft payload.
+- Collapse rule lives in the screen (derived from `sets.all { it.isCompleted }` or the group's `skipped` flag + user override set), not in the draft payload.
 - `SessionLoggerViewModel.kt` — `restTargetSeconds`; undo buffer for removed group/set; merged finish state; title from draft; local-date conversion.
 - `SessionDraftPayload` — `restTargetSeconds: Int = 90` (ignoreUnknownKeys; no migration). `PreferencesStore` — `defaultRestSeconds`.
 - `SessionSummaryScreen.kt` + route; `SessionDao.updateNotes(id, notes)`.

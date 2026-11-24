@@ -82,7 +82,7 @@ fun AppButton(
     ) { ButtonContent(text, icon) }
 }
 
-/** The secondary action. Hairline outline, no fill. */
+/** The secondary action. Hairline outline, no fill. [color] is the label (`error` for Discard). */
 @Composable
 fun AppOutlinedButton(
     text: String,
@@ -90,12 +90,14 @@ fun AppOutlinedButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     icon: ImageVector? = null,
+    color: Color = MaterialTheme.colorScheme.primary,
 ) {
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.heightIn(min = Sizes.button),
         shape = RoundedCornerShape(Radius.pill),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = color),
         elevation = ButtonDefaults.buttonElevation(
             defaultElevation = Elevation.none,
             pressedElevation = Elevation.none,

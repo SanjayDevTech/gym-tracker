@@ -67,13 +67,16 @@ fun Eyebrow(
     Text(text.uppercase(), style = AppText.eyebrow, color = color, modifier = modifier)
 }
 
-/** 1dp `outlineVariant` rule, full width. */
+/** 1dp rule, full width; `outlineVariant` unless a [color] is given (e.g. the logger dock's edge). */
 @Composable
-fun AppDivider(modifier: Modifier = Modifier) {
+fun AppDivider(
+    modifier: Modifier = Modifier,
+    color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.outlineVariant,
+) {
     Box(
         modifier
             .fillMaxWidth()
             .height(Elevation.hairline)
-            .background(MaterialTheme.colorScheme.outlineVariant),
+            .background(color),
     )
 }
