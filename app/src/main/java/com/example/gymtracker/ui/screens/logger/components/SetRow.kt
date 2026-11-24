@@ -3,6 +3,7 @@ package com.example.gymtracker.ui.screens.logger.components
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -40,8 +41,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.example.gymtracker.data.SetType
@@ -60,10 +61,12 @@ import com.example.gymtracker.ui.theme.Radius
 import com.example.gymtracker.ui.theme.Sizes
 import com.example.gymtracker.ui.theme.Spacing
 
-/** The check's nudge (§6.2): three accent pulses over ~2s. */
-private const val PULSE_COUNT = 3
-private const val PULSE_HALF_MILLIS = 330
-private const val PULSE_SCALE = 0.25f
+/** The check's nudge (§6.2): slow accent rings rippling out from the grey circle's border until it is ticked. */
+private const val PULSE_WAVE_MILLIS = 1400
+/** The ring's start radius as a fraction of the icon box: RadioButtonUnchecked's circle is r=10 of 24. */
+private const val PULSE_RING_START = 10f / 24f
+private val PulseRingGrow = 8.dp
+private val PulseRingStroke = 2.dp
 
 /** Size tokens local to the set table (sizes, not gaps). */
 internal object SetTable {
@@ -80,7 +83,7 @@ internal object SetTable {
  * numerals tween from `onSurfaceVariant` to `onSurface`. A PR turns the numerals `primary` and
  * adds a `PR` badge. The row draws its own gutter so the tint can run edge to edge.
  *
- * [pulse] nudges the empty check — a few `primary` pulses — when typing has filled the set that
+ * [pulse] nudges the empty check — slow `primary` rings rippling out from its border until ticked — when typing has filled the set that
  * would complete its exercise, which is left for the user to tick (§6.2).
  */
 @Composable
@@ -107,16 +110,19 @@ fun SetRow(
     val endPulse by rememberUpdatedState(onPulseEnd)
     val pulsing = pulse && !done
     LaunchedEffect(pulsing) {
-        if (!pulsing) {
+        pulseLevel.snapTo(0f)
+        // Rings keep coming until the user ticks the set.
+        while (pulsing) {
             pulseLevel.snapTo(0f)
-            return@LaunchedEffect
+            pulseLevel.animateTo(1f, tween(PULSE_WAVE_MILLIS, easing = LinearOutSlowInEasing))
         }
-        repeat(PULSE_COUNT) {
-            pulseLevel.animateTo(1f, tween(PULSE_HALF_MILLIS))
-            pulseLevel.animateTo(0f, tween(PULSE_HALF_MILLIS))
-        }
-        endPulse()
     }
+    LaunchedEffect(done) { if (done && pulse) endPulse() }
+    val checkTint by animateColorAsState(
+        if (done) scheme.primary else scheme.outline,
+        animationSpec = tween(300),
+        label = "checkTint",
+    )
     val tint by animateColorAsState(
         if (done) DoneRow else Color.Transparent,
         animationSpec = tween(150),
@@ -186,11 +192,16 @@ fun SetRow(
             Icon(
                 if (done) Icons.Filled.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
                 contentDescription = if (done) "Mark set ${index + 1} not done" else "Mark set ${index + 1} done",
-                tint = if (done) scheme.primary else lerp(scheme.outline, scheme.primary, pulseLevel.value),
-                modifier = Modifier.graphicsLayer {
-                    val scale = 1f + PULSE_SCALE * pulseLevel.value
-                    scaleX = scale
-                    scaleY = scale
+                tint = checkTint,
+                modifier = Modifier.drawBehind {
+                    val p = pulseLevel.value
+                    if (pulsing && p > 0f && p < 1f) {
+                        drawCircle(
+                            color = scheme.primary.copy(alpha = 0.7f * (1f - p)),
+                            radius = size.minDimension * PULSE_RING_START + PulseRingGrow.toPx() * p,
+                            style = Stroke(width = PulseRingStroke.toPx()),
+                        )
+                    }
                 },
             )
         }

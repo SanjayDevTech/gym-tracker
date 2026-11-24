@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.example.gymtracker.ui.components.atoms.AppDivider
@@ -79,7 +80,17 @@ fun LoggerDock(
     val meterColor = if (reached) scheme.primary else scheme.tertiary
     val fraction = restElapsedMillis?.let { (it.toFloat() / targetMillis).coerceIn(0f, 1f) } ?: 0f
 
-    Column(modifier.fillMaxWidth().background(scheme.background).windowInsetsPadding(insets)) {
+    Column(
+        modifier
+            .fillMaxWidth()
+            // A background alone isn't hit-tested, so taps on the dock's empty areas would fall
+            // through to the set rows scrolling underneath. An empty pointerInput makes the dock the hit
+            // target (as Material's Surface does) without a coroutine; its own buttons
+            // still get theirs first.
+            .pointerInput(Unit) {}
+            .background(scheme.background)
+            .windowInsetsPadding(insets),
+    ) {
         AppDivider(color = scheme.primary.copy(alpha = DOCK_EDGE_ALPHA))
         if (compact) {
             Column(

@@ -542,7 +542,7 @@ first: "62.5 × 9" is how lifters say it). Check is a 48dp target; tapping it on
 hint values (as today's save already does). Typing still auto-completes the set (kept: it is the fast
 path), and the row's tint and brightened numerals make the auto-tick visible instead of silent —
 except the set that would complete the exercise (the only one left unticked): typing never ticks it,
-its check pulses in primary (~2s) on the first input instead, and the block folds only once the user
+from the first input its check sends slow primary rings out from its border (every ~1.4s) until ticked instead, and the block folds only once the user
 ticks it.
 
 The dock collapses to a single 56dp line (`REST 1:12 / 1:30` + meter) while the IME is open, so the
@@ -1068,7 +1068,7 @@ Why three and not four: logging is an *action* (Start / Quick log / Resume), not
 | Step | Action | Feedback |
 |---|---|---|
 | 1 | Tap weight field | 2dp primary underline; numeric keyboard, `Next` → reps; dock shrinks to one line |
-| 2 | Type reps | set auto-completes: row tint fades in 150ms, numerals → onSurface, `toggle` haptic, rest restarts, meter advances 450ms — unless it is the only unticked set of its exercise: then no tick, and its check pulses in primary (~2s) on the first input |
+| 2 | Type reps | set auto-completes: row tint fades in 150ms, numerals → onSurface, `toggle` haptic, rest restarts, meter advances 450ms — unless it is the only unticked set of its exercise: then no tick, and from the first input its check sends slow primary rings out from its border (every ~1.4s) until ticked |
 | 3 | Or tap ✓ on an empty row | hint values committed and shown |
 | 4 | Value beats baseline | `PR` badge + value in primary; `confirm` haptic |
 | 5 | Last set of an exercise ticked | 600ms later the block collapses to one line; the next block scrolls up |

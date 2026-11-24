@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,6 +62,8 @@ fun LoggerTopBar(
     Column(
         modifier
             .fillMaxWidth()
+            // Claim taps on empty areas so they don't fall through to the list (see LoggerDock).
+            .pointerInput(Unit) {}
             .background(scheme.background)
             .statusBarsPadding(),
     ) {
