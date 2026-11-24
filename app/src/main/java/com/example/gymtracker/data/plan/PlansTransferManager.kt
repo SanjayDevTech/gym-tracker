@@ -9,6 +9,7 @@ import com.example.gymtracker.data.Muscle
 import com.example.gymtracker.data.db.ExerciseEntity
 import com.example.gymtracker.data.db.PlanEntity
 import com.example.gymtracker.data.db.PlannedExerciseEntity
+import com.example.gymtracker.domain.ExerciseNameRule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -61,8 +62,10 @@ class PlansTransferManager(
 
     private suspend fun buildBundleJson(): Pair<String, Int> {
         val plans = repository.observePlans().first()
+        // One relation read for every plan instead of a query per plan.
+        val withExercises = repository.allPlansWithExercises().associateBy { it.plan.id }
         val payloads = plans.mapNotNull { p ->
-            repository.observePlanWithExercises(p.id).first()?.let { PlanExport.toPayload(it) }
+            withExercises[p.id]?.let { PlanExport.toPayload(it) }
         }
         val bundle = PlansBundle(
             version = 1,
@@ -82,6 +85,10 @@ class PlansTransferManager(
         var created = 0
 
         repository.withTransaction {
+            // Live exercises read once, then kept in step with the customs inserted below, rather
+            // than re-reading the whole table for every exercise name in the bundle. Nothing else
+            // writes exercises inside this transaction, so it matches a fresh read exactly.
+            val liveExercises = repository.allActiveExercises().toMutableList()
             for (plan in bundle.plans) {
                 val planName = plan.name.trim()
                 if (planName.isBlank()) continue
@@ -93,25 +100,24 @@ class PlansTransferManager(
                     val exName = src.name.trim()
                     if (exName.isBlank()) continue
                     // Live rows only: a plan never maps onto a deleted exercise.
-                    val existing = repository.findActiveExerciseByName(exName)
+                    val existing = ExerciseNameRule.findLiveMatch(exName, liveExercises)
                     val exerciseId = if (existing != null) {
                         existing.id
                     } else {
                         created++
-                        repository.insertExercise(
-                            ExerciseEntity(
-                                id = 0,
-                                clientUuid = UUID.randomUUID().toString(),
-                                name = exName,
-                                movementType = parseEnum(src.movementType, MovementType.Compound),
-                                primaryMuscles = src.primaryMuscles.mapNotNull { parseEnumOrNull<Muscle>(it) },
-                                secondaryMuscles = src.secondaryMuscles.mapNotNull { parseEnumOrNull<Muscle>(it) },
-                                equipment = parseEnum(src.equipment, Equipment.Other),
-                                cues = "",
-                                isCustom = true,
-                                isDeleted = false,
-                            )
+                        val row = ExerciseEntity(
+                            id = 0,
+                            clientUuid = UUID.randomUUID().toString(),
+                            name = exName,
+                            movementType = parseEnum(src.movementType, MovementType.Compound),
+                            primaryMuscles = src.primaryMuscles.mapNotNull { parseEnumOrNull<Muscle>(it) },
+                            secondaryMuscles = src.secondaryMuscles.mapNotNull { parseEnumOrNull<Muscle>(it) },
+                            equipment = parseEnum(src.equipment, Equipment.Other),
+                            cues = "",
+                            isCustom = true,
+                            isDeleted = false,
                         )
+                        repository.insertExercise(row).also { id -> liveExercises += row.copy(id = id) }
                     }
                     val lo = src.repsLow.coerceAtLeast(1)
                     plannedTemplates += PlannedExerciseEntity(

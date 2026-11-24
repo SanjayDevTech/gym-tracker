@@ -62,6 +62,10 @@ class GymRepository(private val db: AppDatabase) {
     suspend fun findActiveExerciseByName(name: String): ExerciseEntity? =
         ExerciseNameRule.findLiveMatch(name, exerciseDao.allActive())
 
+    /** Every live exercise, one-shot — for callers matching many names in one go (see
+     *  [ExerciseNameRule.findLiveMatch]) instead of re-reading the table per name. */
+    suspend fun allActiveExercises(): List<ExerciseEntity> = exerciseDao.allActive()
+
     /** Insert a user-made exercise (phase 9): fresh random UUID, `isCustom = true`, no cues. */
     suspend fun createCustomExercise(fields: CustomExerciseFields): Long = exerciseDao.insert(
         ExerciseEntity(
@@ -98,6 +102,8 @@ class GymRepository(private val db: AppDatabase) {
     // Plans
     fun observePlans(): Flow<List<PlanEntity>> = planDao.observePlans()
     fun observePlanWithExercises(id: Long): Flow<PlanWithExercises?> = planDao.observePlanWithExercises(id)
+    /** Every plan with its exercises in one read (no per-plan query) — for export. */
+    suspend fun allPlansWithExercises(): List<PlanWithExercises> = planDao.allPlansWithExercises()
     suspend fun findPlan(id: Long): PlanEntity? = planDao.findPlan(id)
     suspend fun findPlanByName(name: String): PlanEntity? = planDao.findPlanByName(name)
     suspend fun insertPlan(plan: PlanEntity): Long = planDao.insertPlan(plan)
@@ -149,6 +155,8 @@ class GymRepository(private val db: AppDatabase) {
 
     // Session draft (singleton, id = 1)
     fun observeSessionDraft(): Flow<SessionDraftEntity?> = sessionDraftDao.observe()
+    /** Whether a draft exists; re-queried on every draft write but never reads the payload. */
+    fun observeHasSessionDraft(): Flow<Boolean> = sessionDraftDao.observeExists()
     suspend fun findSessionDraft(): SessionDraftEntity? = sessionDraftDao.find()
     suspend fun upsertSessionDraft(draft: SessionDraftEntity) = sessionDraftDao.upsert(draft)
     suspend fun clearSessionDraft() = sessionDraftDao.clear()

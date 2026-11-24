@@ -44,6 +44,11 @@ interface PlanDao {
     @Query("SELECT * FROM plans WHERE id = :id LIMIT 1")
     fun observePlanWithExercises(id: Long): Flow<PlanWithExercises?>
 
+    /** Every plan with its planned exercises, one-shot (Room batches the relations). */
+    @Transaction
+    @Query("SELECT * FROM plans ORDER BY created_at_millis ASC")
+    suspend fun allPlansWithExercises(): List<PlanWithExercises>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPlan(plan: PlanEntity): Long
 

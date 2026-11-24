@@ -9,7 +9,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class GymTrackerApp : Application() {
@@ -30,8 +29,9 @@ class GymTrackerApp : Application() {
         // Start the foreground tracker whenever a draft appears; the service stops itself when the
         // draft is cleared. This survives process death — restart hydrates from Room.
         applicationScope.launch {
-            container.repository.observeSessionDraft()
-                .map { it != null }
+            // EXISTS, not the whole row: this runs on every draft write (the logger saves ~every
+            // 400ms while typing) and only needs to know whether there is one.
+            container.repository.observeHasSessionDraft()
                 .distinctUntilChanged()
                 .collect { hasDraft ->
                     if (hasDraft) SessionTrackingService.start(this@GymTrackerApp)

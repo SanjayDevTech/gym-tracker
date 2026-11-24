@@ -83,9 +83,13 @@ class MainActivity : ComponentActivity() {
 
         val container = (application as GymTrackerApp).container
         if (uri != null) {
+            // The application's resolver, not this Activity's: the read runs on the app scope
+            // and may outlive the Activity (rotation mid-read of a slow provider), which would
+            // otherwise keep the destroyed Activity alive until it finished.
+            val resolver = applicationContext.contentResolver
             container.applicationScope.launch {
                 val text = runCatching {
-                    contentResolver.openInputStream(uri)?.use { it.bufferedReader(Charsets.UTF_8).readText() }
+                    resolver.openInputStream(uri)?.use { it.bufferedReader(Charsets.UTF_8).readText() }
                 }.getOrNull()
                 if (!text.isNullOrBlank()) container.requestImportPlan(text)
             }

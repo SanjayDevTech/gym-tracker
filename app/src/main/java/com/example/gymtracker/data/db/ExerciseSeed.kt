@@ -31,13 +31,35 @@ object ExerciseSeed {
     ) {
         val raw = context.resources.openRawResource(R.raw.exercises_seed)
             .bufferedReader().use { it.readText() }
-        val payload = json.decodeFromString(SeedPayload.serializer(), raw)
         val stored = prefs.seedVersion.first()
         // Re-seed when the table is empty (covers destructive DB migrations where DataStore
         // survives but exercises don't), otherwise gate on version.
         val empty = repository.countExercises() == 0
+        // Every launch lands here, nearly always already seeded: settle that from the leading
+        // version field and skip decoding the ~50 KB catalogue at startup. Anything unexpected
+        // in the file's head falls through to the full decode, which then decides as before.
+        val headVersion = leadingSeedVersion(raw)
+        if (!empty && headVersion != null && stored >= headVersion) return
+        val payload = json.decodeFromString(SeedPayload.serializer(), raw)
         if (!empty && stored >= payload.seedVersion) return
 
+        // One transaction for the whole catalogue: a single commit and a single invalidation of
+        // the exercises table, instead of one per row re-running every observer (Library,
+        // picker, Train) ~200 times on a first launch or a seed bump.
+        repository.withTransaction { upsertAll(repository, payload) }
+        prefs.setSeedVersion(payload.seedVersion)
+    }
+
+    /** `seedVersion` when it is the payload's first key (as the shipped file has it), else null. */
+    internal fun leadingSeedVersion(raw: String): Int? =
+        LeadingVersion.find(raw)?.groupValues?.get(1)?.toIntOrNull()
+
+    private val LeadingVersion = Regex("""^\s*\{\s*"seedVersion"\s*:\s*(\d{1,9})\s*[,}]""")
+
+    private suspend fun upsertAll(
+        repository: com.example.gymtracker.data.GymRepository,
+        payload: SeedPayload,
+    ) {
         for (seed in payload.exercises) {
             val existing = repository.findExerciseByName(seed.name)
             // Skip if the row is user-custom — seed never overwrites custom data.
@@ -64,7 +86,6 @@ object ExerciseSeed {
                 repository.insertExercise(toUpsert)
             }
         }
-        prefs.setSeedVersion(payload.seedVersion)
     }
 
     private fun String.toMovementType(): MovementType =

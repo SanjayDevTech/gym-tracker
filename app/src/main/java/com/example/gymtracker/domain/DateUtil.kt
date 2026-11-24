@@ -19,10 +19,15 @@ object DateUtil {
 
     fun epochDayToPickerMillis(epochDay: Long): Long = epochDay * MILLIS_PER_DAY
 
+    /**
+     * Pure arithmetic, no [LocalDate]: it runs once per session in every weekly grouping (Train,
+     * History, Progress, the calendar) on each emission. Epoch day 0 (1970-01-01) was a Thursday,
+     * so ISO day-of-week is `floorMod(epochDay + 3, 7) + 1` — the same value `LocalDate` gives.
+     */
     fun startOfWeek(epochDay: Long, weekStart: DayOfWeek = DayOfWeek.MONDAY): Long {
-        val d = LocalDate.ofEpochDay(epochDay)
-        val daysBack = ((d.dayOfWeek.value - weekStart.value) + 7) % 7
-        return d.minusDays(daysBack.toLong()).toEpochDay()
+        val dayOfWeek = Math.floorMod(epochDay + 3, 7L) + 1
+        val daysBack = Math.floorMod(dayOfWeek - weekStart.value, 7L)
+        return epochDay - daysBack
     }
 
     fun rangeDaysBack(today: Long, days: Int): List<Long> =

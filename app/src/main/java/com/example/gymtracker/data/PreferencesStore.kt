@@ -8,12 +8,19 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.gymtracker.domain.WeeklyTarget
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore by preferencesDataStore(name = "gym_prefs")
 
 const val DEFAULT_REST_SECONDS = 90
 
+/**
+ * Every preference is read from the one DataStore file, so a write to any key re-emits [data] for
+ * all of them. Each flow below is `distinctUntilChanged`, so a write to one key (the logger saving
+ * the default rest, the seed version) doesn't wake up every collector of the others (Progress,
+ * History, Train recompute their whole combine on each emission).
+ */
 class PreferencesStore(private val context: Context) {
     private object Keys {
         val Haptics = booleanPreferencesKey("haptics_enabled")
@@ -27,19 +34,24 @@ class PreferencesStore(private val context: Context) {
 
     val hapticsEnabled: Flow<Boolean> = context.dataStore.data
         .map { it[Keys.Haptics] ?: true }
+        .distinctUntilChanged()
 
     val weightUnit: Flow<WeightUnit> = context.dataStore.data
         .map { prefs -> prefs[Keys.WeightUnit]?.let { runCatching { WeightUnit.valueOf(it) }.getOrNull() } ?: WeightUnit.Kg }
+        .distinctUntilChanged()
 
     val volumeMetric: Flow<VolumeMetric> = context.dataStore.data
         .map { prefs -> prefs[Keys.VolumeMetric]?.let { runCatching { VolumeMetric.valueOf(it) }.getOrNull() } ?: VolumeMetric.Sets }
+        .distinctUntilChanged()
 
     val seedVersion: Flow<Int> = context.dataStore.data
         .map { it[Keys.SeedVersion] ?: 0 }
+        .distinctUntilChanged()
 
     /** Rest target a new workout starts with (§6.3); today's constant, 90s, until changed. */
     val defaultRestSeconds: Flow<Int> = context.dataStore.data
         .map { it[Keys.DefaultRestSeconds] ?: DEFAULT_REST_SECONDS }
+        .distinctUntilChanged()
 
     suspend fun setDefaultRestSeconds(value: Int) =
         context.dataStore.edit { it[Keys.DefaultRestSeconds] = value }
@@ -47,6 +59,7 @@ class PreferencesStore(private val context: Context) {
     /** Sessions a week counted as "on target" (decision 7); 1–7, default 3. */
     val weeklyTargetSessions: Flow<Int> = context.dataStore.data
         .map { (it[Keys.WeeklyTargetSessions] ?: WeeklyTarget.DEFAULT_TARGET).coerceIn(WeeklyTarget.MIN_TARGET, WeeklyTarget.MAX_TARGET) }
+        .distinctUntilChanged()
 
     suspend fun setWeeklyTargetSessions(value: Int) =
         context.dataStore.edit {
@@ -57,6 +70,7 @@ class PreferencesStore(private val context: Context) {
      *  first workout, not at launch). */
     val notificationPermissionAsked: Flow<Boolean> = context.dataStore.data
         .map { it[Keys.NotificationPermissionAsked] ?: false }
+        .distinctUntilChanged()
 
     suspend fun setNotificationPermissionAsked() =
         context.dataStore.edit { it[Keys.NotificationPermissionAsked] = true }

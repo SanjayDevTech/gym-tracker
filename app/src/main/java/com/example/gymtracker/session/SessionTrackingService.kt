@@ -20,6 +20,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
@@ -63,16 +65,21 @@ class SessionTrackingService : Service() {
 
     private fun observeDraft() {
         scope.launch {
-            repository.observeSessionDraft().collectLatest { draft ->
-                if (draft == null) {
-                    cancelRestAlert()
-                    stopSelfSafely()
-                } else {
-                    val payload = parsePayload(draft)
-                    updateNotification(draft, payload)
-                    scheduleRestAlert(payload)
+            // The payload JSON is decoded on Default, not Main: it arrives on every draft write
+            // (~every 400ms while the user types in the logger, which is on Main too).
+            repository.observeSessionDraft()
+                .map { draft -> draft?.let { it to parsePayload(it) } }
+                .flowOn(Dispatchers.Default)
+                .collectLatest { parsed ->
+                    if (parsed == null) {
+                        cancelRestAlert()
+                        stopSelfSafely()
+                    } else {
+                        val (draft, payload) = parsed
+                        updateNotification(draft, payload)
+                        scheduleRestAlert(payload)
+                    }
                 }
-            }
         }
     }
 

@@ -60,8 +60,11 @@ class BackupManager(
             repository.observeDeletedExercises().first()
         val byId = exercises.associateBy { it.id }
         val plans = repository.observePlans().first()
+        // One relation read for every plan, and one for every session below, instead of a query
+        // per plan / per session (hundreds of round-trips on a long history).
+        val plansWithExercises = repository.allPlansWithExercises().associateBy { it.plan.id }
         val planSnapshots = plans.map { p ->
-            val withExercises = repository.observePlanWithExercises(p.id).first()
+            val withExercises = plansWithExercises[p.id]
             PlanSnapshot(
                 clientUuid = p.clientUuid,
                 name = p.name,
@@ -84,9 +87,10 @@ class BackupManager(
         }
 
         val sessionsAll = repository.observeSessions().first()
+        val setsBySession = repository.observeAllSessionsWithSets().first().associateBy { it.session.id }
         val planByIdLocal = plans.associateBy { it.id }
         val sessionSnapshots = sessionsAll.map { s ->
-            val withSets = repository.observeSessionWithSets(s.id).first()
+            val withSets = setsBySession[s.id]
             val planClientUuid = s.planId?.let { planByIdLocal[it]?.clientUuid }
             SessionSnapshot(
                 clientUuid = s.clientUuid,

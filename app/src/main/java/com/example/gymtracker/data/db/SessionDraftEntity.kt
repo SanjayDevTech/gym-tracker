@@ -24,6 +24,10 @@ interface SessionDraftDao {
     @Query("SELECT * FROM session_drafts WHERE id = 1")
     fun observe(): Flow<SessionDraftEntity?>
 
+    /** Whether a draft exists, without loading its payload — for watchers that only need that. */
+    @Query("SELECT EXISTS(SELECT 1 FROM session_drafts WHERE id = 1)")
+    fun observeExists(): Flow<Boolean>
+
     @Query("SELECT * FROM session_drafts WHERE id = 1")
     suspend fun find(): SessionDraftEntity?
 

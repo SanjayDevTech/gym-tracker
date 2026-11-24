@@ -2,6 +2,7 @@ package com.example.gymtracker.domain
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -31,5 +32,25 @@ class DateUtilTest {
         val day = LocalDate.of(1969, 12, 31)
         val millis = day.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() + 1
         assertEquals(day.toEpochDay(), DateUtil.pickerMillisToEpochDay(millis))
+    }
+
+    @Test
+    fun startOfWeekMatchesLocalDateForEveryWeekStart() {
+        // The arithmetic version must agree with the LocalDate one it replaced, either side of
+        // the epoch and across leap years.
+        for (epochDay in -1_500L..30_000L) {
+            val d = LocalDate.ofEpochDay(epochDay)
+            for (weekStart in DayOfWeek.entries) {
+                val daysBack = ((d.dayOfWeek.value - weekStart.value) + 7) % 7
+                val expected = d.minusDays(daysBack.toLong()).toEpochDay()
+                assertEquals("day $epochDay, $weekStart", expected, DateUtil.startOfWeek(epochDay, weekStart))
+            }
+        }
+    }
+
+    @Test
+    fun startOfWeekDefaultsToMonday() {
+        val sunday = LocalDate.of(2026, 11, 29).toEpochDay()
+        assertEquals(LocalDate.of(2026, 11, 23).toEpochDay(), DateUtil.startOfWeek(sunday))
     }
 }
