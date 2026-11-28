@@ -48,6 +48,8 @@ data class SessionDraftPayload(
     // This workout's rest target (§6.3). Seeded from the default-rest pref; drafts written
     // before the field existed decode to today's old constant.
     val restTargetSeconds: Int = 90,
+    // Wall-clock the workout was paused at; 0 = running. Older drafts decode to 0.
+    val pausedAtMillis: Long = 0L,
 )
 
 @Serializable

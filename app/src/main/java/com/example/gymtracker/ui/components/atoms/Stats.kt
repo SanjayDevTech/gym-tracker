@@ -1,5 +1,7 @@
 package com.example.gymtracker.ui.components.atoms
 
+import com.composables.icons.lucide.ChevronRight
+import com.composables.icons.lucide.Lucide
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -9,8 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -69,7 +69,7 @@ fun StatRow(
         ValueText(value = value, unit = unit, style = valueStyle, color = valueColor)
         if (onClick != null) {
             Icon(
-                Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                Lucide.ChevronRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

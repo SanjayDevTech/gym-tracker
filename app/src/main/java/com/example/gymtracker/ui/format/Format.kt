@@ -20,13 +20,13 @@ const val EM_DASH = "—"
 
 private const val LB_PER_KG = 2.20462262
 
-/** `12400` → `12 400`. Grouped with a non-breaking space so it never wraps. */
+/** `12400` → `12,400` — comma grouping, as in Foodprint. */
 fun grouped(value: Number): String {
     val n = value.toDouble().roundToLong()
     val digits = abs(n).toString()
     val out = StringBuilder()
     digits.forEachIndexed { i, c ->
-        if (i > 0 && (digits.length - i) % 3 == 0) out.append(NBSP)
+        if (i > 0 && (digits.length - i) % 3 == 0) out.append(',')
         out.append(c)
     }
     return if (n < 0) "-$out" else out.toString()

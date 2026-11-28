@@ -1,8 +1,19 @@
 package com.example.gymtracker.ui.screens.logger.components
 
+import com.composables.icons.lucide.Check
+import com.composables.icons.lucide.ChevronDown
+import com.composables.icons.lucide.ChevronUp
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Plus
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,11 +24,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,11 +43,13 @@ import com.example.gymtracker.data.formatTarget
 import com.example.gymtracker.data.repUnitShort
 import com.example.gymtracker.ui.components.MenuItem
 import com.example.gymtracker.ui.components.OverflowMenu
-import com.example.gymtracker.ui.components.atoms.AppDivider
-import com.example.gymtracker.ui.components.atoms.AppTextButton
+import com.example.gymtracker.ui.components.atoms.AppOutlinedButton
+import com.example.gymtracker.ui.components.atoms.LocalBehind
+import com.example.gymtracker.ui.components.atoms.cardColor
 import com.example.gymtracker.ui.components.atoms.Eyebrow
 import com.example.gymtracker.ui.screens.logger.ExerciseGroup
 import com.example.gymtracker.ui.theme.AppText
+import com.example.gymtracker.ui.theme.Radius
 import com.example.gymtracker.ui.theme.Sizes
 import com.example.gymtracker.ui.theme.Spacing
 
@@ -59,14 +67,14 @@ val MovementType.logsWeight: Boolean
     get() = this != MovementType.Cardio && this != MovementType.Mobility
 
 /**
- * One exercise in the logger — §3 `ExerciseBlock`, §4.3 (was a bordered `Section` card).
+ * One exercise in the logger: a white card, as Foodprint's sections.
  *
- * Expanded: name + `2/3` + ⋮ (Edit target, Progress, Skip/Unskip, Remove) · amber `TARGET` eyebrow (tap →
- * Target sheet) · rule · column eyebrows once · set rows on hairlines · `+ Add set` foot.
- * Collapsed (S2-b): one 48dp line `✓ name 3/3 ⌄` (`Skipped name 1/3 ⌄` when skipped); tap re-expands. Whether a block is collapsed is
- * decided by the screen, not stored in the draft.
+ * Expanded: name + `2/3` + ⋮ (Edit target, Progress, Skip/Unskip, Remove) · the target line (tap →
+ * Target sheet) · column labels once · set rows · a soft `+ Add set` pill.
+ * Collapsed: one 56dp line `✓ name 3/3 ⌄` (`Skipped name 1/3 ⌄` when skipped); tap re-expands.
+ * Whether a block is collapsed is decided by the screen, not stored in the draft.
  *
- * The block pads itself (not the list) so done rows can tint edge to edge.
+ * The card pads its rows itself (not the list) so done rows can tint edge to edge inside it.
  */
 @Composable
 fun ExerciseBlock(
@@ -87,7 +95,15 @@ fun ExerciseBlock(
     pulseSetIndex: Int? = null,
     onPulseEnd: () -> Unit = {},
 ) {
-    Column(modifier.fillMaxWidth().animateContentSize(tween(200))) {
+    val fill = cardColor()
+    Column(
+        modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Radius.lg))
+            .background(fill)
+            .animateContentSize(tween(200)),
+    ) {
+      CompositionLocalProvider(LocalBehind provides fill) {
         if (collapsed) {
             CollapsedHead(group, onExpand = onToggleCollapsed)
         } else {
@@ -108,7 +124,7 @@ fun ExerciseBlock(
                 onPulseEnd = onPulseEnd,
             )
         }
-        AppDivider()
+      }
     }
 }
 
@@ -118,9 +134,9 @@ private fun CollapsedHead(group: ExerciseGroup, onExpand: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = Sizes.touchTarget)
+            .heightIn(min = 56.dp)
             .clickable(role = Role.Button, onClickLabel = "Expand ${group.exerciseName}", onClick = onExpand)
-            .padding(start = Spacing.gutter, end = Spacing.m),
+            .padding(start = Spacing.cardPadding, end = Spacing.m),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // A skipped exercise reads as skipped, not done: muted label and name instead of ✓.
@@ -128,7 +144,12 @@ private fun CollapsedHead(group: ExerciseGroup, onExpand: () -> Unit) {
         if (skipped) {
             Text("Skipped", style = AppText.label, color = scheme.onSurfaceVariant)
         } else {
-            Icon(Icons.Outlined.Check, contentDescription = "Done", tint = scheme.primary, modifier = Modifier.size(Sizes.icon))
+            Box(
+                Modifier.size(24.dp).clip(CircleShape).background(scheme.secondary),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Lucide.Check, contentDescription = "Done", tint = scheme.onSecondary, modifier = Modifier.size(14.dp))
+            }
         }
         Spacer(Modifier.width(Spacing.s))
         Text(
@@ -145,7 +166,7 @@ private fun CollapsedHead(group: ExerciseGroup, onExpand: () -> Unit) {
             color = scheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = Spacing.s),
         )
-        Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = null, tint = scheme.onSurfaceVariant)
+        Icon(Lucide.ChevronDown, contentDescription = null, tint = scheme.onSurfaceVariant)
     }
 }
 
@@ -180,7 +201,7 @@ private fun ExpandedBlock(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = Spacing.gutter, end = Spacing.xs, top = Spacing.s),
+            .padding(start = Spacing.cardPadding, end = Spacing.xs, top = Spacing.s),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -194,12 +215,12 @@ private fun ExpandedBlock(
         Text(
             "${group.doneCount}/${group.sets.size}",
             style = AppText.numberM,
-            color = if (group.allDone) scheme.primary else scheme.onSurfaceVariant,
+            color = if (group.allDone) scheme.secondary else scheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = Spacing.s),
         )
         if (group.settled) {
             IconButton(onClick = onCollapse) {
-                Icon(Icons.Outlined.KeyboardArrowUp, contentDescription = "Collapse", tint = scheme.onSurfaceVariant)
+                Icon(Lucide.ChevronUp, contentDescription = "Collapse", tint = scheme.onSurfaceVariant)
             }
         }
         OverflowMenu(
@@ -216,21 +237,22 @@ private fun ExpandedBlock(
             contentDescription = "${group.exerciseName} options",
         )
     }
-    Eyebrow(
+    Text(
         "Target " + formatTarget(group.sets.size, group.targetRepsLow, group.targetRepsHigh, group.movementType),
-        color = scheme.tertiary,
+        style = AppText.bodyS,
+        color = scheme.onSurfaceVariant,
         modifier = Modifier
             .clickable(role = Role.Button, onClickLabel = "Edit target", onClick = onEditTarget)
-            .padding(horizontal = Spacing.gutter, vertical = Spacing.s),
+            .padding(horizontal = Spacing.cardPadding)
+            .padding(bottom = Spacing.s),
     )
-    AppDivider(Modifier.padding(horizontal = Spacing.gutter))
 
     // Column heads, once per block — aligned to SetRow's columns.
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Spacing.gutter)
-            .padding(top = Spacing.s),
+            .padding(horizontal = Spacing.cardPadding)
+            .padding(top = Spacing.xs, bottom = Spacing.xs),
         horizontalArrangement = Arrangement.spacedBy(Spacing.m),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -242,7 +264,6 @@ private fun ExpandedBlock(
     }
 
     group.sets.forEachIndexed { setIndex, set ->
-        if (setIndex > 0) AppDivider(Modifier.padding(horizontal = Spacing.gutter))
         SetRow(
             index = setIndex,
             set = set,
@@ -260,12 +281,13 @@ private fun ExpandedBlock(
             onPulseEnd = onPulseEnd,
         )
     }
-    AppDivider(Modifier.padding(horizontal = Spacing.gutter))
-    AppTextButton(
+    AppOutlinedButton(
         text = "Add set",
         onClick = onAddSet,
-        icon = Icons.Outlined.Add,
-        color = scheme.onSurface,
-        modifier = Modifier.padding(horizontal = Spacing.xs),
+        icon = Lucide.Plus,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.cardPadding)
+            .padding(top = Spacing.s, bottom = Spacing.cardPadding),
     )
 }

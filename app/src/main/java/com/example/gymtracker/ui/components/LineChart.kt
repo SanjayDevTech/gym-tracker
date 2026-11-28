@@ -29,10 +29,10 @@ private val PlotHeight = 180.dp
 private val AxisHeight = 22.dp
 
 /**
- * §2 `LineChart`, food's look: 4 grid lines in `outline`@40%, a 3dp `primary` stroke over a
- * 12%→0 wash, 3dp dots; y labels (max on the top line, min on the bottom) and x labels (first,
+ * `LineChart`, Foodprint's look: 4 faint hairline grid lines, a 3dp ink stroke over a 10%→0 wash,
+ * 3dp ink dots; y labels (max on the top line, min on the bottom) and x labels (first,
  * middle and last date) in [AppText.bodyS]. Points sit at their dates, so gaps in training read
- * as gaps. The last point is ringed and carries its value (S2-a).
+ * as gaps. The last point is ringed in the accent and carries its value.
  *
  * [band] draws a `tertiary`@12% target band with [bandCaption] above it if there is room, else
  * below, clamped inside the plot (food lesson 4).
@@ -49,8 +49,10 @@ fun LineChart(
 ) {
     if (points.isEmpty()) return
     val scheme = MaterialTheme.colorScheme
-    val line = scheme.primary
-    val grid = scheme.outline.copy(alpha = 0.4f)
+    val line = scheme.onSurface
+    val accent = scheme.tertiary
+    val ringFill = scheme.surfaceContainerLowest
+    val grid = scheme.onSurface.copy(alpha = 0.08f)
     val bandFill = scheme.tertiary.copy(alpha = 0.12f)
     val bandText = scheme.tertiary
     val axisText = scheme.onSurfaceVariant
@@ -129,7 +131,7 @@ fun LineChart(
                 lineTo(pts.first().x, bottom)
                 close()
             }
-            drawPath(wash, Brush.verticalGradient(listOf(line.copy(alpha = 0.12f), Color.Transparent), startY = top, endY = bottom))
+            drawPath(wash, Brush.verticalGradient(listOf(line.copy(alpha = 0.10f), Color.Transparent), startY = top, endY = bottom))
             drawPath(stroke, line, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
         pts.forEach { drawCircle(line, 3.dp.toPx(), it) }
@@ -137,7 +139,8 @@ fun LineChart(
         // Last point: ringed, with its value above (below if there's no room).
         val last = pts.last()
         val ringR = 6.dp.toPx()
-        drawCircle(line, ringR, last, style = Stroke(width = 1.5.dp.toPx()))
+        drawCircle(ringFill, ringR, last)
+        drawCircle(accent, ringR, last, style = Stroke(width = 2.5.dp.toPx()))
         val lastLabel = measurer.measure(formatValue(values.last()), AppText.label.copy(color = valueText))
         val ly = (last.y - ringR - Spacing.xs.toPx() - lastLabel.size.height).let { if (it < 0f) last.y + ringR + Spacing.xs.toPx() else it }
         val lx = (last.x - lastLabel.size.width / 2f).coerceIn(left, (size.width - lastLabel.size.width).coerceAtLeast(left))

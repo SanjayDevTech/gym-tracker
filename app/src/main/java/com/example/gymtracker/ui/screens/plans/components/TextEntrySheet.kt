@@ -1,11 +1,9 @@
 package com.example.gymtracker.ui.screens.plans.components
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
@@ -19,22 +17,21 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import com.example.gymtracker.ui.components.atoms.AppButton
-import com.example.gymtracker.ui.components.atoms.AppDivider
+import com.example.gymtracker.ui.components.atoms.AppOutlinedButton
 import com.example.gymtracker.ui.components.atoms.AppSheet
-import com.example.gymtracker.ui.components.atoms.AppTextButton
+import com.example.gymtracker.ui.components.atoms.AppTextField
+import com.example.gymtracker.ui.components.atoms.SheetTitleRow
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Spacing
 
 /**
- * One-field sheet for plan text — New plan (Train foot), Rename and Note (Plan editor). Title,
- * an optional caption, a borderless field on a hairline (no outlined box, §1), then the primary
- * action and a quiet Cancel. [allowBlank] lets the note be cleared. [secondaryLabel] adds a text
- * action between them (New plan's "Start from a template").
+ * One-field sheet for plan text — New plan, Rename and Note (Plan editor). Title with a round
+ * close, an optional caption, a soft filled field, then the full-width ink action. [allowBlank]
+ * lets the note be cleared. [secondaryLabel] adds a soft second action (New plan's "Start from
+ * a template").
  */
 @Composable
 fun TextEntrySheet(
@@ -57,31 +54,25 @@ fun TextEntrySheet(
     val canConfirm = allowBlank || text.isNotBlank()
 
     AppSheet(onDismiss = onDismiss) {
-        Text(title, style = AppText.titleL, color = scheme.onSurface)
+        SheetTitleRow(title, onClose = onDismiss)
         if (caption != null) {
             Text(caption, style = AppText.bodyS, color = scheme.onSurfaceVariant)
         }
         Spacer(Modifier.height(Spacing.l))
-        BasicTextField(
+        AppTextField(
             value = text,
             onValueChange = { text = it },
             singleLine = singleLine,
-            textStyle = AppText.body.copy(color = scheme.onSurface),
-            cursorBrush = SolidColor(scheme.primary),
+            minLines = if (singleLine) 1 else 3,
+            placeholder = { Text(placeholder, style = AppText.body) },
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.Sentences,
                 imeAction = if (singleLine) ImeAction.Done else ImeAction.Default,
             ),
             keyboardActions = KeyboardActions(onDone = { if (canConfirm) onConfirm(text) }),
-            modifier = Modifier.fillMaxWidth().focusRequester(focus),
-            decorationBox = { inner ->
-                Box(Modifier.padding(vertical = Spacing.s)) {
-                    if (text.isEmpty()) Text(placeholder, style = AppText.body, color = scheme.onSurfaceVariant)
-                    inner()
-                }
-            },
+            focusRequester = focus,
+            modifier = Modifier.fillMaxWidth(),
         )
-        AppDivider()
         AppButton(
             text = confirmLabel,
             onClick = { onConfirm(text) },
@@ -89,17 +80,11 @@ fun TextEntrySheet(
             modifier = Modifier.fillMaxWidth().padding(top = Spacing.xl),
         )
         if (secondaryLabel != null) {
-            AppTextButton(
+            AppOutlinedButton(
                 text = secondaryLabel,
                 onClick = onSecondary,
                 modifier = Modifier.fillMaxWidth().padding(top = Spacing.s),
             )
         }
-        AppTextButton(
-            text = "Cancel",
-            onClick = onDismiss,
-            color = scheme.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth().padding(top = Spacing.s),
-        )
     }
 }

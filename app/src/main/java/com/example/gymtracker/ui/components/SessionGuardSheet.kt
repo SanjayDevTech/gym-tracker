@@ -16,6 +16,8 @@ import com.example.gymtracker.data.db.SessionDraftEntity
 import com.example.gymtracker.data.db.SessionDraftPayload
 import com.example.gymtracker.ui.components.atoms.AppButton
 import com.example.gymtracker.ui.components.atoms.AppSheet
+import com.example.gymtracker.ui.components.atoms.AppOutlinedButton
+import com.example.gymtracker.ui.components.atoms.SheetTitleRow
 import com.example.gymtracker.ui.components.atoms.AppTextButton
 import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.theme.AppText
@@ -66,16 +68,11 @@ fun SessionGuardSheet(
     val sets = "${running.doneSets} ${plural(running.doneSets, "set")}"
 
     AppSheet(onDismiss = onDismiss) {
-        Text(
-            if (confirming) "Discard $sets?" else "A workout is already running",
-            style = AppText.titleL,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Spacer(Modifier.height(Spacing.s))
+        SheetTitleRow(if (confirming) "Discard $sets?" else "A workout is already running", onClose = onDismiss)
         Text(
             if (confirming) "${running.title} is lost, then $startingTitle starts."
             else "${running.title} · $minutes min · $sets",
-            style = AppText.bodyS,
+            style = AppText.body,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (confirming) {
@@ -85,10 +82,9 @@ fun SessionGuardSheet(
                 destructive = true,
                 modifier = Modifier.fillMaxWidth().padding(top = Spacing.xl),
             )
-            AppTextButton(
+            AppOutlinedButton(
                 text = "Cancel",
                 onClick = { confirming = false },
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth().padding(top = Spacing.s),
             )
         } else {
@@ -97,7 +93,7 @@ fun SessionGuardSheet(
                 onClick = onResume,
                 modifier = Modifier.fillMaxWidth().padding(top = Spacing.xl),
             )
-            AppTextButton(
+            AppOutlinedButton(
                 text = "Discard it and start $startingTitle",
                 onClick = { if (running.doneSets == 0) onDiscardAndStart() else confirming = true },
                 color = MaterialTheme.colorScheme.error,

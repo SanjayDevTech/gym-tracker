@@ -8,6 +8,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
+    <!-- Package visibility (API 30+): the Lift | Food switch opens Foodprint by package. -->
+    <queries>
+        <package android:name="com.example.foodtracker" />
+    </queries>
+
     <application
         android:name=".GymTrackerApp"
         android:allowBackup="true"

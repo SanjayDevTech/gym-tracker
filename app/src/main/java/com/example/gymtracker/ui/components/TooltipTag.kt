@@ -24,8 +24,8 @@ private val PointerHeight = 4.dp
 private val PointerWidth = 8.dp
 
 /**
- * §2 `TooltipTag` body (S4-b, S6-b): `primaryContainer` fill, [Radius.sm], [AppText.label] in
- * `onPrimaryContainer`. Use it through [TagOverlay], which adds the 4dp pointer and clamps the
+ * `TooltipTag` body: an ink pill (`inverseSurface`) with [AppText.label] in `inverseOnSurface`,
+ * like Foodprint's snackbars. Use it through [TagOverlay], which adds the 4dp pointer and clamps the
  * tag inside the plot.
  */
 @Composable
@@ -33,12 +33,12 @@ fun TooltipTag(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
         style = AppText.label,
-        color = MaterialTheme.colorScheme.onPrimaryContainer,
+        color = MaterialTheme.colorScheme.inverseOnSurface,
         maxLines = 1,
         modifier = modifier
-            .clip(RoundedCornerShape(Radius.sm))
-            .background(MaterialTheme.colorScheme.primaryContainer)
-            .padding(horizontal = Spacing.s, vertical = Spacing.xs),
+            .clip(RoundedCornerShape(Radius.pill))
+            .background(MaterialTheme.colorScheme.inverseSurface)
+            .padding(horizontal = Spacing.m, vertical = Spacing.xs),
     )
 }
 
@@ -56,7 +56,7 @@ fun TagOverlay(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    val fill = MaterialTheme.colorScheme.primaryContainer
+    val fill = MaterialTheme.colorScheme.inverseSurface
     Layout(
         contents = listOf(
             content,

@@ -30,7 +30,32 @@ class PreferencesStore(private val context: Context) {
         val DefaultRestSeconds = intPreferencesKey("default_rest_seconds")
         val WeeklyTargetSessions = intPreferencesKey("weekly_target_sessions")
         val NotificationPermissionAsked = booleanPreferencesKey("notification_permission_asked")
+        val ThemeMode = stringPreferencesKey("theme_mode")
+        val Onboarded = booleanPreferencesKey("onboarded")
+        val UserName = stringPreferencesKey("user_name")
     }
+
+    /** Light / Dark / Match system (You → Appearance). Light for a new install, as in Foodprint. */
+    val themeMode: Flow<ThemeMode> = context.dataStore.data
+        .map { ThemeMode.fromName(it[Keys.ThemeMode]) }
+        .distinctUntilChanged()
+
+    suspend fun setThemeMode(value: ThemeMode) =
+        context.dataStore.edit { it[Keys.ThemeMode] = value.name }
+
+    /** False until the first-run flow finishes; the app then opens on Home. */
+    val onboarded: Flow<Boolean> = context.dataStore.data
+        .map { it[Keys.Onboarded] ?: false }
+        .distinctUntilChanged()
+
+    suspend fun setOnboarded() = context.dataStore.edit { it[Keys.Onboarded] = true }
+
+    /** First name for the Home greeting; blank when skipped. */
+    val userName: Flow<String> = context.dataStore.data
+        .map { it[Keys.UserName].orEmpty() }
+        .distinctUntilChanged()
+
+    suspend fun setUserName(value: String) = context.dataStore.edit { it[Keys.UserName] = value.trim() }
 
     val hapticsEnabled: Flow<Boolean> = context.dataStore.data
         .map { it[Keys.Haptics] ?: true }

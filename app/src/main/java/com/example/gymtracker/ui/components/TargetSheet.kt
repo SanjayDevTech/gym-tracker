@@ -1,13 +1,13 @@
 package com.example.gymtracker.ui.components
 
+import com.composables.icons.lucide.ArrowRight
+import com.composables.icons.lucide.Lucide
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,6 +23,7 @@ import com.example.gymtracker.data.repUnit
 import com.example.gymtracker.ui.components.atoms.AppButton
 import com.example.gymtracker.ui.components.atoms.AppDivider
 import com.example.gymtracker.ui.components.atoms.AppSheet
+import com.example.gymtracker.ui.components.atoms.SheetTitleRow
 import com.example.gymtracker.ui.components.atoms.AppTextButton
 import com.example.gymtracker.ui.components.atoms.Eyebrow
 import com.example.gymtracker.ui.components.atoms.Stepper
@@ -70,14 +71,13 @@ fun TargetSheet(
     val unit = movementType.repUnit
 
     AppSheet(onDismiss = onDismiss) {
-        Text(exerciseName, style = AppText.titleL, color = scheme.onSurface)
+        SheetTitleRow(exerciseName, onClose = onDismiss)
         Text(
             formatTarget(if (initialSets != null) sets else previewSets, low, high, movementType),
             style = AppText.numberL,
             color = scheme.tertiary,
         )
         Spacer(Modifier.height(Spacing.m))
-        AppDivider()
         if (initialSets != null) {
             StepperLine("Sets", sets, 1..TARGET_MAX_SETS) { sets = it }
         }
@@ -89,15 +89,14 @@ fun TargetSheet(
             high = v
             if (low > v) low = v
         }
-        Spacer(Modifier.height(Spacing.s))
-        AppDivider()
+        Spacer(Modifier.height(Spacing.m))
         if (onViewProgress != null || onRemove != null) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 if (onViewProgress != null) {
                     AppTextButton(
                         text = "View progress",
                         onClick = onViewProgress,
-                        icon = Icons.AutoMirrored.Outlined.ArrowForward,
+                        icon = Lucide.ArrowRight,
                         color = scheme.onSurface,
                     )
                 }
@@ -123,7 +122,7 @@ private fun StepperLine(label: String, value: Int, range: IntRange, onChange: (I
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.m),
     ) {
-        Eyebrow(label, modifier = Modifier.weight(1f))
+        Text(label, style = AppText.body, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
         Stepper(
             value = value,
             onValueChange = onChange,

@@ -51,6 +51,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     sourceSets {
         getByName("androidTest").assets.directories.add("$projectDir/schemas")
@@ -72,6 +73,11 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
+    // Foodprint's design system: Manrope + Inter (downloadable, zero APK cost), Lucide icons,
+    // and Haze for the frosted tab bar.
+    implementation(libs.androidx.compose.ui.text.google.fonts)
+    implementation(libs.lucide.icons)
+    implementation(libs.haze)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.core.ktx)

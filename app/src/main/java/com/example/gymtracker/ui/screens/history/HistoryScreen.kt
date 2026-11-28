@@ -1,6 +1,7 @@
 package com.example.gymtracker.ui.screens.history
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -31,7 +32,7 @@ import com.example.gymtracker.ui.components.atoms.AppDivider
 import com.example.gymtracker.ui.components.atoms.AppTopBar
 import com.example.gymtracker.ui.components.atoms.EmptyState
 import com.example.gymtracker.ui.components.atoms.Eyebrow
-import com.example.gymtracker.ui.components.atoms.SectionHead
+import com.example.gymtracker.ui.components.atoms.Section
 import com.example.gymtracker.ui.format.formatDuration
 import com.example.gymtracker.ui.format.formatVolume
 import com.example.gymtracker.ui.format.plural
@@ -49,7 +50,7 @@ import java.util.concurrent.ConcurrentHashMap
  * trailing set count). Bar screen: no FAB, so no bottom clearance; the NavHost owns the bar inset.
  */
 @Composable
-fun HistoryScreen(onOpenSession: (Long) -> Unit) {
+fun HistoryScreen(onBack: () -> Unit, onOpenSession: (Long) -> Unit) {
     val container = LocalAppContainer.current
     val vm: HistoryViewModel = viewModel(
         factory = AppViewModelFactory(
@@ -61,7 +62,7 @@ fun HistoryScreen(onOpenSession: (Long) -> Unit) {
     val state by vm.state.collectAsStateWithLifecycle()
 
     Scaffold(
-        topBar = { AppTopBar(title = "History") },
+        topBar = { AppTopBar(title = "History", onBack = onBack) },
         modifier = Modifier.fillMaxSize(),
     ) { padding ->
         // House rule 8: top bar only until the first emission.
@@ -83,21 +84,21 @@ fun HistoryScreen(onOpenSession: (Long) -> Unit) {
                 top = Spacing.s,
                 bottom = Spacing.l,
             ),
+            verticalArrangement = Arrangement.spacedBy(Spacing.section),
         ) {
-            s.weeks.forEachIndexed { weekIndex, week ->
+            // One card per ISO week, newest first.
+            s.weeks.forEach { week ->
                 item(key = "week-${week.weekStartEpochDay}", contentType = "week") {
-                    WeekHead(
-                        weekStart = week.weekStartEpochDay,
-                        today = today,
-                        count = week.sessions.size,
-                        modifier = if (weekIndex == 0) Modifier else Modifier.padding(top = Spacing.section),
-                    )
-                }
-                week.sessions.forEachIndexed { i, row ->
-                    // One day eyebrow per day, even when a day holds two sessions.
-                    val showDay = i == 0 || week.sessions[i - 1].dateEpochDay != row.dateEpochDay
-                    item(key = row.sessionId, contentType = "session") {
-                        Column {
+                    val count = week.sessions.size
+                    Section(
+                        title = weekLabel(week.weekStartEpochDay, today),
+                        trailing = {
+                            Text("$count ${plural(count, "session")}", style = AppText.bodyS, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        },
+                    ) {
+                        week.sessions.forEachIndexed { i, row ->
+                            // One day label per day, even when a day holds two sessions.
+                            val showDay = i == 0 || week.sessions[i - 1].dateEpochDay != row.dateEpochDay
                             if (i > 0) AppDivider()
                             SessionRow(
                                 row = row,
@@ -110,24 +111,6 @@ fun HistoryScreen(onOpenSession: (Long) -> Unit) {
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun WeekHead(weekStart: Long, today: Long, count: Int, modifier: Modifier = Modifier) {
-    Column(modifier.fillMaxWidth()) {
-        SectionHead(
-            title = weekLabel(weekStart, today),
-            trailing = {
-                Text(
-                    "$count ${plural(count, "session")}",
-                    style = AppText.bodyS,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            },
-        )
-        Spacer(Modifier.height(Spacing.s))
-        AppDivider()
     }
 }
 
@@ -145,7 +128,7 @@ private fun SessionRow(
             .clickable(onClickLabel = "Open session", onClick = onClick)
             .heightIn(min = Sizes.touchTarget)
             .padding(vertical = Spacing.m),
-        verticalAlignment = Alignment.Bottom,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
             if (dayLabel != null) {
@@ -163,7 +146,7 @@ private fun SessionRow(
         }
         Spacer(Modifier.width(Spacing.m))
         Column(horizontalAlignment = Alignment.End) {
-            Text("${row.doneSets}", style = AppText.numberL, color = scheme.onSurface)
+            Text("${row.doneSets}", style = AppText.numberM, color = scheme.onSurface)
             Text(
                 plural(row.doneSets, "set"),
                 style = AppText.bodyS,

@@ -1,5 +1,22 @@
 package com.example.gymtracker.ui.screens.plans.templates
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import com.composables.icons.lucide.LayoutTemplate
+import com.example.gymtracker.ui.components.atoms.PastelIcon
+import com.example.gymtracker.ui.components.atoms.cardColor
+import com.example.gymtracker.ui.components.atoms.pressable
+import com.example.gymtracker.ui.components.cardRow
+import com.example.gymtracker.ui.theme.Pastel
+import com.example.gymtracker.ui.theme.Radius
+import com.example.gymtracker.ui.theme.dotTexture
+import com.example.gymtracker.ui.theme.meshGradient
+import com.composables.icons.lucide.ChevronRight
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Plus
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,9 +33,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -42,7 +56,7 @@ import com.example.gymtracker.ui.components.atoms.AppButton
 import com.example.gymtracker.ui.components.atoms.AppDivider
 import com.example.gymtracker.ui.components.atoms.AppTopBar
 import com.example.gymtracker.ui.components.atoms.Section
-import com.example.gymtracker.ui.components.atoms.UnderlineSelector
+import com.example.gymtracker.ui.components.ExclusiveButtonGroup
 import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.rememberAppHaptics
 import com.example.gymtracker.ui.theme.AppText
@@ -52,7 +66,8 @@ import kotlinx.coroutines.launch
 
 /**
  * Plan templates (§4.20) — reached from New plan's "Start from a template" and Plans & backup,
- * never prompted. Name and summary rows on hairlines; a row opens the template's detail.
+ * never prompted. One white card of rows — pastel disc, name, summary, chevron; a row opens the
+ * template's detail.
  */
 @Composable
 fun TemplateListScreen(
@@ -61,8 +76,10 @@ fun TemplateListScreen(
     modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
+    val fill = cardColor()
     Scaffold(
         topBar = { AppTopBar(title = "Plan templates", onBack = onBack) },
+        containerColor = scheme.background,
         modifier = modifier.fillMaxSize(),
     ) { padding ->
         LazyColumn(
@@ -75,31 +92,35 @@ fun TemplateListScreen(
                         "your own plans aren't changed.",
                     style = AppText.bodyS,
                     color = scheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = Spacing.s, bottom = Spacing.l),
+                    modifier = Modifier.padding(start = Spacing.xs, top = Spacing.s, bottom = Spacing.l),
                 )
-                AppDivider()
             }
-            items(PlanTemplates.all, key = { it.id }) { template ->
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { onOpen(template.id) }
-                        .heightIn(min = Sizes.touchTarget)
-                        .padding(vertical = Spacing.m),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(template.name, style = AppText.titleM, color = scheme.onSurface)
-                        Text(template.summary, style = AppText.bodyS, color = scheme.onSurfaceVariant)
+            itemsIndexed(PlanTemplates.all, key = { _, t -> t.id }) { i, template ->
+                Column(Modifier.cardRow(i, PlanTemplates.all.size, fill)) {
+                    if (i > 0) AppDivider(Modifier.padding(start = Spacing.l + 40.dp + Spacing.m))
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .pressable { onOpen(template.id) }
+                            .heightIn(min = 64.dp)
+                            .padding(horizontal = Spacing.l, vertical = Spacing.m),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        PastelIcon(Lucide.LayoutTemplate, Pastel.entries[i % Pastel.entries.size])
+                        Spacer(Modifier.width(Spacing.m))
+                        Column(Modifier.weight(1f)) {
+                            Text(template.name, style = AppText.titleM, color = scheme.onSurface)
+                            Text(template.summary, style = AppText.bodyS, color = scheme.onSurfaceVariant)
+                        }
+                        Spacer(Modifier.width(Spacing.s))
+                        Icon(
+                            Lucide.ChevronRight,
+                            contentDescription = null,
+                            tint = scheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp),
+                        )
                     }
-                    Spacer(Modifier.width(Spacing.s))
-                    Icon(
-                        Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = scheme.onSurfaceVariant,
-                    )
                 }
-                AppDivider()
             }
         }
     }
@@ -147,6 +168,7 @@ fun TemplateDetailScreen(
                 )
             }
         },
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier.fillMaxSize(),
     ) { padding ->
         if (template == null) return@Scaffold
@@ -174,17 +196,35 @@ private fun TemplateContent(
         verticalArrangement = Arrangement.spacedBy(Spacing.section),
     ) {
         item(key = "head") {
-            Column {
-                Text(template.description, style = AppText.body, color = scheme.onSurfaceVariant)
+            // The template on the soft mesh gradient: what it is, its choice of plans, and its size.
+            Column(
+                Modifier
+                    .padding(top = Spacing.s)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(Radius.lg + 4.dp))
+                    .meshGradient(animate = false)
+                    .dotTexture(color = scheme.onSurface.copy(alpha = 0.08f))
+                    .padding(20.dp),
+            ) {
+                Text(template.summary, style = AppText.eyebrow, color = scheme.onSurfaceVariant)
+                Spacer(Modifier.height(Spacing.xs))
+                Text(template.description, style = AppText.body, color = scheme.onSurface)
                 if (template.options.size > 1) {
-                    Spacer(Modifier.height(Spacing.m))
-                    UnderlineSelector(
+                    Spacer(Modifier.height(Spacing.l))
+                    ExclusiveButtonGroup(
                         options = template.options.indices.toList(),
                         selected = optionIndex,
                         onSelect = onOption,
                         fillWidth = true,
+                        trackColor = cardColor().copy(alpha = 0.62f),
                         label = { template.options[it].label },
                     )
+                }
+                Spacer(Modifier.height(Spacing.l))
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    GlassStat("Plans", "${plans.size}", Modifier.weight(1f))
+                    GlassStat("Exercises", "${plans.sumOf { it.exercises.size }}", Modifier.weight(1f))
+                    GlassStat("Sets", "${plans.sumOf { p -> p.exercises.sumOf { it.sets } }}", Modifier.weight(1f))
                 }
             }
         }
@@ -202,10 +242,13 @@ private fun TemplatePlanSection(plan: TemplatePlan) {
         trailing = { Text("$sets sets", style = AppText.bodyS, color = scheme.onSurfaceVariant) },
     ) {
         if (plan.notes.isNotEmpty()) {
-            Text(plan.notes, style = AppText.bodyS, color = scheme.tertiary)
+            Text(plan.notes, style = AppText.bodyS, color = scheme.onSurfaceVariant)
             Spacer(Modifier.height(Spacing.s))
         }
-        plan.exercises.forEach { ExerciseLine(it) }
+        plan.exercises.forEachIndexed { i, ex ->
+            if (i > 0) AppDivider()
+            ExerciseLine(ex)
+        }
     }
 }
 
@@ -213,7 +256,7 @@ private fun TemplatePlanSection(plan: TemplatePlan) {
 private fun ExerciseLine(exercise: TemplateExercise) {
     val scheme = MaterialTheme.colorScheme
     val reps = if (exercise.repsLow == exercise.repsHigh) "${exercise.repsLow}" else "${exercise.repsLow}–${exercise.repsHigh}"
-    Row(Modifier.fillMaxWidth().padding(vertical = Spacing.xs)) {
+    Row(Modifier.fillMaxWidth().padding(vertical = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(exercise.name, style = AppText.body, color = scheme.onSurface)
             if (exercise.notes.isNotEmpty()) {
@@ -221,7 +264,7 @@ private fun ExerciseLine(exercise: TemplateExercise) {
             }
         }
         Spacer(Modifier.width(Spacing.m))
-        Text("${exercise.sets} × $reps", style = AppText.bodyS, color = scheme.tertiary)
+        Text("${exercise.sets} × $reps", style = AppText.label, color = scheme.onSurface)
     }
 }
 
@@ -233,16 +276,29 @@ private fun AddBar(label: String, enabled: Boolean, onAdd: () -> Unit) {
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
             .navigationBarsPadding()
-            .padding(horizontal = Spacing.gutter, vertical = Spacing.s),
+            .padding(horizontal = Spacing.gutter, vertical = Spacing.m),
     ) {
-        AppDivider()
-        Spacer(Modifier.height(Spacing.s))
         AppButton(
             text = label,
             onClick = onAdd,
             enabled = enabled,
-            icon = Icons.Outlined.Add,
+            icon = Lucide.Plus,
             modifier = Modifier.fillMaxWidth(),
         )
+    }
+}
+
+/** A frosted figure on the template's gradient. */
+@Composable
+private fun GlassStat(label: String, value: String, modifier: Modifier = Modifier) {
+    val scheme = MaterialTheme.colorScheme
+    Column(
+        modifier
+            .clip(RoundedCornerShape(Radius.md))
+            .background(cardColor().copy(alpha = 0.62f))
+            .padding(horizontal = Spacing.m, vertical = Spacing.s + 2.dp),
+    ) {
+        Text(label, style = AppText.eyebrow, color = scheme.onSurfaceVariant, maxLines = 1)
+        Text(value, style = AppText.numberM, color = scheme.onSurface, maxLines = 1)
     }
 }

@@ -20,15 +20,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.dp
 import com.example.gymtracker.ui.components.atoms.AppButton
-import com.example.gymtracker.ui.components.atoms.AppDivider
+import com.example.gymtracker.ui.components.atoms.AppOutlinedButton
+import com.example.gymtracker.ui.components.atoms.Section
+import com.example.gymtracker.ui.components.atoms.SheetTitleRow
+import com.example.gymtracker.ui.theme.Rich
 import com.example.gymtracker.ui.components.atoms.AppSheet
-import com.example.gymtracker.ui.components.atoms.AppTextButton
-import com.example.gymtracker.ui.components.atoms.Eyebrow
 import com.example.gymtracker.ui.components.atoms.Meter
 import com.example.gymtracker.ui.components.atoms.Stepper
-import com.example.gymtracker.ui.components.atoms.UnderlineSelector
+import com.example.gymtracker.ui.components.ExclusiveButtonGroup
 import com.example.gymtracker.ui.format.EM_DASH
 import com.example.gymtracker.ui.format.formatClock
 import com.example.gymtracker.ui.theme.AppText
@@ -40,9 +40,9 @@ private val Presets: List<Int?> = listOf(60, 90, 120, 180)
 /**
  * Rest sheet — §4.4. The dock already carries the transport; this sheet is for the *target*.
  *
- * Live `numberXXL` rest clock with `of 1:30` in tertiary, the meter (primary once reached), a
- * 15s [Stepper] (0:15–10:00) plus preset selector, "Use as default for new workouts", and a
- * footer of `Restart now` · `Done`. Target changes apply live; the default pref is written on
+ * Live `numberXXL` rest clock with `of 1:30`, the meter (rest hue, green once reached), a card
+ * with a 15s [Stepper] (0:15–10:00) plus preset selector, "Use as default for new workouts", and
+ * a footer of `Restart now` · `Done`. Target changes apply live; the default pref is written on
  * Done. Before the first ticked set the hero reads `—`.
  */
 @Composable
@@ -64,19 +64,24 @@ fun RestSheet(
     AppSheet(onDismiss = onDismiss) {
         val restElapsedMillis = restElapsed()
         val reached = restElapsedMillis != null && restElapsedMillis >= targetMillis
-        Eyebrow("Rest")
+        SheetTitleRow("Rest", onClose = onDismiss)
         Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
             Text(
                 restElapsedMillis?.let { formatClock(it) } ?: EM_DASH,
                 style = AppText.numberXXL,
                 color = when {
                     restElapsedMillis == null -> scheme.onSurfaceVariant
-                    reached -> scheme.primary
+                    reached -> scheme.secondary
                     else -> scheme.onSurface
                 },
                 modifier = Modifier.weight(1f),
             )
-            Text("of ${formatClock(targetMillis)}", style = AppText.bodyS, color = scheme.tertiary)
+            Text(
+                "of ${formatClock(targetMillis)}",
+                style = AppText.titleM,
+                color = scheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = Spacing.s),
+            )
         }
         if (restElapsedMillis == null) {
             Text("Starts when you tick a set", style = AppText.bodyS, color = scheme.onSurfaceVariant)
@@ -84,13 +89,11 @@ fun RestSheet(
         Spacer(Modifier.height(Spacing.s))
         Meter(
             fraction = restElapsedMillis?.let { it.toFloat() / targetMillis } ?: 0f,
-            color = if (reached) scheme.primary else scheme.tertiary,
-            height = 2.dp,
+            color = if (reached) scheme.secondary else Rich.Rest.ink,
         )
 
-        Spacer(Modifier.height(Spacing.xxl))
-        Eyebrow("Target")
-        Spacer(Modifier.height(Spacing.s))
+        Spacer(Modifier.height(Spacing.xl))
+        Section("Target") {
         Stepper(
             value = targetSeconds,
             onValueChange = onTargetChange,
@@ -102,7 +105,7 @@ fun RestSheet(
             modifier = Modifier.align(Alignment.CenterHorizontally),
         )
         Spacer(Modifier.height(Spacing.s))
-        UnderlineSelector(
+        ExclusiveButtonGroup(
             options = Presets,
             selected = targetSeconds.takeIf { it in Presets },
             onSelect = { it?.let(onTargetChange) },
@@ -110,7 +113,7 @@ fun RestSheet(
             label = { formatClock((it ?: 0) * 1000L) },
         )
 
-        Spacer(Modifier.height(Spacing.m))
+        Spacer(Modifier.height(Spacing.s))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -130,17 +133,15 @@ fun RestSheet(
                 modifier = Modifier.padding(start = Spacing.m),
             )
         }
+        }
 
-        Spacer(Modifier.height(Spacing.m))
-        AppDivider()
-        Spacer(Modifier.height(Spacing.m))
+        Spacer(Modifier.height(Spacing.l))
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
         ) {
-            AppTextButton(text = "Restart now", onClick = onRestart, color = scheme.onSurface)
-            Spacer(Modifier.weight(1f))
-            AppButton(text = "Done", onClick = { onDone(asDefault) })
+            AppOutlinedButton(text = "Restart now", onClick = onRestart, modifier = Modifier.weight(1f))
+            AppButton(text = "Done", onClick = { onDone(asDefault) }, modifier = Modifier.weight(1f))
         }
     }
 }

@@ -1,5 +1,13 @@
 package com.example.gymtracker.ui.components
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,24 +24,25 @@ import androidx.compose.ui.unit.dp
 import com.example.gymtracker.domain.WeeklyTarget
 import com.example.gymtracker.ui.components.atoms.Eyebrow
 import com.example.gymtracker.ui.components.atoms.StatusCell
+import com.example.gymtracker.ui.components.atoms.heatRamp
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Spacing
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 
-/** One calendar column. A size, not a gap. */
-private val ColumnWidth = 24.dp
+/** The day-initial column on the left. A size, not a gap. */
+private val LabelWidth = 20.dp
 
 private val DayInitials = listOf("M", "T", "W", "T", "F", "S", "S")
 
 /**
- * §2 `TrainingCalendar` (rewrite of `ConsistencyCalendar`): [weeks] ISO weeks as rows, oldest on
- * top, ending with the week of [endEpochDay]. Seven columns Monday–Sunday (Sunday included) of
- * [StatusCell]s — trained days in `primary`, others the empty `outlineVariant`. Eyebrow day
- * initials on top, a month initial on the left of the row where a month starts, and on the right
- * a `✓` in `primary` for every week in [metWeeks] (decision 7). The running week shows `·` until
- * it meets the target. Days after [today] are not drawn.
+ * [weeks] ISO weeks as columns, oldest on the left, ending with the week of [endEpochDay] — the
+ * shape of Foodprint's rhythm heatmap, so it fills the card's width. Seven rows Monday–Sunday of
+ * rounded square cells: trained days from the heat ramp, others its untrained stop. A month
+ * initial over the column where a month starts, day initials on the left, and under each column
+ * a `✓` in the positive colour for a week in [metWeeks] (`·` for the running week until it meets
+ * the target). Days after [today] are not drawn.
  */
 @Composable
 fun TrainingCalendar(
@@ -45,44 +54,64 @@ fun TrainingCalendar(
     weeks: Int = 12,
 ) {
     val scheme = MaterialTheme.colorScheme
+    val ramp = heatRamp()
     val lastWeek = WeeklyTarget.weekStart(endEpochDay)
     val firstWeek = lastWeek - (weeks - 1) * 7L
-    val rows = (0 until weeks).map { firstWeek + it * 7L }
-    val shownTrained = rows.sumOf { w -> (0 until 7).count { (w + it) in sessionDays && w + it <= today } }
-    val shownMet = rows.count { it in metWeeks }
+    val columns = (0 until weeks).map { firstWeek + it * 7L }
+    val shownTrained = columns.sumOf { w -> (0 until 7).count { (w + it) in sessionDays && w + it <= today } }
+    val shownMet = columns.count { it in metWeeks }
 
     Column(
-        modifier.clearAndSetSemantics {
-            contentDescription = "Last $weeks weeks: $shownTrained training days, $shownMet weeks on target"
-        },
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        modifier
+            .fillMaxWidth()
+            .clearAndSetSemantics {
+                contentDescription = "Last $weeks weeks: $shownTrained training days, $shownMet weeks on target"
+            },
     ) {
-        Row {
-            Box(Modifier.width(ColumnWidth))
-            DayInitials.forEach { d ->
-                Box(Modifier.width(ColumnWidth), contentAlignment = Alignment.Center) { Eyebrow(d) }
+        // Month initials over the first column of each month.
+        Row(Modifier.fillMaxWidth()) {
+            Box(Modifier.width(LabelWidth))
+            columns.forEachIndexed { index, week ->
+                val monthStart = (0 until 7).map { week + it }.firstOrNull { LocalDate.ofEpochDay(it).dayOfMonth == 1 }
+                val label = when {
+                    monthStart != null -> LocalDate.ofEpochDay(monthStart).month
+                    index == 0 -> LocalDate.ofEpochDay(week).month
+                    else -> null
+                }?.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+                Box(Modifier.weight(1f)) {
+                    if (label != null) Text(label, style = AppText.eyebrow, color = scheme.onSurfaceVariant, maxLines = 1, softWrap = false)
+                }
             }
         }
-        rows.forEachIndexed { index, week ->
-            val monthStart = (0 until 7).map { week + it }.firstOrNull { LocalDate.ofEpochDay(it).dayOfMonth == 1 }
-            val monthLabel = when {
-                monthStart != null -> LocalDate.ofEpochDay(monthStart).month
-                index == 0 -> LocalDate.ofEpochDay(week).month
-                else -> null
-            }?.getDisplayName(TextStyle.NARROW, Locale.getDefault())
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.width(ColumnWidth)) { if (monthLabel != null) Eyebrow(monthLabel) }
-                for (d in 0 until 7) {
+        Spacer(Modifier.height(Spacing.xs))
+        for (d in 0 until 7) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.width(LabelWidth)) {
+                    if (d % 2 == 0) Eyebrow(DayInitials[d])
+                }
+                columns.forEach { week ->
                     val day = week + d
-                    Box(Modifier.width(ColumnWidth), contentAlignment = Alignment.Center) {
+                    Box(Modifier.weight(1f).aspectRatio(1f).padding(2.dp)) {
                         if (day <= today) {
-                            StatusCell(if (day in sessionDays) scheme.primary else scheme.outlineVariant)
+                            Box(
+                                Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        if (day in sessionDays) ramp[3] else ramp.first(),
+                                        RoundedCornerShape(4.dp),
+                                    ),
+                            )
                         }
                     }
                 }
-                Box(Modifier.width(ColumnWidth), contentAlignment = Alignment.Center) {
+            }
+        }
+        Row(Modifier.fillMaxWidth()) {
+            Box(Modifier.width(LabelWidth))
+            columns.forEach { week ->
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                     when {
-                        week in metWeeks -> Text("✓", style = AppText.label, color = scheme.primary)
+                        week in metWeeks -> Text("✓", style = AppText.label, color = scheme.secondary)
                         week <= today && today < week + 7 -> Text("·", style = AppText.label, color = scheme.onSurfaceVariant)
                     }
                 }

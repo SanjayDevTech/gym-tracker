@@ -11,12 +11,9 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
@@ -30,8 +27,6 @@ import com.example.gymtracker.ui.theme.Spacing
 /** §2 `BarChart` geometry: 150dp plot + 18dp axis. Sizes, not gaps. */
 private val PlotHeight = 150.dp
 private val AxisHeight = 18.dp
-private val CapHeight = 2.dp
-private val MaxCorner = 4.dp
 
 /** One bar. [label] is drawn under it when set (callers thin labels so they never collide). */
 @Immutable
@@ -43,10 +38,10 @@ data class BarDatum(
 )
 
 /**
- * §2 `BarChart` — food's stacked-bar styling: bars in `inversePrimary` (deep volt) with a 2dp
- * `primary` top cap (S4-b), corner `min(w/2, 4dp)`; an optional dashed `tertiary` [reference]
- * line with its [referenceCaption] above the line if there is room, else below, clamped inside the
- * plot (food lesson 4). Tapping a bar selects it ([onSelect], tap again to clear); the selected
+ * `BarChart` — Foodprint's week bars: rounded ink bars, the selected bar (or, with nothing
+ * selected, the running period) in the accent; a running period is drawn outline-only until it
+ * ends. An optional dashed [reference] line carries its [referenceCaption] above the line if there
+ * is room, else below, clamped inside the plot. Tapping a bar selects it ([onSelect], tap again to clear); the selected
  * bar carries a [TooltipTag] with [tagFor]'s text.
  */
 @Composable
@@ -62,11 +57,11 @@ fun BarChart(
 ) {
     if (bars.isEmpty()) return
     val scheme = MaterialTheme.colorScheme
-    val barColor = scheme.inversePrimary
-    val capColor = scheme.primary
-    val refColor = scheme.tertiary
+    val barColor = scheme.onSurface.copy(alpha = 0.72f)
+    val accent = scheme.tertiary
+    val refColor = scheme.onSurface.copy(alpha = 0.28f)
+    val refText = scheme.onSurfaceVariant
     val axisColor = scheme.onSurfaceVariant
-    val baseColor = scheme.outlineVariant
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
 
@@ -78,7 +73,7 @@ fun BarChart(
         val maxValue = maxOf(bars.maxOf { it.value }, reference ?: 0f).takeIf { it > 0f } ?: 1f
         val top = maxValue * 1.1f
         val slot = widthPx / bars.size
-        val barW = slot * 0.6f
+        val barW = slot * 0.5f
         fun barLeft(i: Int) = i * slot + (slot - barW) / 2f
         fun yFor(v: Float) = plotPx * (1f - v / top)
 
@@ -87,7 +82,7 @@ fun BarChart(
         TagOverlay(
             tagText = tag,
             anchorX = sel?.let { barLeft(it) + barW / 2f } ?: 0f,
-            anchorY = sel?.let { yFor(bars[it].value) - with(density) { CapHeight.toPx() } } ?: 0f,
+            anchorY = sel?.let { yFor(bars[it].value) - with(density) { Spacing.xs.toPx() } } ?: 0f,
         ) {
             Canvas(
                 Modifier
@@ -107,31 +102,18 @@ fun BarChart(
                         },
                     ),
             ) {
-                val cap = CapHeight.toPx()
-                val corner = minOf(barW / 2f, MaxCorner.toPx())
-                // Baseline.
-                drawRect(baseColor, Offset(0f, plotPx - 1.dp.toPx()), Size(size.width, 1.dp.toPx()))
+                val corner = CornerRadius(barW / 2.4f)
+                val minH = 6.dp.toPx()
                 bars.forEachIndexed { i, bar ->
                     if (bar.value <= 0f) return@forEachIndexed
                     val left = barLeft(i)
-                    val y = yFor(bar.value).coerceAtMost(plotPx - cap)
-                    val shape = Path().apply {
-                        addRoundRect(
-                            RoundRect(
-                                left = left, top = y, right = left + barW, bottom = plotPx,
-                                topLeftCornerRadius = CornerRadius(corner),
-                                topRightCornerRadius = CornerRadius(corner),
-                            ),
-                        )
-                    }
+                    val y = yFor(bar.value).coerceAtMost(plotPx - minH)
+                    val color = if (i == sel || (sel == null && bar.inProgress)) accent else barColor
                     if (bar.inProgress) {
-                        drawPath(shape, barColor, style = Stroke(width = 1.5.dp.toPx()))
-                        clipPath(shape) { drawRect(capColor, Offset(left, y), Size(barW, cap)) }
+                        val w = 1.5.dp.toPx()
+                        drawRoundRect(color, Offset(left + w / 2f, y + w / 2f), Size(barW - w, plotPx - y - w), corner, style = Stroke(width = w))
                     } else {
-                        clipPath(shape) {
-                            drawRect(capColor, Offset(left, y), Size(barW, plotPx - y))
-                            drawRect(barColor, Offset(left, y + cap), Size(barW, plotPx - y - cap))
-                        }
+                        drawRoundRect(color, Offset(left, y), Size(barW, plotPx - y), corner)
                     }
                 }
                 if (reference != null && reference > 0f) {
@@ -141,10 +123,10 @@ fun BarChart(
                         Offset(0f, y),
                         Offset(size.width, y),
                         strokeWidth = 1.dp.toPx(),
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 4.dp.toPx())),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 5.dp.toPx())),
                     )
                     if (referenceCaption != null) {
-                        val text = measurer.measure(referenceCaption, AppText.bodyS.copy(color = refColor))
+                        val text = measurer.measure(referenceCaption, AppText.bodyS.copy(color = refText))
                         val gap = Spacing.xs.toPx()
                         val above = y - gap - text.size.height
                         val ty = (if (above >= 0f) above else y + gap)

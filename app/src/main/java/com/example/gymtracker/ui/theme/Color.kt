@@ -3,78 +3,62 @@ package com.example.gymtracker.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * The palette — design-plan §1, "a black scoreboard".
+ * The palette — "calm canvas, pastel light", shared with Foodprint so the two apps read as
+ * one family.
  *
- * ONE scheme, dark only, every Material role set explicitly (see [Theme.kt]):
- * nothing falls through to the baseline purple/red that used to paint warm-up
- * badges, failure badges and every destructive button.
+ * Two tables, light and dark, following the system setting. Light is the
+ * default reading: a cool off-white canvas with white cards, ink-black actions
+ * and soft pastel gradients behind the hero figures. Dark keeps the same roles
+ * on a near-black canvas.
  *
- * Neutrals are food-tracker's verbatim (family resemblance). The accent is volt
- * and means **work done** — a ticked set, a record, a filled day. Targets you set
- * yourself are amber ([AppTertiary]). Nothing else is coloured.
- *
- * The `surfaceContainer*` ramp exists only for modal surfaces (sheets, menus,
- * dialogs) and pressed/focused states. Nothing on a page fills.
+ * Roles:
+ *  - `primary` is **ink** — buttons, the add button, selected toggles. Not data.
+ *  - `secondary` is **positive** — work done: ticked sets, a met target.
+ *  - `tertiary` is the **accent** — today in a chart, records, highlights.
+ *  - `error` / [Effort] — failure sets, drops.
  */
 
-// ---- Surfaces -------------------------------------------------------------
+// ---- Light ----------------------------------------------------------------
 
-val AppBlack = Color(0xFF000000)
-val AppSurfaceLow = Color(0xFF070707)
-val AppSurface = Color(0xFF0C0C0B)
-val AppSurfaceHigh = Color(0xFF141312)
-val AppSurfaceHighest = Color(0xFF1C1A18)
+val LightCanvas = Color(0xFFF4F4F7)
+val LightCard = Color(0xFFFFFFFF)
+val LightSurfaceLow = Color(0xFFF9F9FB)
+val LightSurfaceHigh = Color(0xFFEEEEF2)
+val LightSurfaceHighest = Color(0xFFE5E5EB)
+val LightInk = Color(0xFF121214)
+val LightInkSoft = Color(0xFF6E6E78)
+val LightOutline = Color(0xFFD4D4DC)
+val LightOutlineVariant = Color(0xFFEAEAF0)
 
-/** Not `#FFFFFF`: pure white on pure black haloes, and this is read mid-set. */
-val AppOnSurface = Color(0xFFEFE9E0)
-val AppOnSurfaceVariant = Color(0xFFA79E92)
-val AppOutline = Color(0xFF36312B)
-val AppOutlineVariant = Color(0xFF201D1A)
+val LightPositive = Color(0xFF1E9E5A)
+val LightPositiveContainer = Color(0xFFDDF5E6)
+val LightAccent = Color(0xFFF2663A)
+val LightAccentContainer = Color(0xFFFFE5DA)
+val LightError = Color(0xFFE5484D)
+val LightErrorContainer = Color(0xFFFDE3E3)
+val LightOnErrorContainer = Color(0xFF8A1C1F)
 
-// ---- Accent: Volt (decision 6) --------------------------------------------
-// The one hue with high luminance on black that neither food (mint) nor the
-// family's warning hues (amber, orange, red) occupy. The orange brand is retired.
+// ---- Dark -----------------------------------------------------------------
 
-val AppPrimary = Color(0xFFC5EA6A)
-val AppOnPrimary = Color(0xFF1B2600)
-val AppPrimaryContainer = Color(0xFF26330C)
-val AppOnPrimaryContainer = Color(0xFFE2F7B0)
+val DarkCanvas = Color(0xFF0B0B0E)
+val DarkCard = Color(0xFF17171B)
+val DarkSurfaceLow = Color(0xFF121216)
+val DarkSurfaceHigh = Color(0xFF222228)
+val DarkSurfaceHighest = Color(0xFF2C2C33)
+val DarkInk = Color(0xFFF3F3F6)
+val DarkInkSoft = Color(0xFF9A9AA6)
+val DarkOutline = Color(0xFF3A3A44)
+val DarkOutlineVariant = Color(0xFF26262D)
 
-/** Deep volt — `inversePrimary`, and the heat ramp's midpoint. */
-val AppPrimaryDeep = Color(0xFF5E7A1C)
+val DarkPositive = Color(0xFF4ADE80)
+val DarkPositiveContainer = Color(0xFF12321F)
+val DarkAccent = Color(0xFFFF7A4D)
+val DarkAccentContainer = Color(0xFF3A1E14)
+val DarkError = Color(0xFFFF6B6B)
+val DarkErrorContainer = Color(0xFF3B1416)
+val DarkOnErrorContainer = Color(0xFFFFD9D9)
 
-// ---- Target (shared with food) --------------------------------------------
+// ---- Status ---------------------------------------------------------------
 
-val AppTertiary = Color(0xFFE0A961)
-val AppOnTertiary = Color(0xFF2A1A00)
-val AppTertiaryContainer = Color(0xFF2D2310)
-val AppOnTertiaryContainer = Color(0xFFF3DBA5)
-
-// ---- Destructive ----------------------------------------------------------
-
-val AppError = Color(0xFFFF6B5E)
-val AppOnError = Color(0xFF3A0A06)
-val AppErrorContainer = Color(0xFF4A120C)
-val AppOnErrorContainer = Color(0xFFFFD9D4)
-
-// ---- Custom tokens --------------------------------------------------------
-
-/** Failure sets and negative deltas. Food's `StatusOver`. */
-val Effort = Color(0xFFF08A4B)
-
-/**
- * Completed set-row tint: primary at 8% on black, pre-composited so it is a
- * flat colour (S2-b). The one tinted row in the app — house rule 3's gym exception.
- */
-val DoneRow = Color(0xFF101309)
-
-// ---- Data palette: one heat ramp (training volume) ------------------------
-
-val Heat0 = AppOutlineVariant      // no volume
-val Heat25 = Color(0xFF3A4520)
-val Heat50 = AppPrimaryDeep
-val Heat75 = Color(0xFF91B23F)
-val Heat100 = AppPrimary
-
-/** The five ramp stops, low → high. */
-val HeatRamp: List<Color> = listOf(Heat0, Heat25, Heat50, Heat75, Heat100)
+/** Failure sets and negative deltas — Foodprint's "over a limit" orange. */
+val Effort = Color(0xFFF97316)

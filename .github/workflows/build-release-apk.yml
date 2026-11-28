@@ -25,7 +25,7 @@ jobs:
       - name: Name the APK after the commit
         id: apk
         run: |
-          name="GymTracker-${GITHUB_SHA::7}-release"
+          name="LiftUp-${GITHUB_SHA::7}-release"
           mv app/build/outputs/apk/release/app-release.apk "$name.apk"
           echo "name=$name" >> "$GITHUB_OUTPUT"
 

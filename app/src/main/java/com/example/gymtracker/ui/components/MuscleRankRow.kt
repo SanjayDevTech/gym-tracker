@@ -26,12 +26,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.gymtracker.ui.components.atoms.ValueText
 import com.example.gymtracker.ui.components.atoms.heatColor
+import com.example.gymtracker.ui.components.atoms.heatRamp
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Sizes
 import com.example.gymtracker.ui.theme.Spacing
 
 /** Meter thickness (§3: 2dp). A size. */
-private val MeterHeight = 2.dp
+private val MeterHeight = 8.dp
 
 /** The meter's box, tall enough for the band ticks to read. A size. */
 private val MeterBox = 8.dp
@@ -53,8 +54,9 @@ fun MuscleRankRow(
     valueColor: Color = MaterialTheme.colorScheme.onSurface,
     onClick: (() -> Unit)? = null,
 ) {
-    val track = MaterialTheme.colorScheme.outlineVariant
-    val tick = MaterialTheme.colorScheme.tertiary
+    val track = MaterialTheme.colorScheme.surfaceContainerHigh
+    val tick = MaterialTheme.colorScheme.outline
+    val ramp = heatRamp()
     val f by animateFloatAsState(fraction.coerceIn(0f, 1f), tween(450), label = "rank")
     Row(
         modifier
@@ -83,7 +85,7 @@ fun MuscleRankRow(
             val r = CornerRadius(h / 2f)
             drawRoundRect(track, Offset(0f, y), Size(size.width, h), r)
             if (f > 0f) {
-                drawRoundRect(heatColor(0.25f + 0.75f * f), Offset(0f, y), Size((size.width * f).coerceAtLeast(h), h), r)
+                drawRoundRect(heatColor(0.25f + 0.75f * f, ramp), Offset(0f, y), Size((size.width * f).coerceAtLeast(h), h), r)
             }
             band?.let { b ->
                 val w = 2.dp.toPx()

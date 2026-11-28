@@ -10,9 +10,7 @@ import androidx.compose.ui.Modifier
 import com.example.gymtracker.ui.theme.Radius
 
 /**
- * Snackbar host — design-plan §2. `surfaceContainerHigh` slab at [Radius.md],
- * `onSurface` text, action in `primary`; overrides Material's cream
- * inverse-surface slab, which is the brightest thing that could appear on black.
+ * Snackbar host — Foodprint's: an ink slab at [Radius.md] with the action in the accent.
  * Snackbars are the app's only transient message — no Toasts.
  */
 @Composable
@@ -24,11 +22,11 @@ fun AppSnackbarHost(
         Snackbar(
             snackbarData = data,
             shape = RoundedCornerShape(Radius.md),
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            actionColor = MaterialTheme.colorScheme.primary,
-            actionContentColor = MaterialTheme.colorScheme.primary,
-            dismissActionContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            containerColor = MaterialTheme.colorScheme.inverseSurface,
+            contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+            actionColor = MaterialTheme.colorScheme.tertiary,
+            actionContentColor = MaterialTheme.colorScheme.tertiary,
+            dismissActionContentColor = MaterialTheme.colorScheme.inverseOnSurface,
         )
     }
 }

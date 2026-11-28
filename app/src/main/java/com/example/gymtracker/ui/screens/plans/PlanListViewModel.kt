@@ -1,5 +1,11 @@
 package com.example.gymtracker.ui.screens.plans
 
+import com.example.gymtracker.data.Muscle
+import com.example.gymtracker.data.SetType
+import com.example.gymtracker.domain.ExerciseMuscleMap
+import com.example.gymtracker.domain.MuscleVolume
+import com.example.gymtracker.domain.SessionWindow
+import com.example.gymtracker.domain.SessionWindowSet
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gymtracker.data.GymRepository
@@ -16,6 +22,7 @@ import com.example.gymtracker.data.db.SessionVolume
 import com.example.gymtracker.data.toMuscleGroups
 import com.example.gymtracker.domain.DateUtil
 import com.example.gymtracker.domain.WeeklyTarget
+import com.example.gymtracker.domain.currentRunOfWeeks
 import com.example.gymtracker.domain.WeeksOnTarget
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -48,6 +55,8 @@ data class LiveSession(
     val totalSets: Int,
     /** Wall-clock of the last completed set; 0 while rest is cleared. */
     val lastSetCompletedAtMillis: Long,
+    /** Wall-clock the workout was paused at; 0 = running. */
+    val pausedAtMillis: Long = 0L,
 )
 
 /** This week against the weekly target (decision 7, §3 `WeekHero`). */
@@ -59,8 +68,30 @@ data class WeekSummary(
     /** Mon = 0 … Sun = 6. */
     val todayIndex: Int,
     val onTarget: WeeksOnTarget,
+    /** Weeks in a row on target (see [WeeklyTarget.currentRunOfWeeks]). */
+    val streakWeeks: Int,
+    /** Longest run of weeks on target, ever. */
+    val bestRunWeeks: Int,
     val volumeKg7d: Double,
     val sets7d: Int,
+)
+
+/** One of Home's recent sessions. */
+data class RecentSession(
+    val sessionId: Long,
+    val title: String,
+    val dateEpochDay: Long,
+    val doneSets: Int,
+    val volumeKg: Double,
+    val durationMillis: Long?,
+)
+
+/** This week's working sets per muscle, for Home's body map. */
+data class WeekMuscles(
+    /** 0..1 per trained muscle, for the heat ramp. */
+    val levels: Map<Muscle, Float>,
+    /** Most-trained first, with working sets. */
+    val ranked: List<Pair<Muscle, Float>>,
 )
 
 data class TrainState(
@@ -68,7 +99,19 @@ data class TrainState(
     val week: WeekSummary,
     val plans: List<PlanCard>,
     val unit: WeightUnit,
+    val name: String,
+    /** Working sets per day this week, Mon = 0 … Sun = 6. */
+    val setsByDay: List<Int>,
+    val muscles: WeekMuscles,
+    val recent: List<RecentSession>,
+    /** Monday that starts the heatmap; [heatSets] holds one entry per day from it. */
+    val heatStart: Long,
+    /** Completed sets per day over the last [HEAT_WEEKS] weeks, oldest first. */
+    val heatSets: List<Int>,
 )
+
+/** Weeks on Home's heatmap — Foodprint's rhythm, 18 weeks. */
+const val HEAT_WEEKS = 18
 
 class PlanListViewModel(
     private val repository: GymRepository,
@@ -76,7 +119,17 @@ class PlanListViewModel(
     prefs: PreferencesStore,
 ) : ViewModel() {
 
-    private val settings = combine(prefs.weeklyTargetSessions, prefs.weightUnit) { target, unit -> target to unit }
+    private val settings = combine(prefs.weeklyTargetSessions, prefs.weightUnit, prefs.userName) { target, unit, name ->
+        Triple(target, unit, name)
+    }
+
+    // shortcut: the week is fixed when Home opens, so a session left open past midnight on Sunday
+    // keeps showing last week until Home is reopened.
+    private val weekStart = WeeklyTarget.weekStart(DateUtil.todayEpochDay())
+    private val thisWeek = combine(
+        repository.observeSessionsWithSetsInRange(weekStart, weekStart + 6),
+        repository.observeAllExercisesIncludingDeleted(),
+    ) { sessions, exercises -> sessions to exercises }
 
     /** Null until the first Room emission (house rule 8): no "No plans yet" flash. */
     val state: StateFlow<TrainState?> = combine(
@@ -88,7 +141,8 @@ class PlanListViewModel(
             repository.observeSessionDraft(),
         ) { plans, planned, exercises, sessions, draft -> Inputs(plans, planned, exercises, sessions, draft) },
         settings,
-    ) { inputs, (target, unit) ->
+        thisWeek,
+    ) { inputs, (target, unit, name), (weekSessions, allExercises) ->
         val today = DateUtil.todayEpochDay()
         val exById = inputs.exercises.associateBy { it.id }
         val plannedByPlan = inputs.planned.groupBy { it.planId }
@@ -117,10 +171,54 @@ class PlanListViewModel(
             trainedDays = days.filter { it in weekStart until weekStart + 7 }.map { (it - weekStart).toInt() }.toSet(),
             todayIndex = (today - weekStart).toInt(),
             onTarget = WeeklyTarget.weeksOnTarget(days, target, today),
+            streakWeeks = WeeklyTarget.currentRunOfWeeks(days, target, today),
+            bestRunWeeks = WeeklyTarget.bestRunOfWeeks(days, target),
             volumeKg7d = volume7d,
             sets7d = sets7d,
         )
-        TrainState(live = inputs.draft?.toLive(), week = week, plans = cards, unit = unit)
+        val muscleMap = allExercises.associate { it.id to ExerciseMuscleMap(it.primaryMuscles, it.secondaryMuscles) }
+        val windows = weekSessions.map { s ->
+            SessionWindow(
+                dateEpochDay = s.session.dateEpochDay,
+                sets = s.sets.map {
+                    SessionWindowSet(it.exerciseId, it.repsDone, it.weightKg, it.isCompleted, it.setType == SetType.Warmup)
+                },
+            )
+        }
+        val muscleSets = MuscleVolume.computeForWindow(windows, weekStart..weekStart + 6, muscleMap)
+            .filterValues { it > 0f }
+        val setsByDay = List(7) { i ->
+            weekSessions.filter { it.session.dateEpochDay == weekStart + i }
+                .sumOf { s -> s.sets.count { it.isCompleted && it.setType != SetType.Warmup } }
+        }
+        val planNames = inputs.plans.associate { it.id to it.name }
+        val recent = inputs.sessions.sortedByDescending { it.loggedAtMillis }.take(RECENT_COUNT).map {
+            RecentSession(
+                sessionId = it.sessionId,
+                title = it.planId?.let(planNames::get) ?: "Quick log",
+                dateEpochDay = it.dateEpochDay,
+                doneSets = it.doneSets,
+                volumeKg = it.volumeKg,
+                durationMillis = it.startedAtMillis?.let { start -> (it.loggedAtMillis - start).takeIf { d -> d > 0 } },
+            )
+        }
+        val heatStart = weekStart - (HEAT_WEEKS - 1) * 7L
+        val setsByDate = inputs.sessions.groupBy { it.dateEpochDay }.mapValues { (_, v) -> v.sumOf { it.doneSets } }
+        TrainState(
+            heatStart = heatStart,
+            heatSets = List(HEAT_WEEKS * 7) { setsByDate[heatStart + it] ?: 0 },
+            live = inputs.draft?.toLive(),
+            week = week,
+            plans = cards,
+            unit = unit,
+            name = name,
+            setsByDay = setsByDay,
+            muscles = WeekMuscles(
+                levels = MuscleVolume.normalize(muscleSets),
+                ranked = muscleSets.entries.sortedByDescending { it.value }.map { it.key to it.value },
+            ),
+            recent = recent,
+        )
     }
         // Folds every session and decodes the draft JSON on each emission (Train is the start
         // destination, so this ran on Main during startup): keep it off Main.
@@ -153,6 +251,7 @@ class PlanListViewModel(
     )
 
     private companion object {
+        const val RECENT_COUNT = 3
         val json = Json { ignoreUnknownKeys = true }
 
         fun SessionDraftEntity.toLive(): LiveSession {
@@ -167,6 +266,7 @@ class PlanListViewModel(
                 doneSets = sets.count { it.isCompleted },
                 totalSets = sets.size,
                 lastSetCompletedAtMillis = payload?.lastSetCompletedAtMillis ?: 0L,
+                pausedAtMillis = payload?.pausedAtMillis ?: 0L,
             )
         }
     }

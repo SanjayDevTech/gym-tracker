@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Adaptive icon foreground, concept A.
-  Loaded barbell, side-on, in volt: a 4dp bar (the rule) carrying two plates a side.
-  Drawn group is scaled 0.92 about the centre, so the farthest corner sits ~24dp out (48dp keyline).
-  Extents x:27..81, y:38..70; farthest corner 25.6dp from centre, inside the 33dp safe-zone radius.
-  Colour: @color/ic_launcher_foreground (volt, "work done"). Flat; no gradient or shadow.
+  Adaptive icon foreground: a dumbbell, on the diagonal, white on Foodprint's ink tile — the two
+  icons read as a pair. ic_launcher_monochrome.xml and ic_splash.xml carry the same paths; keep
+  them in step. Scaled 0.6: on the diagonal that gives the same visual margin as Foodprint's bowl.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -12,35 +10,16 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <group
-        android:scaleX="0.92"
-        android:scaleY="0.92"
-        android:pivotX="54"
-        android:pivotY="54">
-
-        <!-- Bar: full-width 4dp rule -->
-        <path
-            android:fillColor="@color/ic_launcher_foreground"
-            android:pathData="M28,52 h52 a1,1 0 0 1 1,1 v2 a1,1 0 0 1 -1,1 h-52 a1,1 0 0 1 -1,-1 v-2 a1,1 0 0 1 1,-1 Z" />
-
-        <!-- Left big plate 6x32 -->
-        <path
-            android:fillColor="@color/ic_launcher_foreground"
-            android:pathData="M35.5,38 h3 a1.5,1.5 0 0 1 1.5,1.5 v29 a1.5,1.5 0 0 1 -1.5,1.5 h-3 a1.5,1.5 0 0 1 -1.5,-1.5 v-29 a1.5,1.5 0 0 1 1.5,-1.5 Z" />
-
-        <!-- Left small plate 4x20 -->
-        <path
-            android:fillColor="@color/ic_launcher_foreground"
-            android:pathData="M42.25,44 h1 a1.5,1.5 0 0 1 1.5,1.5 v17 a1.5,1.5 0 0 1 -1.5,1.5 h-1 a1.5,1.5 0 0 1 -1.5,-1.5 v-17 a1.5,1.5 0 0 1 1.5,-1.5 Z" />
-
-        <!-- Right small plate -->
-        <path
-            android:fillColor="@color/ic_launcher_foreground"
-            android:pathData="M64.75,44 h1 a1.5,1.5 0 0 1 1.5,1.5 v17 a1.5,1.5 0 0 1 -1.5,1.5 h-1 a1.5,1.5 0 0 1 -1.5,-1.5 v-17 a1.5,1.5 0 0 1 1.5,-1.5 Z" />
-
-        <!-- Right big plate -->
-        <path
-            android:fillColor="@color/ic_launcher_foreground"
-            android:pathData="M69.5,38 h3 a1.5,1.5 0 0 1 1.5,1.5 v29 a1.5,1.5 0 0 1 -1.5,1.5 h-3 a1.5,1.5 0 0 1 -1.5,-1.5 v-29 a1.5,1.5 0 0 1 1.5,-1.5 Z" />
+    <!-- Centre (54,54) ← rotate −45° and scale 0.6 ← the dumbbell drawn level around (54,70). -->
+    <group android:translateX="54" android:translateY="54">
+        <group android:rotation="-45" android:scaleX="0.6" android:scaleY="0.6">
+            <group android:translateX="-54" android:translateY="-70">
+                <path android:fillColor="@android:color/white" android:pathData="M27.5,57 h6 a3.5,3.5 0 0 1 3.5,3.5 v19 a3.5,3.5 0 0 1 -3.5,3.5 h-6 a3.5,3.5 0 0 1 -3.5,-3.5 v-19 a3.5,3.5 0 0 1 3.5,-3.5 Z" />
+                <path android:fillColor="@android:color/white" android:pathData="M38,61 h1 a3,3 0 0 1 3,3 v12 a3,3 0 0 1 -3,3 h-1 a3,3 0 0 1 -3,-3 v-12 a3,3 0 0 1 3,-3 Z" />
+                <path android:fillColor="@android:color/white" android:pathData="M44,67 h20 a2,2 0 0 1 2,2 v2 a2,2 0 0 1 -2,2 h-20 a2,2 0 0 1 -2,-2 v-2 a2,2 0 0 1 2,-2 Z" />
+                <path android:fillColor="@android:color/white" android:pathData="M69,61 h1 a3,3 0 0 1 3,3 v12 a3,3 0 0 1 -3,3 h-1 a3,3 0 0 1 -3,-3 v-12 a3,3 0 0 1 3,-3 Z" />
+                <path android:fillColor="@android:color/white" android:pathData="M74.5,57 h6 a3.5,3.5 0 0 1 3.5,3.5 v19 a3.5,3.5 0 0 1 -3.5,3.5 h-6 a3.5,3.5 0 0 1 -3.5,-3.5 v-19 a3.5,3.5 0 0 1 3.5,-3.5 Z" />
+            </group>
+        </group>
     </group>
 </vector>

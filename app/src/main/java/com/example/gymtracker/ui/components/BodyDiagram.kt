@@ -2,27 +2,45 @@ package com.example.gymtracker.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.example.gymtracker.data.Muscle
+import com.example.gymtracker.ui.components.atoms.cardColor
 import com.example.gymtracker.ui.components.atoms.heatColor
+import com.example.gymtracker.ui.components.atoms.heatRamp
+import com.example.gymtracker.data.displayName
 import com.example.gymtracker.ui.rememberAppHaptics
+import com.example.gymtracker.ui.theme.AppText
+import com.example.gymtracker.ui.theme.Spacing
 import kotlin.math.min
 
 enum class BodyView { Front, Back }
 
 /**
- * §2 `BodyDiagram` (revised): regions filled from [fills] (callers use the heat ramp —
- * [heatFill]); a muscle not in the map is the empty `outlineVariant`. Region edges in `outline`,
- * the selected muscle outlined `onSurface` 1.5. The back view has its own silhouette (issue 33).
- * Hit-testing is unchanged: topmost region wins.
+ * One view of the anatomical figure: a soft silhouette, each muscle filled from [fills] (callers
+ * use [heatFill]) with a hairline gap of the card colour between muscles, so the figure reads as
+ * a set of shapes rather than a blob. A muscle missing from [fills] is the ramp's "untrained"
+ * stop. The [selectedMuscle] gets an ink outline; taps hit the topmost shape.
  */
 @Composable
 fun BodyDiagram(
@@ -32,51 +50,50 @@ fun BodyDiagram(
     selectedMuscle: Muscle? = null,
     onMuscleTap: ((Muscle) -> Unit)? = null,
 ) {
-    val emptyColor = MaterialTheme.colorScheme.outlineVariant
-    val outlineColor = MaterialTheme.colorScheme.outline
-    val selectedColor = MaterialTheme.colorScheme.onSurface
+    val ramp = heatRamp()
+    val gap = cardColor()
+    val untrained = ramp.first()
+    val body = lerp(gap, untrained, 0.5f)
+    val selected = MaterialTheme.colorScheme.onSurface
     val haptics = rememberAppHaptics()
-
-    val regions = when (view) {
-        BodyView.Front -> BodyDiagramPaths.FrontRegions
-        BodyView.Back -> BodyDiagramPaths.BackRegions
+    val shapes = when (view) {
+        BodyView.Front -> BodyPaths.Front
+        BodyView.Back -> BodyPaths.Back
     }
-    val silhouette = when (view) {
-        BodyView.Front -> BodySilhouette.Front
-        BodyView.Back -> BodySilhouette.Back
-    }
+    val trained = shapes.keys.filter { fills.containsKey(it) }
 
     Canvas(
-        modifier = modifier.pointerInput(view, onMuscleTap) {
-            if (onMuscleTap == null) return@pointerInput
-            detectTapGestures { tap ->
-                val vp = computeViewport(size.width.toFloat(), size.height.toFloat())
-                val local = Offset(
-                    x = (tap.x - vp.offsetX) / vp.scale,
-                    y = (tap.y - vp.offsetY) / vp.scale,
-                )
-                // Hit-test topmost first (reverse draw order) so overlaid regions like Adductors,
-                // drawn over the inner Quads, win the tap instead of the region beneath them.
-                val hit = regions.entries.lastOrNull { (_, r) -> r.contains(local) }
-                if (hit != null) {
-                    haptics.light()
-                    onMuscleTap(hit.key)
-                }
+        modifier = modifier
+            .aspectRatio(VIEWBOX_W / VIEWBOX_H)
+            .semantics {
+                contentDescription = "${view.name} view. " + if (trained.isEmpty()) "Nothing trained"
+                else "Trained: " + trained.joinToString { it.displayName }
             }
-        },
-    ) {
-        val vp = computeViewport(size.width, size.height)
-        translate(vp.offsetX, vp.offsetY) {
-            scale(scaleX = vp.scale, scaleY = vp.scale, pivot = Offset.Zero) {
-                regions.forEach { (muscle, region) ->
-                    drawPath(region.path, fills[muscle] ?: emptyColor)
-                    drawPath(region.path, outlineColor, style = Stroke(width = 0.4f))
+            .pointerInput(view, onMuscleTap) {
+                if (onMuscleTap == null) return@pointerInput
+                detectTapGestures { tap ->
+                    val vp = viewport(size.width.toFloat(), size.height.toFloat())
+                    val x = (tap.x - vp.dx) / vp.scale
+                    val y = (tap.y - vp.dy) / vp.scale
+                    shapes.entries.lastOrNull { (_, s) -> s.contains(x, y) }?.let {
+                        haptics.light()
+                        onMuscleTap(it.key)
+                    }
                 }
-                // Silhouette over the fills so the back view's spine and blade lines stay visible.
-                drawPath(path = silhouette, color = outlineColor, style = Stroke(width = 1f))
+            },
+    ) {
+        val vp = viewport(size.width, size.height)
+        translate(vp.dx, vp.dy) {
+            scale(vp.scale, vp.scale, pivot = Offset.Zero) {
+                drawPath(BodyPaths.Silhouette, body)
+                val stroke = Stroke(width = 1.6f, join = StrokeJoin.Round)
+                shapes.forEach { (muscle, shape) ->
+                    drawPath(shape.path, fills[muscle] ?: untrained)
+                    drawPath(shape.path, gap, style = stroke)
+                }
                 if (selectedMuscle != null) {
-                    regions[selectedMuscle]?.let { region ->
-                        drawPath(region.path, selectedColor, style = Stroke(width = 1.5f))
+                    shapes[selectedMuscle]?.let {
+                        drawPath(it.path, selected, style = Stroke(width = 2f, join = StrokeJoin.Round))
                     }
                 }
             }
@@ -84,25 +101,41 @@ fun BodyDiagram(
     }
 }
 
+/** Front and back side by side, each captioned. The muscle map on Home and Progress. */
+@Composable
+fun BodyMap(
+    fills: Map<Muscle, Color>,
+    modifier: Modifier = Modifier,
+    selectedMuscle: Muscle? = null,
+    onMuscleTap: ((Muscle) -> Unit)? = null,
+) {
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+        BodyView.entries.forEach { view ->
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                BodyDiagram(
+                    view = view,
+                    fills = fills,
+                    selectedMuscle = selectedMuscle,
+                    onMuscleTap = onMuscleTap,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(Spacing.xs))
+                Text(view.name, style = AppText.eyebrow, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
 /**
- * Heat-ramp fills for 0..1 volume levels. Any trained muscle starts a quarter of the way up the
- * ramp so a light week never reads as untrained; zero/absent stays the empty colour.
+ * Ramp fills for 0..1 volume levels. Any trained muscle starts a quarter of the way up so a light
+ * week never reads as untrained; zero/absent stays the untrained stop.
  */
-fun heatFill(levels: Map<Muscle, Float>): Map<Muscle, Color> =
-    levels.filterValues { it > 0f }.mapValues { heatColor(0.25f + 0.75f * it.value.coerceIn(0f, 1f)) }
+fun heatFill(levels: Map<Muscle, Float>, ramp: List<Color>): Map<Muscle, Color> =
+    levels.filterValues { it > 0f }.mapValues { heatColor(0.25f + 0.75f * it.value.coerceIn(0f, 1f), ramp) }
 
-private data class Viewport(val scale: Float, val offsetX: Float, val offsetY: Float)
+private data class Viewport(val scale: Float, val dx: Float, val dy: Float)
 
-private fun computeViewport(canvasW: Float, canvasH: Float): Viewport {
-    val s = min(
-        canvasW / BodyDiagramPaths.VIEWBOX_WIDTH,
-        canvasH / BodyDiagramPaths.VIEWBOX_HEIGHT,
-    )
-    val contentW = BodyDiagramPaths.VIEWBOX_WIDTH * s
-    val contentH = BodyDiagramPaths.VIEWBOX_HEIGHT * s
-    return Viewport(
-        scale = s,
-        offsetX = (canvasW - contentW) / 2f,
-        offsetY = (canvasH - contentH) / 2f,
-    )
+private fun viewport(w: Float, h: Float): Viewport {
+    val s = min(w / VIEWBOX_W, h / VIEWBOX_H)
+    return Viewport(s, (w - VIEWBOX_W * s) / 2f, (h - VIEWBOX_H * s) / 2f)
 }

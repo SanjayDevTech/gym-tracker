@@ -1,5 +1,18 @@
 package com.example.gymtracker.ui.components.atoms
 
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.Canvas
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,9 +37,8 @@ import com.example.gymtracker.ui.theme.Spacing
 /**
  * The rest clock's transport — design-plan §2 `RestTransport` (S5-g).
  *
- * `− 15 s` · a 56dp [Radius.md] primary-filled `Skip` · `+ 15 s`. Skip is one of the few
- * fills §1 allows: it is the action under the thumb between every set. The step buttons are
- * quiet `onSurface` text — they adjust a value, they don't record work.
+ * `− 15 s` · a 56dp ink `Skip` pill · `+ 15 s`. Skip is the action under the thumb between every
+ * set, so it is the filled one; the step buttons are soft pills — they adjust a value.
  */
 @Composable
 fun RestTransport(
@@ -44,18 +56,18 @@ fun RestTransport(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.s),
     ) {
-        AppTextButton(
+        AppOutlinedButton(
             text = "−${NBSP}$stepSeconds${NBSP}s",
             onClick = onMinus,
             enabled = enabled,
-            color = scheme.onSurface,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).heightIn(min = Sizes.transportButton),
         )
         Button(
             onClick = onSkip,
             enabled = skipEnabled,
-            shape = RoundedCornerShape(Radius.md),
-            // Sizes, not gaps: the transport's centre key is wider than a pill button.
+            shape = RoundedCornerShape(Radius.pill),
+            colors = ButtonDefaults.buttonColors(containerColor = scheme.primary, contentColor = scheme.onPrimary),
+            // Sizes, not gaps: the transport's centre key is wider than a step pill.
             modifier = Modifier
                 .heightIn(min = Sizes.transportButton)
                 .widthIn(min = 128.dp),
@@ -66,13 +78,46 @@ fun RestTransport(
                 hoveredElevation = Elevation.none,
                 disabledElevation = Elevation.none,
             ),
-        ) { Text("Skip", style = AppText.label) }
-        AppTextButton(
+        ) { Text("Skip", style = AppText.button) }
+        AppOutlinedButton(
             text = "+${NBSP}$stepSeconds${NBSP}s",
             onClick = onPlus,
             enabled = enabled,
-            color = scheme.onSurface,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).heightIn(min = Sizes.transportButton),
         )
+    }
+}
+
+/**
+ * The rest ring: [remaining] of the rest still to go (1 → 0), drawn clockwise from twelve in
+ * [color] over a translucent track of the same colour, with [content] centred. The sweep
+ * animates linearly across each one-second tick, so the ring drains smoothly; [full] draws it
+ * whole (rest reached).
+ */
+@Composable
+fun RestRing(
+    remaining: Float,
+    color: Color,
+    size: Dp,
+    stroke: Dp,
+    modifier: Modifier = Modifier,
+    full: Boolean = false,
+    content: @Composable () -> Unit,
+) {
+    val sweep by animateFloatAsState(
+        targetValue = if (full) 1f else remaining.coerceIn(0f, 1f),
+        animationSpec = tween(1_000, easing = LinearEasing),
+        label = "restRing",
+    )
+    Box(modifier.size(size), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.matchParentSize()) {
+            val w = stroke.toPx()
+            val topLeft = Offset(w / 2f, w / 2f)
+            val arc = Size(this.size.width - w, this.size.height - w)
+            val line = Stroke(width = w, cap = StrokeCap.Round)
+            drawArc(color.copy(alpha = 0.16f), -90f, 360f, false, topLeft, arc, style = line)
+            if (sweep > 0f) drawArc(color, -90f, 360f * sweep, false, topLeft, arc, style = line)
+        }
+        content()
     }
 }

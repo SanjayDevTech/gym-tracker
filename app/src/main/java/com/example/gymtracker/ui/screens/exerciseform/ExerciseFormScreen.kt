@@ -1,5 +1,12 @@
 package com.example.gymtracker.ui.screens.exerciseform
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import com.example.gymtracker.ui.components.OptionGrid
+import com.example.gymtracker.ui.components.atoms.AppTextField
+import com.example.gymtracker.ui.components.atoms.softFill
+import com.example.gymtracker.ui.theme.Radius
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -49,22 +56,20 @@ import com.example.gymtracker.domain.ExerciseNameRule
 import com.example.gymtracker.ui.components.atoms.AppTextButton
 import com.example.gymtracker.ui.components.atoms.AppTopBar
 import com.example.gymtracker.ui.components.atoms.Section
-import com.example.gymtracker.ui.components.atoms.UnderlineSelector
+import com.example.gymtracker.ui.components.ExclusiveButtonGroup
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Elevation
 import com.example.gymtracker.ui.theme.Sizes
 import com.example.gymtracker.ui.theme.Spacing
 
-/** The selection rule under a text option (house rule 3). A size. */
-private val RuleWidth = 24.dp
-private val RuleHeight = 2.dp
 
 /**
  * Custom exercise form — design-plan §4.19 (phase 9). A full page from Exercises' FAB, the
  * picker's empty search, Exercise detail ⋮ Edit and Import's Create.
  *
- * Top bar with a primary `Save` text button, disabled until the name is valid; then NAME,
- * TYPE, EQUIPMENT, PRIMARY and SECONDARY MUSCLES as standing sections. The name must be
+ * Top bar with a `Save` text button, disabled until the name is valid; then Name, Type,
+ * Equipment, Primary and Secondary muscles as cards — a soft field, a grid of options, and pill
+ * chips that turn ink when chosen. The name must be
  * non-empty and not another live exercise's (ignoring case), with the reason inline under the
  * field. Edit mode draws the top bar only until the exercise loads.
  */
@@ -102,6 +107,7 @@ fun ExerciseFormScreen(
                 },
             )
         },
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxSize(),
     ) { padding ->
         if (f == null) return@Scaffold // Edit loading: top bar only.
@@ -116,7 +122,7 @@ fun ExerciseFormScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.section),
         ) {
             Section("Name") {
-                UnderlineTextField(
+                NameField(
                     value = f.name,
                     onValueChange = { v ->
                         nameTouched = true
@@ -130,7 +136,7 @@ fun ExerciseFormScreen(
                 )
             }
             Section("Type") {
-                UnderlineSelector(
+                OptionGrid(
                     options = MovementType.entries.toList(),
                     selected = f.movementType,
                     onSelect = { t -> viewModel.edit { it.copy(movementType = t) } },
@@ -158,7 +164,7 @@ private fun MuscleSection(title: String, selected: Set<Muscle>, onToggle: (Muscl
     Section(
         title = title,
         trailing = if (selected.isEmpty()) null else {
-            { Text("${selected.size}", style = AppText.bodyS, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            { Text("${selected.size} chosen", style = AppText.bodyS, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         },
     ) {
         TextOptions(
@@ -174,8 +180,7 @@ private fun MuscleSection(title: String, selected: Set<Muscle>, onToggle: (Muscl
 private fun <T> Set<T>.toggle(item: T): Set<T> = if (item in this) this - item else this + item
 
 /**
- * Wrapped text options: selected = onSurface label over a 24×2dp rule, unselected
- * onSurfaceVariant (house rule 3 — no chips). [multi] toggles; otherwise one choice.
+ * Wrapped pill chips: soft when off, ink when on. [multi] toggles; otherwise one choice.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -187,7 +192,10 @@ private fun <T> TextOptions(
     multi: Boolean,
 ) {
     val scheme = MaterialTheme.colorScheme
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.l)) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+        verticalArrangement = Arrangement.spacedBy(Spacing.s),
+    ) {
         options.forEach { option ->
             val on = isSelected(option)
             val select = if (multi) {
@@ -195,72 +203,38 @@ private fun <T> TextOptions(
             } else {
                 Modifier.selectable(selected = on, role = Role.RadioButton, onClick = { if (!on) onTap(option) })
             }
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .heightIn(min = Sizes.touchTarget)
+            val fill by animateColorAsState(if (on) scheme.primary else softFill(), label = "optFill")
+            val ink by animateColorAsState(if (on) scheme.onPrimary else scheme.onSurface, label = "optInk")
+            Box(
+                Modifier
+                    .clip(RoundedCornerShape(Radius.pill))
+                    .background(fill)
                     .then(select)
-                    .padding(vertical = Spacing.s),
+                    .heightIn(min = 40.dp)
+                    .padding(horizontal = Spacing.l, vertical = Spacing.s),
+                contentAlignment = Alignment.Center,
             ) {
-                Text(label(option), style = AppText.label, color = if (on) scheme.onSurface else scheme.onSurfaceVariant)
-                Spacer(Modifier.height(Spacing.xs))
-                Box(
-                    Modifier
-                        .size(width = RuleWidth, height = RuleHeight)
-                        .background(if (on) scheme.onSurface else Color.Transparent),
-                )
+                Text(label(option), style = AppText.label, color = ink)
             }
         }
     }
 }
 
-/**
- * One-line `titleM` text input in the [com.example.gymtracker.ui.components.atoms.NumberField]
- * idiom: no box, a rule beneath (2dp primary when focused, error when [error] is set), and the
- * error as a `bodyS` line under it.
- */
+/** The name field: a soft filled box, an ink ring on focus, the error ring and line when set. */
 @Composable
-private fun UnderlineTextField(value: String, onValueChange: (String) -> Unit, error: String?) {
-    val scheme = MaterialTheme.colorScheme
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
-    val ruleColor = when {
-        error != null -> scheme.error
-        focused -> scheme.primary
-        else -> scheme.outlineVariant
-    }
-    Column(Modifier.fillMaxWidth()) {
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = true,
-            textStyle = AppText.titleM.copy(color = scheme.onSurface),
-            cursorBrush = SolidColor(scheme.primary),
-            keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.Words,
-                imeAction = ImeAction.Done,
-            ),
-            interactionSource = interaction,
-            modifier = Modifier.fillMaxWidth(),
-            decorationBox = { inner ->
-                Box {
-                    if (value.isEmpty()) Text("Landmine press", style = AppText.titleM, color = scheme.onSurfaceVariant)
-                    inner()
-                }
-            },
-        )
-        Spacer(Modifier.height(Spacing.xs))
-        Box(Modifier.fillMaxWidth().height(RuleHeight), contentAlignment = Alignment.TopStart) {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(if (focused || error != null) RuleHeight else Elevation.hairline)
-                    .background(ruleColor),
-            )
-        }
-        if (error != null) {
-            Spacer(Modifier.height(Spacing.xs))
-            Text(error, style = AppText.bodyS, color = scheme.error)
-        }
-    }
+private fun NameField(value: String, onValueChange: (String) -> Unit, error: String?) {
+    AppTextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        textStyle = AppText.titleM,
+        placeholder = { Text("Landmine press", style = AppText.titleM) },
+        isError = error != null,
+        supportingText = error?.let { { Text(it, style = AppText.bodyS) } },
+        keyboardOptions = KeyboardOptions(
+            capitalization = KeyboardCapitalization.Words,
+            imeAction = ImeAction.Done,
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    )
 }

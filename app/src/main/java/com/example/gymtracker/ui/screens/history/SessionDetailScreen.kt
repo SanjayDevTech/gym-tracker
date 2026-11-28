@@ -1,5 +1,35 @@
 package com.example.gymtracker.ui.screens.history
 
+import com.composables.icons.lucide.ChevronRight
+import com.composables.icons.lucide.Dumbbell
+import com.composables.icons.lucide.Layers
+import com.composables.icons.lucide.Timer
+import com.composables.icons.lucide.Weight
+import com.example.gymtracker.ui.components.StatTile
+import com.example.gymtracker.ui.components.icon
+import com.example.gymtracker.ui.components.atoms.PastelIcon
+import com.example.gymtracker.ui.theme.Pastel
+import com.example.gymtracker.ui.theme.meshGradient
+import com.example.gymtracker.ui.theme.dotTexture
+import com.example.gymtracker.ui.theme.Rich
+import com.example.gymtracker.ui.theme.Radius
+import com.example.gymtracker.ui.components.atoms.staggerIn
+import com.example.gymtracker.ui.components.atoms.softFill
+import com.example.gymtracker.ui.components.atoms.cardColor
+import com.example.gymtracker.ui.components.atoms.SheetTitleRow
+import com.example.gymtracker.ui.components.atoms.Metric
+import com.example.gymtracker.ui.components.atoms.AppCard
+import com.composables.icons.lucide.Trophy
+import com.composables.icons.lucide.Lucide
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -120,27 +150,41 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, onOpenExercise: (Lo
                 top = Spacing.s,
                 bottom = Spacing.xxl,
             ),
+            verticalArrangement = Arrangement.spacedBy(Spacing.section),
         ) {
             item(key = "stats") {
-                Column {
-                    DetailStats(s)
-                    Spacer(Modifier.height(Spacing.s))
-                    Text(
-                        "${s.exerciseCount} ${plural(s.exerciseCount, "exercise")} · " +
-                            "Volume = weight × reps, warm-ups out.",
-                        style = AppText.bodyS,
-                        color = scheme.onSurfaceVariant,
-                    )
+                DetailHero(s, Modifier.staggerIn(0))
+            }
+            item(key = "tiles") {
+                Column(Modifier.staggerIn(1), verticalArrangement = Arrangement.spacedBy(Spacing.section)) {
+                    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(Spacing.section)) {
+                        StatTile(Rich.Sets, Lucide.Layers, "Sets", "${s.doneSets}", Modifier.weight(1f).fillMaxHeight(), unit = plural(s.doneSets, "set"))
+                        StatTile(
+                            Rich.Volume, Lucide.Weight, "Volume",
+                            if (s.volumeKg > 0.0) formatVolumeNumber(s.volumeKg, s.unit) else EM_DASH,
+                            Modifier.weight(1f).fillMaxHeight(),
+                            unit = if (s.volumeKg > 0.0) s.unit.label else "",
+                            caption = "Warm-ups out",
+                        )
+                    }
+                    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(Spacing.section)) {
+                        StatTile(Rich.Body, Lucide.Dumbbell, "Exercises", "${s.exerciseCount}", Modifier.weight(1f).fillMaxHeight())
+                        StatTile(Rich.Records, Lucide.Trophy, "Records", "${s.prCount}", Modifier.weight(1f).fillMaxHeight(), unit = plural(s.prCount, "PR"))
+                    }
+                }
+            }
+            item(key = "note") {
+                AppCard(Modifier.staggerIn(2)) {
                     NoteLine(note = s.notes, onClick = { editingNote = true }, label = "Note")
                 }
             }
-            s.exercises.forEach { e ->
+            s.exercises.forEachIndexed { i, e ->
                 item(key = "exercise-${e.exerciseId}") {
                     ExerciseTable(
                         exercise = e,
                         unit = s.unit,
                         onOpen = { onOpenExercise(e.exerciseId) },
-                        modifier = Modifier.padding(top = Spacing.section),
+                        modifier = Modifier.staggerIn(3 + i),
                     )
                 }
             }
@@ -174,39 +218,53 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, onOpenExercise: (Lo
 }
 
 /**
- * The S4-c stat row: four equal columns, eyebrow over [AppText.numberM]. A private twin of
- * `StatColumns` because PRS needs its own colour (primary when > 0), which the atom can't take.
+ * The session on Foodprint's soft gradient hero: the date up top with a PR chip and the duration
+ * as the one big figure. Sets, volume, exercises and records sit in the tiles under it.
  */
 @Composable
-private fun DetailStats(s: SessionDetailState) {
+private fun DetailHero(s: SessionDetailState, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.m),
-        verticalAlignment = Alignment.Bottom,
+    Column(
+        modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Radius.lg + 4.dp))
+            .meshGradient(animate = false)
+            .dotTexture(color = scheme.onSurface.copy(alpha = 0.10f))
+            .padding(20.dp),
     ) {
-        StatCell("Duration", s.durationMillis?.let(::formatClock) ?: EM_DASH, null, scheme.onSurface)
-        StatCell("Sets", "${s.doneSets}", null, scheme.onSurface)
-        StatCell(
-            "Volume",
-            if (s.volumeKg > 0.0) formatVolumeNumber(s.volumeKg, s.unit) else EM_DASH,
-            if (s.volumeKg > 0.0) s.unit.label else null,
-            scheme.onSurface,
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                LocalDate.ofEpochDay(s.dateEpochDay).format(DateTimeFormatter.ofPattern("EEEE d MMM", Locale.getDefault())),
+                style = AppText.eyebrow,
+                color = scheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            if (s.prCount > 0) {
+                Row(
+                    Modifier
+                        .clip(RoundedCornerShape(Radius.pill))
+                        .background(cardColor().copy(alpha = 0.75f))
+                        .padding(horizontal = Spacing.m, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Lucide.Trophy, contentDescription = null, tint = Rich.Records.ink, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(Spacing.xs))
+                    Text("${s.prCount} ${plural(s.prCount, "record")}", style = AppText.label, color = scheme.onSurface)
+                }
+            }
+        }
+        Spacer(Modifier.height(Spacing.xs))
+        Text(
+            s.durationMillis?.let(::formatClock) ?: EM_DASH,
+            style = AppText.numberXXL,
+            color = scheme.onSurface,
+            modifier = Modifier.semantics { contentDescription = "Duration ${s.durationMillis?.let(::formatClock) ?: "not timed"}" },
         )
-        StatCell("PRs", "${s.prCount}", null, if (s.prCount > 0) scheme.primary else scheme.onSurface)
-    }
-}
-
-@Composable
-private fun RowScope.StatCell(
-    label: String,
-    value: String,
-    unit: String?,
-    color: Color,
-) {
-    Column(Modifier.weight(1f)) {
-        Eyebrow(label)
-        ValueText(value = value, unit = unit, style = AppText.numberM, color = color)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Lucide.Timer, contentDescription = null, tint = scheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(Spacing.xs))
+            Text("Duration", style = AppText.eyebrow, color = scheme.onSurfaceVariant)
+        }
     }
 }
 
@@ -219,8 +277,8 @@ private fun NoteSheet(initial: String, onSave: (String) -> Unit, onDismiss: () -
     AppSheet(onDismiss = onDismiss) {
         // The sheet's only IME consumer: keeps the field and Save above the keyboard.
         Column(Modifier.imePadding()) {
-            Text("Note", style = AppText.titleL, color = scheme.onSurface)
-            Spacer(Modifier.height(Spacing.l))
+            SheetTitleRow("Note", onClose = onDismiss)
+            Spacer(Modifier.height(Spacing.m))
             BasicTextField(
                 value = text,
                 onValueChange = { text = it },
@@ -229,14 +287,19 @@ private fun NoteSheet(initial: String, onSave: (String) -> Unit, onDismiss: () -
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 modifier = Modifier.fillMaxWidth().focusRequester(focus),
                 decorationBox = { inner ->
-                    Box {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 96.dp)
+                            .clip(RoundedCornerShape(Radius.md))
+                            .background(softFill())
+                            .padding(Spacing.m),
+                    ) {
                         if (text.isEmpty()) Text("Add a note…", style = AppText.body, color = scheme.onSurfaceVariant)
                         inner()
                     }
                 },
             )
-            Spacer(Modifier.height(Spacing.s))
-            AppDivider()
             AppButton(
                 text = "Save",
                 onClick = { onSave(text) },
@@ -261,7 +324,7 @@ private fun ExerciseTable(
 ) {
     val scheme = MaterialTheme.colorScheme
     val lifting = exercise.movementType == MovementType.Compound || exercise.movementType == MovementType.Isolation
-    Column(modifier.fillMaxWidth()) {
+    AppCard(modifier) {
         // Head → Exercise detail.
         Column(
             Modifier
@@ -271,29 +334,31 @@ private fun ExerciseTable(
             verticalArrangement = Arrangement.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    exercise.name,
-                    style = AppText.titleM,
-                    color = scheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
+                PastelIcon(exercise.movementType.icon, Pastel.Peach, size = 36.dp)
                 Spacer(Modifier.width(Spacing.m))
-                Text(
-                    "${exercise.doneSets} ${plural(exercise.doneSets, "set")}",
-                    style = AppText.bodyS,
-                    color = scheme.onSurfaceVariant,
-                )
-            }
-            if (exercise.target != null) {
-                Eyebrow(exercise.target, color = scheme.tertiary)
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        exercise.name,
+                        style = AppText.titleM,
+                        color = scheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        listOfNotNull("${exercise.doneSets} ${plural(exercise.doneSets, "set")}", exercise.target).joinToString(" · "),
+                        style = AppText.bodyS,
+                        color = scheme.onSurfaceVariant,
+                    )
+                }
+                Icon(Lucide.ChevronRight, contentDescription = null, tint = scheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
             }
         }
-        Spacer(Modifier.height(Spacing.s))
-        AppDivider()
-        exercise.sets.forEach { set ->
-            SetLine(set = set, unit = unit, lifting = lifting, repUnit = exercise.movementType.repUnit)
+        Spacer(Modifier.height(Spacing.m))
+        // Each set on its own soft pill: no rules, just space.
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            exercise.sets.forEach { set ->
+                SetLine(set = set, unit = unit, lifting = lifting, repUnit = exercise.movementType.repUnit)
+            }
         }
     }
 }
@@ -305,7 +370,7 @@ private fun SetLine(set: DetailSet, unit: WeightUnit, lifting: Boolean, repUnit:
     val muted = !set.completed || set.setType == SetType.Warmup
     val valueColor = when {
         muted -> scheme.onSurfaceVariant
-        set.isPr -> scheme.primary
+        set.isPr -> Rich.Records.ink
         else -> scheme.onSurface
     }
     val badgeColor = when {
@@ -318,7 +383,9 @@ private fun SetLine(set: DetailSet, unit: WeightUnit, lifting: Boolean, repUnit:
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = Sizes.touchTarget)
-            .padding(vertical = Spacing.xs),
+            .clip(RoundedCornerShape(Radius.md))
+            .background(softFill())
+            .padding(horizontal = Spacing.m, vertical = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(set.badge, style = AppText.numberM, color = badgeColor, modifier = Modifier.widthIn(min = BadgeColumn))
@@ -341,7 +408,7 @@ private fun SetLine(set: DetailSet, unit: WeightUnit, lifting: Boolean, repUnit:
             Spacer(Modifier.weight(1f))
         }
         Box(Modifier.widthIn(min = PrColumn), contentAlignment = Alignment.Center) {
-            if (set.isPr) AppBadge("PR")
+            if (set.isPr) AppBadge("PR", container = scheme.tertiary, content = scheme.onTertiary)
         }
         Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
             if (!set.completed) {

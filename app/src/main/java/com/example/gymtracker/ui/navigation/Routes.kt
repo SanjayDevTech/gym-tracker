@@ -4,23 +4,27 @@ import androidx.annotation.Keep
 import kotlinx.serialization.Serializable
 
 /*
- * Every destination — design-plan §5. The three bar destinations ([TrainRoute], [HistoryRoute],
- * [ProgressRoute]) are peers; everything else is a leaf page that pushes onto whichever tab is
- * current and hides the bar.
+ * Every destination. The three bar destinations ([HomeRoute], [ProgressRoute], [YouRoute]) are
+ * peers; everything else is a leaf page that pushes onto whichever tab is current and hides the
+ * bar. [OnboardingRoute] is the whole graph until the first run finishes.
  */
+
+@Serializable object OnboardingRoute
 
 // ---- Bottom-bar destinations ----------------------------------------------
 
-/** Start destination: live session, week vs target, plans (§4.1; was "Plans"). */
-@Serializable object TrainRoute
-@Serializable object HistoryRoute
-/** Consistency, volume, muscles (§4.12; was "Analytics"). */
+/** Start destination: live session, the week, the muscle map, plans and recent sessions. */
+@Serializable object HomeRoute
+/** Consistency, volume, muscles over any period. */
 @Serializable object ProgressRoute
+/** Settings, library and data, behind a profile card. */
+@Serializable object YouRoute
 
 // ---- Leaf pages ------------------------------------------------------------
 
-@Serializable object SettingsRoute
-/** Plans & backup (§4.15), from Settings. */
+/** Every session, newest first — from Home's "Recent" and Progress. */
+@Serializable object HistoryRoute
+/** Plans & backup, from You. */
 @Serializable object DataRoute
 
 /** The exercise library (§4.10), from Progress's top-bar action. */

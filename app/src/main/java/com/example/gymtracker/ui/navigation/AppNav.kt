@@ -5,15 +5,20 @@ import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.Alignment
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
+import kotlinx.coroutines.flow.first
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -59,11 +64,13 @@ import com.example.gymtracker.ui.screens.logger.SessionLoggerHost
 import com.example.gymtracker.ui.screens.picker.ExercisePickerScreen
 import com.example.gymtracker.ui.screens.plans.PlanEditorScreen
 import com.example.gymtracker.ui.screens.plans.PlanListViewModel
-import com.example.gymtracker.ui.screens.plans.TrainScreen
 import com.example.gymtracker.ui.screens.plans.importplan.ImportPlanScreen
 import com.example.gymtracker.ui.screens.plans.templates.TemplateDetailScreen
 import com.example.gymtracker.ui.screens.plans.templates.TemplateListScreen
-import com.example.gymtracker.ui.screens.settings.SettingsScreen
+import com.example.gymtracker.ui.screens.settings.YouScreen
+import com.example.gymtracker.ui.screens.home.HomeScreen
+import com.example.gymtracker.ui.screens.home.StartWorkoutSheet
+import com.example.gymtracker.ui.screens.onboarding.OnboardingScreen
 import com.example.gymtracker.ui.screens.settings.SettingsViewModel
 import com.example.gymtracker.ui.screens.summary.SessionSummaryScreen
 import kotlinx.coroutines.launch
@@ -73,6 +80,17 @@ private data class PendingStart(val planId: Long?, val title: String, val runnin
 
 @Composable
 fun AppNav() {
+    val container = LocalAppContainer.current
+    // Read once before the graph is built: the start destination can't change under a NavHost.
+    val onboardedPref by produceState<Boolean?>(initialValue = null) {
+        value = container.prefs.onboarded.first()
+    }
+    val onboarded = onboardedPref ?: return
+    AppNavHost(onboarded)
+}
+
+@Composable
+private fun AppNavHost(onboarded: Boolean) {
     val nav = rememberNavController()
     val container = LocalAppContainer.current
     val scope = rememberCoroutineScope()
@@ -141,40 +159,35 @@ fun AppNav() {
         )
     }
 
-    // ---- "Push A is still running · Resume" (§5), once per session, on Train -------------------
+    // ---- "Push A is still running · Resume", once per session, on Home --------------------------
     var runningNotice by remember { mutableStateOf<RunningDraft?>(null) }
     var noticeShownFor by rememberSaveable { mutableLongStateOf(0L) }
-    val trainSnackbar = remember { SnackbarHostState() }
+    val homeSnackbar = remember { SnackbarHostState() }
+    var showStart by rememberSaveable { mutableStateOf(false) }
 
     val backStackEntry by nav.currentBackStackEntryAsState()
     val currentTab = backStackEntry?.destination.barDestination()
+    val hazeState = rememberHazeState()
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        // The outer Scaffold pads for the bar only. With no insets of its own, `barPadding` is the
-        // bar's height (which already includes the navigation-bar inset) on the three tabs and 0
-        // on leaf pages, whose own Scaffolds then consume the system inset themselves (§5).
-        contentWindowInsets = WindowInsets(0),
-        bottomBar = {
-            // Leaf pages push onto the current tab's stack and hide the bar; the logger owns the
-            // bottom of the screen (rule 11).
-            if (currentTab != null) {
-                AppBottomBar(current = currentTab, onSelect = { nav.toBarDestination(it) })
-            }
-        },
-    ) { inner ->
-        val barPadding = inner.calculateBottomPadding()
+    if (showStart) {
+        StartWorkoutSheet(
+            onQuickLog = { showStart = false; startSession(null) },
+            onStartPlan = { showStart = false; startSession(it) },
+            onDismiss = { showStart = false },
+        )
+    }
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+    ) {
         NavHost(
             navController = nav,
-            startDestination = TrainRoute,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = barPadding)
-                // Inset rule (§5, food lesson 3): padding moves the content up but consumes
-                // nothing, so a destination's own Scaffold would still read the navigation-bar
-                // inset and add it a second time, floating its FAB and snackbar an inset clear
-                // of the bar. Consume the bottom only; status-bar insets stay each screen's job.
-                .consumeWindowInsets(PaddingValues(bottom = barPadding)),
+            startDestination = if (onboarded) HomeRoute else OnboardingRoute,
+            // The bar floats over the tab screens, which pad their own content by
+            // [bottomBarClearance]; leaf pages hide it and own the bottom of the screen.
+            modifier = Modifier.fillMaxSize().hazeSource(hazeState),
             enterTransition = navEnter,
             exitTransition = navExit,
             popEnterTransition = navPopEnter,
@@ -182,9 +195,17 @@ fun AppNav() {
             predictivePopEnterTransition = navPredictivePopEnter,
             predictivePopExitTransition = navPredictivePopExit,
         ) {
+            composable<OnboardingRoute> {
+                OnboardingScreen(
+                    onDone = {
+                        nav.navigate(HomeRoute) { popUpTo<OnboardingRoute> { inclusive = true } }
+                    },
+                )
+            }
+
             // ---- Bar destinations -------------------------------------------------------------
 
-            composable<TrainRoute> {
+            composable<HomeRoute> {
                 val vm: PlanListViewModel = viewModel(
                     factory = AppViewModelFactory(
                         mapOf(PlanListViewModel::class.java to {
@@ -196,7 +217,7 @@ fun AppNav() {
                     val notice = runningNotice ?: return@LaunchedEffect
                     runningNotice = null // restarts this effect; the snackbar runs in AppNav's scope
                     scope.launch {
-                        val result = trainSnackbar.showSnackbar(
+                        val result = homeSnackbar.showSnackbar(
                             message = "${notice.title} is still running",
                             actionLabel = "Resume",
                             duration = SnackbarDuration.Short,
@@ -206,40 +227,52 @@ fun AppNav() {
                         }
                     }
                 }
-                TrainScreen(
+                HomeScreen(
                     viewModel = vm,
-                    snackbarHostState = trainSnackbar,
-                    onSettings = { nav.navigate(SettingsRoute) },
-                    onQuickLog = { startSession(null) },
+                    snackbarHostState = homeSnackbar,
                     onOpenPlan = { nav.navigate(PlanEditorRoute(it)) },
-                    onLogPlan = { startSession(it) },
+                    onStartPlan = { startSession(it) },
+                    onQuickLog = { startSession(null) },
                     onResumeSession = { nav.navigate(SessionLoggerRoute(planId = it)) },
                     onOpenTemplates = { nav.navigate(TemplatesRoute) },
+                    onOpenProgress = { nav.toBarDestination(BarDestination.Progress) },
+                    onOpenHistory = { nav.navigate(HistoryRoute) },
+                    onOpenSession = { nav.navigate(SessionDetailRoute(it)) },
                 )
             }
 
-            composable<HistoryRoute> {
-                HistoryScreen(onOpenSession = { nav.navigate(SessionDetailRoute(it)) })
-            }
-
             composable<ProgressRoute> {
-                ProgressScreen(onOpenExercises = { nav.navigate(ExercisesRoute) })
+                ProgressScreen(
+                    onOpenExercises = { nav.navigate(ExercisesRoute) },
+                    onOpenHistory = { nav.navigate(HistoryRoute) },
+                )
             }
 
             // ---- Leaf pages -----------------------------------------------------------------
 
-            composable<SettingsRoute> {
+            composable<YouRoute> {
                 val vm: SettingsViewModel = viewModel(
                     factory = AppViewModelFactory(
                         mapOf(SettingsViewModel::class.java to {
-                            SettingsViewModel(container.prefs)
+                            SettingsViewModel(container.prefs, container.database.sessionDao())
                         })
                     )
                 )
-                SettingsScreen(
+                YouScreen(
                     viewModel = vm,
-                    onBack = { nav.popBackStack() },
                     onOpenData = { nav.navigate(DataRoute) },
+                    onOpenExercises = { nav.navigate(ExercisesRoute) },
+                    onOpenTemplates = { nav.navigate(TemplatesRoute) },
+                    onOpenHistory = { nav.navigate(HistoryRoute) },
+                )
+            }
+
+            // ---- Leaf pages -----------------------------------------------------------------
+
+            composable<HistoryRoute> {
+                HistoryScreen(
+                    onBack = { nav.popBackStack() },
+                    onOpenSession = { nav.navigate(SessionDetailRoute(it)) },
                 )
             }
 
@@ -264,9 +297,9 @@ fun AppNav() {
                     templateId = route.templateId,
                     onBack = { nav.popBackStack() },
                     onAdded = { count ->
-                        // Back to Train, where the new plans now sit at the end of the list.
-                        nav.popBackStack(TrainRoute, inclusive = false)
-                        scope.launch { trainSnackbar.showSnackbar("Added $count ${plural(count, "plan")}") }
+                        // Back to Home, where the new plans now sit at the end of the list.
+                        nav.toBarDestination(BarDestination.Home)
+                        scope.launch { homeSnackbar.showSnackbar("Added $count ${plural(count, "plan")}") }
                     },
                 )
             }
@@ -362,7 +395,7 @@ fun AppNav() {
                     pickedExerciseIds = entry.pickedExercises(),
                     onPickedHandled = { entry.clearPickedExercises() },
                     onMinimise = {
-                        // The draft persists; Train says so once per session (§5).
+                        // The draft persists; Home says so once per session.
                         draft?.let { RunningDraft.from(it) }?.let { running ->
                             if (running.startedAtMillis != noticeShownFor) {
                                 noticeShownFor = running.startedAtMillis
@@ -410,23 +443,42 @@ fun AppNav() {
                 )
             }
         }
+        AnimatedVisibility(
+            visible = currentTab != null,
+            modifier = Modifier.align(Alignment.BottomCenter),
+            enter = slideInVertically { it } + fadeIn(),
+            exit = slideOutVertically { it } + fadeOut(),
+        ) {
+            AppBottomBar(
+                hazeState = hazeState,
+                current = currentTab,
+                onSelect = { nav.toBarDestination(it) },
+                onAdd = {
+                    // A running workout is one tap away; otherwise pick what to start.
+                    val running = draft
+                    if (running != null) nav.navigate(SessionLoggerRoute(planId = running.planId))
+                    else showStart = true
+                },
+            )
+        }
     }
 }
 
 /**
  * Switch bar tabs — §5 "Back-stack behaviour". The three are peers, not a stack:
- * `popUpTo(startDestination)` with `saveState`/`restoreState` means Train → History → Progress →
- * back lands on Train, and each tab keeps its own stack and scroll position. `launchSingleTop`
+ * `popUpTo(HomeRoute)` with `saveState`/`restoreState` means Home → Progress → You → back lands
+ * on Home, and each tab keeps its own stack and scroll position. `launchSingleTop`
  * stops a second tap on the current tab stacking a duplicate.
  */
 private fun NavHostController.toBarDestination(dest: BarDestination) {
     val route: Any = when (dest) {
-        BarDestination.Train -> TrainRoute
-        BarDestination.History -> HistoryRoute
+        BarDestination.Home -> HomeRoute
         BarDestination.Progress -> ProgressRoute
+        BarDestination.You -> YouRoute
     }
     navigate(route) {
-        popUpTo(graph.startDestinationId) { saveState = true }
+        // HomeRoute, not the graph's start: after onboarding the start destination is gone.
+        popUpTo<HomeRoute> { saveState = true }
         launchSingleTop = true
         restoreState = true
     }
