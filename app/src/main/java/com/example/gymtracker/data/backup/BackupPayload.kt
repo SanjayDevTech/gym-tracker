@@ -24,6 +24,11 @@ data class PrefsSnapshot(
     // v3. Null when the file predates it — the current preference is then left alone.
     val volumeMetric: String? = null,
     val weeklyTargetSessions: Int? = null,
+    // Null when the file predates them — the current preference is then left alone. `theme` is a
+    // new name on purpose: `themeMode` above holds values from older exports that restore ignores.
+    val theme: String? = null,
+    val userName: String? = null,
+    val defaultRestSeconds: Int? = null,
 )
 
 @Serializable

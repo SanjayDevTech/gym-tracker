@@ -1,6 +1,7 @@
 package com.example.gymtracker.data.backup
 
 import com.example.gymtracker.data.SetType
+import com.example.gymtracker.data.ThemeMode
 import com.example.gymtracker.data.VolumeMetric
 import com.example.gymtracker.data.db.SessionDraftPayload
 import kotlinx.serialization.json.Json
@@ -28,6 +29,9 @@ class PayloadCompatTest {
         assertNull(payload.sessions.single().sets.single().setType)
         assertNull(payload.prefs.volumeMetric)
         assertNull(payload.prefs.weeklyTargetSessions)
+        assertNull(payload.prefs.theme)
+        assertNull(payload.prefs.userName)
+        assertNull(payload.prefs.defaultRestSeconds)
     }
 
     @Test
@@ -40,6 +44,9 @@ class PayloadCompatTest {
                 seedVersion = 1,
                 volumeMetric = VolumeMetric.Tonnage.name,
                 weeklyTargetSessions = 5,
+                theme = ThemeMode.Dark.name,
+                userName = "Sam",
+                defaultRestSeconds = 120,
             ),
             customExercises = emptyList(),
             plans = emptyList(),
@@ -57,6 +64,9 @@ class PayloadCompatTest {
         assertEquals(SetType.Failure.name, back.sessions.single().sets.single().setType)
         assertEquals(VolumeMetric.Tonnage.name, back.prefs.volumeMetric)
         assertEquals(5, back.prefs.weeklyTargetSessions)
+        assertEquals(ThemeMode.Dark.name, back.prefs.theme)
+        assertEquals("Sam", back.prefs.userName)
+        assertEquals(120, back.prefs.defaultRestSeconds)
     }
 
     @Test

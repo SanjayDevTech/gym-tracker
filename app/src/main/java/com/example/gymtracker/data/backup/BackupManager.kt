@@ -9,6 +9,7 @@ import com.example.gymtracker.data.MovementType
 import com.example.gymtracker.data.Muscle
 import com.example.gymtracker.data.PreferencesStore
 import com.example.gymtracker.data.SetType
+import com.example.gymtracker.data.ThemeMode
 import com.example.gymtracker.data.VolumeMetric
 import com.example.gymtracker.data.WeightUnit
 import com.example.gymtracker.data.db.AppDatabase
@@ -135,6 +136,9 @@ class BackupManager(
                 seedVersion = prefs.seedVersion.first(),
                 volumeMetric = prefs.volumeMetric.first().name,
                 weeklyTargetSessions = prefs.weeklyTargetSessions.first(),
+                theme = prefs.themeMode.first().name,
+                userName = prefs.userName.first(),
+                defaultRestSeconds = prefs.defaultRestSeconds.first(),
             ),
             customExercises = customs,
             plans = planSnapshots,
@@ -252,6 +256,9 @@ class BackupManager(
             parseEnumOrNull<VolumeMetric>(name)?.let { prefs.setVolumeMetric(it) }
         }
         payload.prefs.weeklyTargetSessions?.let { prefs.setWeeklyTargetSessions(it) }
+        payload.prefs.theme?.let { name -> parseEnumOrNull<ThemeMode>(name)?.let { prefs.setThemeMode(it) } }
+        payload.prefs.userName?.let { prefs.setUserName(it) }
+        payload.prefs.defaultRestSeconds?.takeIf { it > 0 }?.let { prefs.setDefaultRestSeconds(it) }
     }
 
     private inline fun <reified T : Enum<T>> parseEnum(value: String, fallback: T): T =
