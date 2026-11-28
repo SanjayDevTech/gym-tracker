@@ -44,7 +44,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.semantics.Role
@@ -129,13 +128,15 @@ fun SetRow(
         animationSpec = tween(300),
         label = "checkFill",
     )
+    // Fade from the same colour at zero alpha, not Color.Transparent: that is transparent *black*,
+    // so the midpoint of the fade is a translucent grey that flashes on the light card.
     val checkTint by animateColorAsState(
-        if (done) scheme.onSecondary else Color.Transparent,
+        if (done) scheme.onSecondary else scheme.onSecondary.copy(alpha = 0f),
         animationSpec = tween(300),
         label = "checkTint",
     )
     val tint by animateColorAsState(
-        if (done) AppTheme.extras.doneRow else Color.Transparent,
+        AppTheme.extras.doneRow.let { if (done) it else it.copy(alpha = 0f) },
         animationSpec = tween(150),
         label = "doneTint",
     )
