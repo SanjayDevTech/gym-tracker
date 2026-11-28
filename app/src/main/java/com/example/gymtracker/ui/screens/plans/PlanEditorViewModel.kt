@@ -33,7 +33,7 @@ class PlanEditorViewModel(
             initialValue = null,
         )
 
-    /** Median length of this plan's timed sessions (decision 4); null when none is timed. */
+    /** Median length of this plan's timed sessions; null when none is timed. */
     val typicalDurationMillis: StateFlow<Long?> = sessionDao.observeSessionVolumes()
         .map { rows -> PlanStats.medianDurationMillis(rows.filter { it.planId == planId }) }
         .stateIn(
@@ -96,7 +96,7 @@ class PlanEditorViewModel(
         viewModelScope.launch { repository.insertPlanned(planned) }
     }
 
-    /** Whole-plan deletion; the caller confirms first (house rule 10). Logged sessions are kept.
+    /** Whole-plan deletion; the caller confirms first. Logged sessions are kept.
      *  [onDeleted] runs after the write, so popping the screen cannot cancel it. */
     fun deletePlan(onDeleted: () -> Unit) {
         viewModelScope.launch {

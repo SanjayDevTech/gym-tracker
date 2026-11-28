@@ -38,9 +38,9 @@ import java.time.LocalDate
 /** The pinned range selector + pager position. [offset] = whole periods back from the current. */
 data class PeriodSelection(val window: AnalyticsWindow = AnalyticsWindow.Week, val offset: Int = 0)
 
-/** TRAINING DAYS hero and calendar (decision 7). */
+/** TRAINING DAYS hero and calendar. */
 data class Consistency(
-    /** Distinct days trained inside the period (issue 27: days, not sessions). */
+    /** Distinct days trained inside the period (days, not sessions). */
     val trainingDays: Int,
     val onTarget: WeeksOnTarget,
     val bestRun: Int,
@@ -66,7 +66,7 @@ data class MuscleFigures(
     /** 0..1 per muscle for the diagram's heat ramp. */
     val levels: Map<Muscle, Float>,
     val ranked: List<Pair<Muscle, Float>>,
-    /** Muscles with no working sets in the period (issue 31: follows the period). */
+    /** Muscles with no working sets in the period (follows the period). */
     val neglected: List<Muscle>,
 )
 
@@ -99,8 +99,8 @@ data class MuscleBreakdown(
 )
 
 /**
- * Progress (§4.12), was `AnalyticsViewModel`. Range + pager drive every figure; the volume
- * metric is local to this page (issue 30) and starts from the Settings preference.
+ * Progress, was `AnalyticsViewModel`. Range + pager drive every figure; the volume
+ * metric is local to this page and starts from the Settings preference.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProgressViewModel(
@@ -109,7 +109,7 @@ class ProgressViewModel(
 ) : ViewModel() {
 
     private val _selection = MutableStateFlow(PeriodSelection())
-    /** Drives the pinned selectors, which draw before the first emission (§4.12 Loading). */
+    /** Drives the pinned selectors, which draw before the first emission. */
     val selection: StateFlow<PeriodSelection> = _selection.asStateFlow()
 
     /** Local metric choice; null = follow the preference. */
@@ -126,7 +126,7 @@ class ProgressViewModel(
             .map { Triple(sel, today, period) to it }
     }
 
-    /** Null until the first Room emission (house rule 8). */
+    /** Null until the first Room emission, so loading shows no empty-state flash. */
     val state: StateFlow<ProgressState?> = combine(
         periodData,
         // Deleted (custom) exercises included: their logged sets still count toward muscles.

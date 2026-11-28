@@ -57,7 +57,7 @@ data class ExerciseGroup(
     val targetRepsLow: Int,
     val targetRepsHigh: Int,
     val sets: List<SetDraft>,
-    /** "Skip exercise": its unticked sets stay unticked (saved as skipped, decision 8) and the
+    /** "Skip exercise": its unticked sets stay unticked (saved as skipped) and the
      *  block folds. Cleared by ticking any of its sets, or "Unskip exercise". */
     val skipped: Boolean = false,
 ) {
@@ -80,7 +80,7 @@ data class ExerciseGroup(
     }
 
     /**
-     * A typed edit into a set row. Typing auto-ticks the set (the fast path, §4.3) — except the
+     * A typed edit into a set row. Typing auto-ticks the set (the fast path) — except the
      * set that would complete the exercise (the only one left unticked): ticking that one is
      * left to the user, so the block doesn't fold while they are still adjusting it. On the first
      * input into such a set the outcome asks the row to nudge its check.
@@ -126,7 +126,7 @@ data class SessionLoggerState(
     /** Wall-clock of the last set marked completed; 0 = rest cleared (Skip, or no set yet).
      *  Persisted in the draft so the rest clock keeps running while the logger is closed. */
     val lastSetCompletedAtMillis: Long = 0L,
-    /** This workout's rest target (§6.3). */
+    /** This workout's rest target. */
     val restTargetSeconds: Int = DEFAULT_REST_SECONDS,
     /** Wall-clock the workout was paused at; 0 = running. While paused both clocks stand still. */
     val pausedAtMillis: Long = 0L,
@@ -165,7 +165,7 @@ class SessionLoggerViewModel(
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    /** Single-level undo buffer for the last removed exercise or set (§6.6). */
+    /** Single-level undo buffer for the last removed exercise or set. */
     private sealed interface Removed {
         data class Group(val index: Int, val group: ExerciseGroup) : Removed
         data class Set(val groupUid: String, val index: Int, val set: SetDraft) : Removed
@@ -324,7 +324,7 @@ class SessionLoggerViewModel(
     // ---- Date -------------------------------------------------------------
 
     /** Apply a date from the Material date picker (UTC-midnight millis). Future days — judged
-     *  against *local* today, not UTC — are refused (issue 15). */
+     *  against *local* today, not UTC — are refused. */
     fun setDateFromPicker(utcMillis: Long) {
         val epochDay = DateUtil.pickerMillisToEpochDay(utcMillis)
         if (epochDay > DateUtil.todayEpochDay()) return
@@ -490,7 +490,7 @@ class SessionLoggerViewModel(
 
     fun unskipGroup(groupIndex: Int) = updateGroup(groupIndex) { it.copy(skipped = false) }
 
-    /** The row's check. Ticking an empty row commits its hint values so they are shown (§6.2). */
+    /** The row's check. Ticking an empty row commits its hint values so they are shown. */
     fun setCompleted(groupIndex: Int, setIndex: Int, completed: Boolean) {
         val unit = _draft.value.weightUnit
         updateSet(groupIndex, setIndex) { set ->
@@ -641,7 +641,7 @@ class SessionLoggerViewModel(
             val sessionId = repository.saveSession(session) { id ->
                 s.groups.flatMap { group ->
                     group.sets.mapIndexed { idx, draft ->
-                        // Unticked sets are saved as skipped (decision 8): is_completed = false,
+                        // Unticked sets are saved as skipped: is_completed = false,
                         // carrying the values the row showed so History can render them.
                         LoggedSetEntity(
                             sessionId = id,

@@ -62,7 +62,7 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        /** v4 → v5 (decision 4): record when each workout started, so a session has a duration.
+        /** v4 → v5: record when each workout started, so a session has a duration.
          *  Nullable with no default — sessions logged before this stay NULL and show "—". */
         internal val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {

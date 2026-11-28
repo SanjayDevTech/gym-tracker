@@ -9,7 +9,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/** Formats written before phase 3 must still decode (additive, optional fields only). */
+/** Older backup formats must still decode (additive, optional fields only). */
 class PayloadCompatTest {
     private val json = Json { ignoreUnknownKeys = true }
 

@@ -15,7 +15,7 @@ import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 
-/** The user-editable fields of a custom exercise (§4.19). */
+/** The user-editable fields of a custom exercise. */
 data class CustomExerciseFields(
     val name: String,
     val movementType: MovementType,
@@ -66,7 +66,7 @@ class GymRepository(private val db: AppDatabase) {
      *  [ExerciseNameRule.findLiveMatch]) instead of re-reading the table per name. */
     suspend fun allActiveExercises(): List<ExerciseEntity> = exerciseDao.allActive()
 
-    /** Insert a user-made exercise (phase 9): fresh random UUID, `isCustom = true`, no cues. */
+    /** Insert a user-made exercise: fresh random UUID, `isCustom = true`, no cues. */
     suspend fun createCustomExercise(fields: CustomExerciseFields): Long = exerciseDao.insert(
         ExerciseEntity(
             clientUuid = UUID.randomUUID().toString(),

@@ -213,7 +213,7 @@ fun PlanEditorScreen(
 
     Scaffold(
         topBar = {
-            // Loading: no title, no menu, no placeholder name (§4.2).
+            // Loading: no title, no menu, no placeholder name.
             AppTopBar(
                 title = "",
                 onBack = onBack,

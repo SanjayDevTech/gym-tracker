@@ -45,7 +45,7 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * History — §4.8, bar destination 2 (no back arrow). Sessions by ISO week: a standing head per
+ * History (no back arrow). Sessions by ISO week: a standing head per
  * week with its session count, then one row per session (day eyebrow · plan name · meta ·
  * trailing set count). Bar screen: no FAB, so no bottom clearance; the NavHost owns the bar inset.
  */
@@ -65,7 +65,7 @@ fun HistoryScreen(onBack: () -> Unit, onOpenSession: (Long) -> Unit) {
         topBar = { AppTopBar(title = "History", onBack = onBack) },
         modifier = Modifier.fillMaxSize(),
     ) { padding ->
-        // House rule 8: top bar only until the first emission.
+        // Loading: top bar only until the first emission.
         val s = state ?: return@Scaffold
         if (s.weeks.isEmpty()) {
             EmptyState(
@@ -157,8 +157,8 @@ private fun SessionRow(
 }
 
 /**
- * `5 exercises · 41 min · 8 420 kg`. Duration is left out for sessions logged before v5 (§4.8:
- * "omit the duration"), volume when there is none (cardio, bodyweight-only).
+ * `5 exercises · 41 min · 8 420 kg`. Duration is left out for sessions logged before v5, volume
+ * when there is none (cardio, bodyweight-only).
  */
 private fun HistoryRow.metaLine(unit: WeightUnit): String = buildList {
     add("$exerciseCount ${plural(exerciseCount, "exercise")}")

@@ -44,7 +44,7 @@ class ExercisePickerViewModel(
 
     private val inputs = combine(query, filters, selected) { q, f, s -> Triple(q, f, s) }
 
-    /** Null until the first Room emission (house rule 8). */
+    /** Null until the first Room emission, so loading shows no empty-state flash. */
     val state: StateFlow<PickerUiState?> = combine(
         repository.observeExercises(),
         recentIds,

@@ -16,13 +16,13 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 
-/** One History row — §4.8: plan name (or "Quick log"), counts, duration, volume. */
+/** One History row: plan name (or "Quick log"), counts, duration, volume. */
 data class HistoryRow(
     val sessionId: Long,
     val dateEpochDay: Long,
     /** Plan name, or null for an ad-hoc session (rendered "Quick log"). */
     val planName: String?,
-    /** Exercises with at least one completed set (issue 19's one definition). */
+    /** Exercises with at least one completed set (the one definition used everywhere). */
     val exerciseCount: Int,
     val doneSets: Int,
     /** Working + failure volume in kg; warm-ups out. */
@@ -43,7 +43,7 @@ data class HistoryState(
 )
 
 /**
- * History — §4.8. Sessions grouped by ISO week. Starts at `null` (house rule 8) so the
+ * History. Sessions grouped by ISO week. Starts at `null` so the
  * screen draws only its top bar until Room's first emission; an empty list is a real empty.
  */
 class HistoryViewModel(

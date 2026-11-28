@@ -3,7 +3,7 @@ package com.example.gymtracker.domain
 import java.time.LocalDate
 import java.time.ZoneId
 
-/** The Progress range selector (§4.12). Rolling windows ending today; "Today" was "Session". */
+/** The Progress range selector. Rolling windows ending today; "Today" was "Session". */
 enum class AnalyticsWindow(val label: String, val days: Int) {
     Today("Today", 1),
     Week("Week", 7),

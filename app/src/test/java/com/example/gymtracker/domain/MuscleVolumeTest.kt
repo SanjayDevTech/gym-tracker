@@ -105,7 +105,7 @@ class MuscleVolumeTest {
         assertFalse(n.containsKey(Muscle.Quads))
     }
 
-    // --- Weekly working sets + the 10–20 band (decision 11) ---
+    // --- Weekly working sets + the 10–20 band ---
 
     @Test
     fun `weekly working sets divide window volume by its length in weeks`() {

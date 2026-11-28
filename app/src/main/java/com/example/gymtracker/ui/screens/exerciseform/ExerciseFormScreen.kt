@@ -64,7 +64,7 @@ import com.example.gymtracker.ui.theme.Spacing
 
 
 /**
- * Custom exercise form — design-plan §4.19 (phase 9). A full page from Exercises' FAB, the
+ * Custom exercise form. A full page from Exercises' FAB, the
  * picker's empty search, Exercise detail ⋮ Edit and Import's Create.
  *
  * Top bar with a `Save` text button, disabled until the name is valid; then Name, Type,

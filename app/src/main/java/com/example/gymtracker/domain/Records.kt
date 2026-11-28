@@ -10,7 +10,7 @@ data class RecordBroken(
     val delta: Float?,
 )
 
-/** One exercise's records in one session, judged against its pre-session baseline (§6.5). */
+/** One exercise's records in one session, judged against its pre-session baseline. */
 data class SessionRecords(
     /** Set index (position in the session's list) → the records that set broke. */
     val prSets: Map<Int, Set<PrType>>,

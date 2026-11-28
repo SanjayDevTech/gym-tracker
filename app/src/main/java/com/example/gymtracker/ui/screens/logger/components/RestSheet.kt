@@ -38,7 +38,7 @@ import com.example.gymtracker.ui.theme.Spacing
 private val Presets: List<Int?> = listOf(60, 90, 120, 180)
 
 /**
- * Rest sheet — §4.4. The dock already carries the transport; this sheet is for the *target*.
+ * Rest sheet. The dock already carries the transport; this sheet is for the *target*.
  *
  * Live `numberXXL` rest clock with `of 1:30`, the meter (rest hue, green once reached), a card
  * with a 15s [Stepper] (0:15–10:00) plus preset selector, "Use as default for new workouts", and

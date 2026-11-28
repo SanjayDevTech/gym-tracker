@@ -14,8 +14,8 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Sparkline — 96×28dp, 2dp ink stroke, the last point a 3dp accent dot;
- * no axes, no wash. Plan rows only. Draws nothing for fewer than two points (§4.1: a plan with
- * fewer than 2 sessions shows no sparkline). A flat series sits on the vertical centre.
+ * no axes, no wash. Plan rows only. Draws nothing for fewer than two points, so a plan with
+ * fewer than 2 sessions shows no sparkline. A flat series sits on the vertical centre.
  */
 @Composable
 fun Sparkline(

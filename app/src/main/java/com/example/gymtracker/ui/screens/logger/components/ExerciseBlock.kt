@@ -62,7 +62,7 @@ class SetActions(
     val onDelete: (setIndex: Int) -> Unit,
 )
 
-/** Cardio and mobility log time, not load: no weight column (issue 12). */
+/** Cardio and mobility log time, not load: no weight column. */
 val MovementType.logsWeight: Boolean
     get() = this != MovementType.Cardio && this != MovementType.Mobility
 

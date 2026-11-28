@@ -19,7 +19,7 @@ import com.example.gymtracker.ui.theme.Radius
 import com.example.gymtracker.ui.theme.Spacing
 import kotlin.math.roundToInt
 
-/** The tag's pointer (§2: 4dp tall). Sizes, not gaps. */
+/** The tag's pointer: 4dp tall. Sizes, not gaps. */
 private val PointerHeight = 4.dp
 private val PointerWidth = 8.dp
 

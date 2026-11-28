@@ -27,12 +27,12 @@ import kotlinx.serialization.Serializable
 /** Plans & backup, from You. */
 @Serializable object DataRoute
 
-/** The exercise library (§4.10), from Progress's top-bar action. */
+/** The exercise library, from Progress's top-bar action. */
 @Serializable object ExercisesRoute
 @Serializable data class ExerciseDetailRoute(val exerciseId: Long)
 
 /**
- * Custom exercise form (§4.19, phase 9). [exerciseId] null = create, else edit (custom only).
+ * Custom exercise form. [exerciseId] null = create, else edit (custom only).
  * The `prefill*` fields seed a new exercise — the picker's search text, or an Import entry's
  * optional fields (enum names; muscles comma-separated). A create returns the new id under
  * [CREATED_EXERCISE_KEY] on the previous entry's `savedStateHandle`.
@@ -49,7 +49,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class PlanEditorRoute(val planId: Long)
 @Serializable object ImportPlanRoute
 
-/** Plan templates (§4.20), from New plan and Plans & backup. */
+/** Plan templates, from New plan and Plans & backup. */
 @Serializable object TemplatesRoute
 @Serializable data class TemplateDetailRoute(val templateId: String)
 
@@ -57,11 +57,11 @@ import kotlinx.serialization.Serializable
 
 @Serializable data class SessionLoggerRoute(val planId: Long? = null)
 
-/** Shown after Finish, replacing the logger in the stack (§4.5). */
+/** Shown after Finish, replacing the logger in the stack. */
 @Serializable data class SessionSummaryRoute(val sessionId: Long)
 
 /**
- * Who opened the exercise picker (§4.13), which decides its behaviour:
+ * Who opened the exercise picker, which decides its behaviour:
  * [Session] multi-select with autofocused search (logger); [Plan] multi-select with `IN PLAN`
  * marks for [ExercisePickerRoute.planId]; [Single] one tap returns (Import's Map).
  */

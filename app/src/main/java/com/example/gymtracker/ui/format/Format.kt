@@ -6,10 +6,10 @@ import kotlin.math.abs
 import kotlin.math.roundToLong
 
 /**
- * Number formatting — design-plan §2, the `ValueText` + `Format.kt` row.
+ * Number formatting.
  *
  * One rounding rule for the whole app, and every weight and volume in the
- * user's preferred unit (house rule 9). Missing values render as [EM_DASH].
+ * user's preferred unit. Missing values render as [EM_DASH].
  */
 
 /** Non-breaking space. Thousands separator and number–unit gap both use it. */

@@ -109,14 +109,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
 
-/** Undo snackbars stay 5s (§6.6) — between Material's Short (4s) and Long (10s). */
+/** Undo snackbars stay 5s — between Material's Short (4s) and Long (10s). */
 private const val UNDO_MILLIS = 5_000L
 
-/** §1 motion: a finished exercise folds 600ms after its last set is ticked. */
+/** A finished exercise folds 600ms after its last set is ticked. */
 private const val COLLAPSE_DELAY_MILLIS = 600L
 
 /**
- * Session logger — design-plan §4.3, the reference implementation.
+ * Session logger.
  *
  * Top bar (title, Finish, ⋮, progress) and the bottom workout dock (workout clock, rest ring and
  * its keys) are fixed; one `LazyColumn` of [ExerciseBlock]s scrolls between them using the
@@ -322,7 +322,7 @@ fun LoggerScreen(
             modifier = Modifier.fillMaxSize(),
         ) { padding ->
             when {
-                // Loading: top bar + dock only, no "add an exercise" flash (house rule 8).
+                // Loading: top bar + dock only, no "add an exercise" flash.
                 !state.initialized -> Unit
                 reorderMode -> ReorderList(
                     groups = state.groups,
@@ -465,7 +465,7 @@ fun LoggerScreen(
 
 }
 
-/** Per-set callbacks for one block. Typing auto-completes a set (the fast path, §4.3) unless it
+/** Per-set callbacks for one block. Typing auto-completes a set (the fast path) unless it
  *  would complete the exercise; then [onNudge] pulses that set's check instead. They read the
  *  group from the VM at call time rather than capturing it, so one instance serves the block
  *  across edits. */
@@ -623,8 +623,8 @@ private fun PrHaptic(state: SessionLoggerState, prKeys: Set<String>, haptics: Ap
 }
 
 /**
- * Which settled blocks are folded (§7 phase 3: derived from `sets.all { isCompleted }` or the
- * group's skipped flag, plus a user override never stored in the draft). A block that isn't
+ * Which settled blocks are folded: derived from `sets.all { isCompleted }` or the group's
+ * skipped flag, plus a user override never stored in the draft. A block that isn't
  * settled is always expanded.
  */
 private class CollapseState(
@@ -680,7 +680,7 @@ private fun rememberCollapseState(): CollapseState = rememberSaveable(
 ) { CollapseState(emptySet(), emptySet(), emptySet(), seeded = false) }
 
 /** Blocks already finished when the logger opens fold at once; a block finished *now* folds
- *  600ms later and the next block scrolls to the top (§1 motion, §6.2 step 5). */
+ *  600ms later and the next block scrolls to the top. */
 @Composable
 private fun CollapseEffects(
     state: SessionLoggerState,
@@ -727,8 +727,8 @@ private fun EmptyLogger(onAddExercises: () -> Unit, padding: PaddingValues) {
     }
 }
 
-/** Change date (§4.3 change 1): capped at *local* today; the picker's UTC-midnight millis are
- *  converted by the VM, so the logged day is the day tapped (issue 15). */
+/** Change date: capped at *local* today; the picker's UTC-midnight millis are converted by
+ *  the VM, so the logged day is the day tapped. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LoggerDatePicker(epochDay: Long, onPick: (Long) -> Unit, onDismiss: () -> Unit) {

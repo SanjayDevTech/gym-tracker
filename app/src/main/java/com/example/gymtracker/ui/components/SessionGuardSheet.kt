@@ -49,9 +49,9 @@ data class RunningDraft(
 }
 
 /**
- * Session guard — design-plan §4.6. Raised by Start on a plan, the editor's Start workout, or
+ * Session guard. Raised by Start on a plan, the editor's Start workout, or
  * Quick log while a *different* workout is already running. Resume is the primary action; discard
- * is a second state of the same sheet rather than a sheet over a sheet (house rule 12).
+ * is a second state of the same sheet rather than a sheet over a sheet.
  *
  * @param startingTitle what the user tried to start ("Pull B", "a quick log").
  */

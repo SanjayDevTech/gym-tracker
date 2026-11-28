@@ -14,7 +14,7 @@ import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Spacing
 
 /**
- * One record — §3 `RecordRow` (Summary; Exercise detail later). Exercise name left, value in
+ * One record (Summary, Exercise detail). Exercise name left, value in
  * `primary` right (a record is work done); under it the record kind and the delta vs the
  * previous best, also `primary`. [delta] is null for a first-ever log.
  */

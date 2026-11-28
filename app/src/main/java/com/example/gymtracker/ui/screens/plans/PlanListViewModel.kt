@@ -34,19 +34,19 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import java.util.UUID
 
-/** A plan plus the at-a-glance facts its Train row shows (§3 `PlanRow`). */
+/** A plan plus the at-a-glance facts its row shows. */
 data class PlanCard(
     val plan: PlanEntity,
     val exerciseCount: Int,
     val muscleGroups: List<MuscleGroup>,
     val lastTrainedEpochDay: Long?,
-    /** Volume of the plan's last ≤ 8 sessions, oldest first (S2-a sparkline). */
+    /** Volume of the plan's last ≤ 8 sessions, oldest first (the sparkline). */
     val recentVolumes: List<Double>,
-    /** Median length of the plan's timed sessions (decision 4); null when none is timed. */
+    /** Median length of the plan's timed sessions; null when none is timed. */
     val typicalDurationMillis: Long?,
 )
 
-/** The running draft as Train's live strip reads it (§3 `LiveStrip`). */
+/** The running draft as the live strip reads it. */
 data class LiveSession(
     val planId: Long?,
     val title: String,
@@ -59,7 +59,7 @@ data class LiveSession(
     val pausedAtMillis: Long = 0L,
 )
 
-/** This week against the weekly target (decision 7, §3 `WeekHero`). */
+/** This week against the weekly target. */
 data class WeekSummary(
     val sessions: Int,
     val target: Int,
@@ -131,7 +131,7 @@ class PlanListViewModel(
         repository.observeAllExercisesIncludingDeleted(),
     ) { sessions, exercises -> sessions to exercises }
 
-    /** Null until the first Room emission (house rule 8): no "No plans yet" flash. */
+    /** Null until the first Room emission: no "No plans yet" flash. */
     val state: StateFlow<TrainState?> = combine(
         combine(
             repository.observePlans(),

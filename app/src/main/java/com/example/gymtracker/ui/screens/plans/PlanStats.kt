@@ -6,7 +6,7 @@ import com.example.gymtracker.ui.format.formatDuration
 import com.example.gymtracker.ui.format.plural
 
 /**
- * Pure folds over [SessionVolume] rows shared by Train and the Plan editor (§4.1, §4.2).
+ * Pure folds over [SessionVolume] rows shared by the plan list and the Plan editor.
  * Kept free of Android types so they can be unit-tested.
  */
 object PlanStats {
@@ -27,11 +27,11 @@ object PlanStats {
         typicalMillis?.let { add("~" + formatDuration(it)) }
     }.joinToString(" · ")
 
-    /** How many recent sessions a plan row's sparkline draws (S2-a). */
+    /** How many recent sessions a plan row's sparkline draws. */
     const val SPARK_POINTS = 8
 
     /**
-     * Median wall-clock length of the timed sessions in [sessions] (decision 4). Sessions logged
+     * Median wall-clock length of the timed sessions in [sessions]. Sessions logged
      * before v5 have no start time and are ignored; null when none is timed. An even count
      * averages the middle two.
      */

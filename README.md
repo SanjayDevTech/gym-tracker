@@ -117,9 +117,6 @@ Single module, MVVM:
 The look follows Foodprint's design system, written up in
 [docs/ui-house-rules.md](docs/ui-house-rules.md): cards on a calm canvas, ink actions, soft
 pastel gradients behind the one number a screen is about. Home is the reference screen.
-Older comments that cite "§6.5" or "decision 7" point into
-[docs/design-plan.md](docs/design-plan.md), the plan behind the previous interface; its
-behaviour rules still hold, its visual rules are retired.
 
 ## How it was made
 

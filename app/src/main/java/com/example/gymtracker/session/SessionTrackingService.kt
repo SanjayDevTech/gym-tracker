@@ -100,7 +100,7 @@ class SessionTrackingService : Service() {
     }
 
     /**
-     * One Rest timer post at `lastSetCompletedAt + restTarget` (decision 5). Re-keyed whenever the
+     * One Rest timer post at `lastSetCompletedAt + restTarget`. Re-keyed whenever the
      * draft's rest base or target changes; a new base (the next completed set, Restart) or a
      * cleared one (Skip) also withdraws an alert already shown. Posts only when the logger isn't
      * resumed — on screen, the dock's own haptic does the job. A target already in the past when

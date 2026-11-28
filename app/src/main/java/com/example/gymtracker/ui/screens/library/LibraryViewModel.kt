@@ -28,7 +28,7 @@ class LibraryViewModel(
 
     private val filters = MutableStateFlow(ExerciseFilters())
 
-    /** Null until the first Room emission (house rule 8). */
+    /** Null until the first Room emission, so loading shows no empty-state flash. */
     val state: StateFlow<LibraryState?> = combine(
         repository.observeExercises(),
         _query,

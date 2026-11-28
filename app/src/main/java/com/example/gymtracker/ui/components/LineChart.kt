@@ -24,7 +24,7 @@ import com.example.gymtracker.domain.ProgressPoint
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Spacing
 
-/** §2 `LineChart` geometry: 180dp plot + 22dp axis. Sizes, not gaps. */
+/** Line chart geometry: 180dp plot + 22dp axis. Sizes, not gaps. */
 private val PlotHeight = 180.dp
 private val AxisHeight = 22.dp
 
@@ -59,7 +59,7 @@ fun LineChart(
     val valueText = scheme.onSurface
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    // The axis grows with font scale (house rule 7): 22dp is a minimum.
+    // The axis grows with font scale: 22dp is a minimum (house rule 9).
     val axisDp = with(density) {
         maxOf(AxisHeight.toPx(), measurer.measure("0", AppText.bodyS).size.height.toFloat()).toDp()
     }

@@ -45,7 +45,7 @@ data class SessionDraftPayload(
     val groups: List<SessionDraftGroup>,
     // Wall-clock of the last completed set, so the rest timer survives leaving the logger.
     val lastSetCompletedAtMillis: Long = 0L,
-    // This workout's rest target (§6.3). Seeded from the default-rest pref; drafts written
+    // This workout's rest target. Seeded from the default-rest pref; drafts written
     // before the field existed decode to today's old constant.
     val restTargetSeconds: Int = 90,
     // Wall-clock the workout was paused at; 0 = running. Older drafts decode to 0.

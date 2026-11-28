@@ -75,7 +75,7 @@ import com.example.gymtracker.ui.screens.settings.SettingsViewModel
 import com.example.gymtracker.ui.screens.summary.SessionSummaryScreen
 import kotlinx.coroutines.launch
 
-/** A workout the user asked to start while another was running (§4.6). */
+/** A workout the user asked to start while another was running. */
 private data class PendingStart(val planId: Long?, val title: String, val running: RunningDraft)
 
 @Composable
@@ -117,7 +117,7 @@ private fun AppNavHost(onboarded: Boolean) {
         }
     }
 
-    // ---- Starting a workout (§6.1) and the session guard (§4.6) --------------------------------
+    // ---- Starting a workout and the session guard ------------------------------------------------
     // Hoisted here so Train's Start / Quick log and the editor's Start workout share one guard.
     // Remembered: Room hands back a new Flow per call, and collectAsStateWithLifecycle restarts
     // (re-subscribing and re-querying) whenever its flow instance changes. AppNav recomposes on
@@ -406,7 +406,7 @@ private fun AppNavHost(onboarded: Boolean) {
                     },
                     onDiscarded = { nav.popBackStack() },
                     onFinished = { sessionId ->
-                        // The summary replaces the logger in the stack (§5 back-stack rules).
+                        // The summary replaces the logger in the stack.
                         nav.navigate(SessionSummaryRoute(sessionId)) {
                             popUpTo<SessionLoggerRoute> { inclusive = true }
                         }
@@ -465,7 +465,7 @@ private fun AppNavHost(onboarded: Boolean) {
 }
 
 /**
- * Switch bar tabs — §5 "Back-stack behaviour". The three are peers, not a stack:
+ * Switch bar tabs. The three are peers, not a stack:
  * `popUpTo(HomeRoute)` with `saveState`/`restoreState` means Home → Progress → You → back lands
  * on Home, and each tab keeps its own stack and scroll position. `launchSingleTop`
  * stops a second tap on the current tab stacking a duplicate.
@@ -485,7 +485,7 @@ private fun NavHostController.toBarDestination(dest: BarDestination) {
 }
 
 /*
- * One set of transitions, chosen per pair of entries. Tab ↔ tab is a fade-through (§1 motion:
+ * One set of transitions, chosen per pair of entries. Tab ↔ tab is a fade-through (house rule 7:
  * 90ms out, then 210ms in, so the outgoing tab is gone before the incoming one starts — peers do
  * not slide, a slide says "deeper" or "back"). Everything else is a push or pop: food's 300ms
  * slide with ~30% parallax.

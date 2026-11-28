@@ -102,10 +102,10 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
- * Session detail — §4.9, a leaf page from History. Stat row (DURATION · SETS · VOLUME · PRS), a
+ * Session detail, a leaf page from History. Stat row (DURATION · SETS · VOLUME · PRS), a
  * caption, the note (tap to edit), then one set table per exercise: warm-ups muted, skipped sets
- * (decision 8) muted with "skipped", PR badges recomputed against earlier history. ⋮ → Delete
- * behind a [ConfirmSheet] (house rule 10).
+ * muted with "skipped", PR badges recomputed against earlier history. ⋮ → Delete
+ * behind a [ConfirmSheet].
  */
 @Composable
 fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, onOpenExercise: (Long) -> Unit) {
@@ -139,7 +139,7 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, onOpenExercise: (Lo
         },
         modifier = Modifier.fillMaxSize(),
     ) { padding ->
-        // Loading: top bar only (house rule 8).
+        // Loading: top bar only.
         val s = state ?: return@Scaffold
         val scheme = MaterialTheme.colorScheme
         LazyColumn(
@@ -363,7 +363,7 @@ private fun ExerciseTable(
     }
 }
 
-/** `W   40 kg   12 reps` — S2-c table row, numberM, right-aligned value columns. */
+/** `W   40 kg   12 reps` — table row, numberM, right-aligned value columns. */
 @Composable
 private fun SetLine(set: DetailSet, unit: WeightUnit, lifting: Boolean, repUnit: String) {
     val scheme = MaterialTheme.colorScheme

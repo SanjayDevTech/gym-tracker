@@ -42,7 +42,7 @@ data class ExerciseFormFields(
 data class SavedExercise(val id: Long, val created: Boolean)
 
 /**
- * Custom exercise form (§4.19). [exerciseId] null = create from [prefill]; otherwise edit, which
+ * Custom exercise form. [exerciseId] null = create from [prefill]; otherwise edit, which
  * loads the row and refuses built-in or deleted ones ([blocked]).
  */
 class ExerciseFormViewModel(
@@ -130,7 +130,7 @@ fun ExerciseFormRoute.prefill(): ExerciseFormFields = ExerciseFormFields(
     secondary = prefillSecondary.toMuscles(),
 )
 
-/** Import's Create (§4.16 → §4.19): the source entry's name and optional fields as a prefill. */
+/** Import's Create: the source entry's name and optional fields as a prefill. */
 fun exerciseFormRouteFor(source: PlanImportExercise) = ExerciseFormRoute(
     prefillName = source.name,
     prefillType = source.movementType,

@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Spacing
 
-/** §2 `BarChart` geometry: 150dp plot + 18dp axis. Sizes, not gaps. */
+/** Bar chart geometry: 150dp plot + 18dp axis. Sizes, not gaps. */
 private val PlotHeight = 150.dp
 private val AxisHeight = 18.dp
 
@@ -68,7 +68,7 @@ fun BarChart(
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val widthPx = with(density) { maxWidth.toPx() }
         val plotPx = with(density) { PlotHeight.toPx() }
-        // The axis grows with font scale (house rule 7): 18dp is a minimum.
+        // The axis grows with font scale: 18dp is a minimum (house rule 9).
         val axisPx = maxOf(with(density) { AxisHeight.toPx() }, measurer.measure("0", AppText.bodyS).size.height.toFloat())
         val maxValue = maxOf(bars.maxOf { it.value }, reference ?: 0f).takeIf { it > 0f } ?: 1f
         val top = maxValue * 1.1f

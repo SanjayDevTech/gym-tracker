@@ -4,7 +4,7 @@ import com.example.gymtracker.data.db.ExerciseEntity
 import java.util.Locale
 
 /**
- * Name validation for the custom-exercise form (§4.19, phase 9): the trimmed name must be
+ * Name validation for the custom-exercise form: the trimmed name must be
  * non-empty and must not match (ignoring case) any other exercise that isn't soft-deleted.
  * A deleted exercise's name is free to reuse — it no longer appears anywhere you pick from.
  */

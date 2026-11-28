@@ -1,7 +1,7 @@
 package com.example.gymtracker.domain
 
 /**
- * The weekly target (decision 7) — "3 of 4 this week", "on target 9 of 12 weeks". Replaces the
+ * The weekly target — "3 of 4 this week", "on target 9 of 12 weeks". Replaces the
  * daily streak, which punished rest days and read 0 every morning before the day's workout.
  *
  * Weeks are ISO weeks, Monday start, keyed by the epoch day of their Monday. Every function takes
@@ -35,7 +35,7 @@ object WeeklyTarget {
      * counted either, so a new user reads "2 of 3", not "2 of 12".
      *
      * [WeeksOnTarget.of] is 0 until a full week has passed since the first session; show "—"
-     * then (§4.1 empty state).
+     * then.
      */
     fun weeksOnTarget(
         sessionDays: Collection<Long>,

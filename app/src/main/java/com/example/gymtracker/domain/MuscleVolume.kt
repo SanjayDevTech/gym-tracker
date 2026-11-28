@@ -86,7 +86,7 @@ object MuscleVolume {
     }
 
     /**
-     * The weekly-volume guideline band (decision 11): 10–20 working sets per muscle per week.
+     * The weekly-volume guideline band: 10–20 working sets per muscle per week.
      * Shown on Progress only when the range is WEEK.
      */
     const val GUIDELINE_LOW_SETS = 10

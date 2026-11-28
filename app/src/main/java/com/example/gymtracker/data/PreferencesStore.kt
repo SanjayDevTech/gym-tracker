@@ -73,7 +73,7 @@ class PreferencesStore(private val context: Context) {
         .map { it[Keys.SeedVersion] ?: 0 }
         .distinctUntilChanged()
 
-    /** Rest target a new workout starts with (§6.3); today's constant, 90s, until changed. */
+    /** Rest target a new workout starts with; today's constant, 90s, until changed. */
     val defaultRestSeconds: Flow<Int> = context.dataStore.data
         .map { it[Keys.DefaultRestSeconds] ?: DEFAULT_REST_SECONDS }
         .distinctUntilChanged()
@@ -81,7 +81,7 @@ class PreferencesStore(private val context: Context) {
     suspend fun setDefaultRestSeconds(value: Int) =
         context.dataStore.edit { it[Keys.DefaultRestSeconds] = value }
 
-    /** Sessions a week counted as "on target" (decision 7); 1–7, default 3. */
+    /** Sessions a week counted as "on target"; 1–7, default 3. */
     val weeklyTargetSessions: Flow<Int> = context.dataStore.data
         .map { (it[Keys.WeeklyTargetSessions] ?: WeeklyTarget.DEFAULT_TARGET).coerceIn(WeeklyTarget.MIN_TARGET, WeeklyTarget.MAX_TARGET) }
         .distinctUntilChanged()
@@ -91,8 +91,8 @@ class PreferencesStore(private val context: Context) {
             it[Keys.WeeklyTargetSessions] = value.coerceIn(WeeklyTarget.MIN_TARGET, WeeklyTarget.MAX_TARGET)
         }
 
-    /** Whether the logger has already asked for POST_NOTIFICATIONS (§6.1 step 3: once, on the
-     *  first workout, not at launch). */
+    /** Whether the logger has already asked for POST_NOTIFICATIONS: once, on the
+     *  first workout, not at launch. */
     val notificationPermissionAsked: Flow<Boolean> = context.dataStore.data
         .map { it[Keys.NotificationPermissionAsked] ?: false }
         .distinctUntilChanged()

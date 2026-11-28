@@ -25,9 +25,9 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.animation.core.FastOutSlowInEasing
 
 /**
- * Progress primitives — design-plan §2 `Meter` and `StatusCell`.
+ * Progress primitives: `Meter` and `StatusCell`.
  *
- * Values animate over 450ms and interpolate the value (§1 motion table); the
+ * Values animate over 450ms and interpolate the value; the
  * numbers beside them carry `tnum` so they don't jitter while it runs.
  */
 

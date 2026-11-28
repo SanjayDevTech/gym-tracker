@@ -36,9 +36,9 @@ data class DetailSet(
     val setType: SetType,
     val weightKg: Float?,
     val reps: Int?,
-    /** False = left unticked at Finish, saved as skipped (decision 8). */
+    /** False = left unticked at Finish, saved as skipped. */
     val completed: Boolean,
-    /** Broke a record against history *before* this session (§6.5). */
+    /** Broke a record against history *before* this session. */
     val isPr: Boolean,
 )
 
@@ -67,9 +67,9 @@ data class SessionDetailState(
 )
 
 /**
- * Session detail — §4.9. Read-only apart from the note and Delete (decision 3). PR flags are
+ * Session detail. Read-only apart from the note and Delete. PR flags are
  * recomputed from the exercise's history *before* this session, so a later session can't steal
- * the badge. State starts `null` (house rule 8).
+ * the badge. State starts `null`.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class SessionDetailViewModel(

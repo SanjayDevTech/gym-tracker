@@ -28,13 +28,13 @@ data class RecordFigure(val value: Float, val dateEpochDay: Long)
 /** One logged set as the RECENT list shows it. */
 data class RecentSet(val repsDone: Int?, val weightKg: Float?, val setType: SetType)
 
-/** One session's completed sets for this exercise (issue 25: grouped by session, dated). */
+/** One session's completed sets for this exercise (grouped by session, dated). */
 data class RecentSession(val dateEpochDay: Long, val sets: List<RecentSet>)
 
 data class ExerciseDetailState(
     /** Null when the exercise does not exist (deleted); the page then shows its top bar only. */
     val exercise: ExerciseEntity?,
-    /** Any completed scoring set at all — false shows the empty state (§4.11). */
+    /** Any completed scoring set at all — false shows the empty state. */
     val hasHistory: Boolean,
     /** Any completed working set with load: weight metrics are offered, hero = est. 1RM. */
     val weighted: Boolean,
@@ -57,7 +57,7 @@ class ExerciseDetailViewModel(
 
     /**
      * One history query, with dates, feeds everything: charts, records, the grouped RECENT list
-     * and the progression check. Null until the first emission (house rule 8).
+     * and the progression check. Null until the first emission.
      */
     val state: StateFlow<ExerciseDetailState?> = combine(
         repository.observeExercise(exerciseId),
@@ -68,7 +68,7 @@ class ExerciseDetailViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /**
-     * Soft delete (phase 9; custom only — the menu is never shown for built-ins). `logged_sets`
+     * Soft delete (custom only — the menu is never shown for built-ins). `logged_sets`
      * references exercises with RESTRICT, so a hard delete isn't possible; history and records
      * still resolve the name by id. The exercise also leaves every plan, in the same transaction.
      * App scope, because the page pops straight after.

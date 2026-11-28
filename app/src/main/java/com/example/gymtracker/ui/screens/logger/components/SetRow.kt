@@ -65,7 +65,7 @@ import com.example.gymtracker.ui.theme.Radius
 import com.example.gymtracker.ui.theme.Sizes
 import com.example.gymtracker.ui.theme.Spacing
 
-/** The check's nudge (§6.2): slow rings rippling out from the empty disc's edge until it is ticked. */
+/** The check's nudge: slow rings rippling out from the empty disc's edge until it is ticked. */
 private const val PULSE_WAVE_MILLIS = 1400
 /** The ring starts on the disc's edge: half its size. */
 private const val PULSE_RING_START = 0.5f
@@ -81,7 +81,7 @@ internal object SetTable {
 }
 
 /**
- * One set — §3 `SetRow`, §4.3.
+ * One set.
  *
  * Badge (set number, `W` muted, `F` in [Effort]; tap → type menu + Delete set) · weight and reps
  * [NumberField]s (soft filled boxes) · a 48dp check (a soft disc, a green disc with a tick once done).
@@ -90,7 +90,7 @@ internal object SetTable {
  * the accent and adds a `PR` badge. The row draws its own inset so the tint can run edge to edge.
  *
  * [pulse] nudges the empty check — slow green rings rippling out from its edge until ticked — when
- * typing has filled the set that would complete its exercise, which is left for the user to tick (§6.2).
+ * typing has filled the set that would complete its exercise, which is left for the user to tick.
  */
 @Composable
 fun SetRow(
@@ -237,7 +237,7 @@ fun SetRow(
 
 /**
  * 40dp set badge: the set number, or `W` (warm-up, muted) / `F` (failure, [Effort]). Tap opens
- * Warm-up / Working / Failure / — / Delete set (issue 13: "−" used to remove only the last set).
+ * Warm-up / Working / Failure / — / Delete set, so any set can be removed, not only the last.
  */
 @Composable
 private fun SetBadge(

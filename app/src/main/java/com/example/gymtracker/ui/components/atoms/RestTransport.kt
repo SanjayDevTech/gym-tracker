@@ -35,7 +35,7 @@ import com.example.gymtracker.ui.theme.Sizes
 import com.example.gymtracker.ui.theme.Spacing
 
 /**
- * The rest clock's transport — design-plan §2 `RestTransport` (S5-g).
+ * The rest clock's transport.
  *
  * `− 15 s` · a 56dp ink `Skip` pill · `+ 15 s`. Skip is the action under the thumb between every
  * set, so it is the filled one; the step buttons are soft pills — they adjust a value.

@@ -45,14 +45,14 @@ import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Spacing
 
 /**
- * The logger's top bar — §3 `LoggerTopBar` (S2-b).
+ * The logger's top bar.
  *
- * A round `↓` minimise (leaving does not end the session, issue 4) · centred, the workout title
+ * A round `↓` minimise (leaving does not end the session) · centred, the workout title
  * (one line, ellipsised) over a muted meta line `3 of 12 sets · Today` whose date part turns
  * `tertiary` when the session is not today (the clocks live in the bottom dock) · a
  * pill (`Discard`: soft, in `error`, until a set is ticked; then `Finish`: ink) · a round ⋮. Under
  * it a meter of sets done over total. Finish is a once-a-session action, so it lives up here, away
- * from the thumb that ticks sets (house rule 11).
+ * from the thumb that ticks sets.
  */
 @Composable
 fun LoggerTopBar(

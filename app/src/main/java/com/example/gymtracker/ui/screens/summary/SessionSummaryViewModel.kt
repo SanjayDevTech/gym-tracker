@@ -52,8 +52,8 @@ data class SessionSummaryState(
 )
 
 /**
- * Session summary — §4.5. Loaded once from the saved session: duration from
- * `loggedAt − startedAt` (decision 4), records recomputed against history *excluding* this
+ * Session summary. Loaded once from the saved session: duration from
+ * `loggedAt − startedAt`, records recomputed against history *excluding* this
  * session (the same baseline the logger snapshotted at start), skipped sets per exercise.
  */
 class SessionSummaryViewModel(

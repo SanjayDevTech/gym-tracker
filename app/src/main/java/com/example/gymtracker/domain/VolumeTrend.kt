@@ -2,7 +2,7 @@ package com.example.gymtracker.domain
 
 import com.example.gymtracker.data.VolumeMetric
 
-/** One ISO week's training volume (§4.12 bar chart). [changeVsPrior] is null without a base. */
+/** One ISO week's training volume (Progress bar chart). [changeVsPrior] is null without a base. */
 data class WeekVolume(
     val weekStart: Long,
     val total: Float,
@@ -15,7 +15,7 @@ data class WeekVolume(
 /**
  * Headline training volume over time — each completed working set counted **once** (no
  * per-muscle split, unlike [MuscleVolume]). Warm-ups and unticked sets never count; tonnage
- * includes failure sets (they are work, §7 non-UI #20) and skips bodyweight sets.
+ * includes failure sets (they are work) and skips bodyweight sets.
  */
 object VolumeTrend {
     /** Weeks averaged for the reference line and every "vs 4-wk" figure. */

@@ -67,7 +67,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Import plan — design-plan §4.16. Two phases on one page.
+ * Import plan. Two phases on one page.
  *
  * **Pick:** a helper line, `Choose JSON file`, an error line, and the format as a [Section] with
  * the monospace example. **Review:** a `numberXL` "6 / 8" matched hero with the review/skipped
@@ -114,7 +114,7 @@ fun ImportPlanScreen(
         pickerForIndex = null
         onPickedHandled()
     }
-    // Create opens the custom-exercise page (§4.19) prefilled; its new id maps the entry.
+    // Create opens the custom-exercise page prefilled; its new id maps the entry.
     var createForIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     LaunchedEffect(createdExerciseId) {
         val id = createdExerciseId ?: return@LaunchedEffect
@@ -301,7 +301,7 @@ private fun ReviewHero(
 }
 
 /**
- * §3 `ImportEntryRow`: source name + `3 × 8–12`; the resolution as one text line —
+ * One import entry: source name + `3 × 8–12`; the resolution as one text line —
  * `→ Bench press` in the positive colour (also after Create, which saves the exercise),
  * `– Skipped` onSurfaceVariant, `! Needs review` error — on its own card, actions as pills.
  */

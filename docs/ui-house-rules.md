@@ -8,10 +8,6 @@ Home (`ui/screens/home/`) is the reference implementation. Match it.
 
 Light is the default; You → Appearance offers Light, Dark and Match system.
 
-> Older code comments cite the previous design plan's "black scoreboard" rules —
-> OLED canvas, hairline-only sections, volt accent, uppercase eyebrows. Those
-> rules are retired; where a comment disagrees with this page, this page wins.
-
 ## 1. Cards on a canvas
 
 - The page is `background` (`#F4F4F7` light / `#0B0B0E` dark). Content sits in

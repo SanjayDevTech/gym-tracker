@@ -90,8 +90,8 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * Session summary — §4.5. Pushed after Finish in place of the logger. Duration hero, three stat
- * columns, records, per-exercise best set (with skipped counts, decision 8), and an inline note
+ * Session summary. Pushed after Finish in place of the logger. Duration hero, three stat
+ * columns, records, per-exercise best set (with skipped counts), and an inline note
  * written to the session on Done / ✕ / back.
  */
 @Composable

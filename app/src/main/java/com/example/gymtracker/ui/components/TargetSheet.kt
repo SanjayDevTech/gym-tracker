@@ -31,7 +31,7 @@ import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Sizes
 import com.example.gymtracker.ui.theme.Spacing
 
-/** Same caps for every caller (issue 10): sets 1–10; 50 reps / 120 min / 180 sec. */
+/** Same caps for every caller: sets 1–10; 50 reps / 120 min / 180 sec. */
 val MovementType.targetCap: Int
     get() = when (this) {
         MovementType.Cardio -> 120
@@ -42,7 +42,7 @@ val MovementType.targetCap: Int
 const val TARGET_MAX_SETS = 10
 
 /**
- * Target sheet — §4.7, one component for the logger and (phase 5) the Plan editor.
+ * Target sheet, one component for the logger and the Plan editor.
  *
  * Title, a live `numberL` preview in tertiary, then SETS (only when [sets] is non-null — hidden
  * in the logger, where the set table *is* the count), FROM and TO steppers with unit-aware

@@ -19,8 +19,8 @@ import com.example.gymtracker.ui.theme.Spacing
 
 /**
  * A tappable note: the text itself, or a quiet "Add a note…" prompt. Tap → edit. With [label],
- * an eyebrow leads the line (`NOTE  Felt strong.`, Session detail §4.9); without, the note stands
- * alone under the title (Plan editor §4.2, issue 9).
+ * an eyebrow leads the line (`NOTE  Felt strong.`, Session detail); without, the note stands
+ * alone under the title (Plan editor).
  */
 @Composable
 fun NoteLine(

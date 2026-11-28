@@ -9,7 +9,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Room v4 → v5 (decision 4): `sessions.started_at_millis`, nullable, existing rows NULL. */
+/** Room v4 → v5: `sessions.started_at_millis`, nullable, existing rows NULL. */
 @RunWith(AndroidJUnit4::class)
 class MigrationTest {
     private val dbName = "migration-test.db"

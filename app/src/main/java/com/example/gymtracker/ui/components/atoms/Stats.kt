@@ -25,9 +25,9 @@ import com.example.gymtracker.ui.theme.Sizes
 import com.example.gymtracker.ui.theme.Spacing
 
 /**
- * Stat displays — design-plan §2 `StatRow` / `StatColumns`.
+ * Stat displays: `StatRow` / `StatColumns`.
  *
- * House rule 2: label left, number right; eyebrow labels; units trailing in
+ * Label left, number right; eyebrow labels; units trailing in
  * `bodyS`. These replace `StatTile`, `LabeledLine`, `MetricReadout`,
  * `HeaderStat`, `SummaryStat` and `MetaStat`.
  */
@@ -89,7 +89,7 @@ data class StatItem(
  * 2–4 equal-width columns of eyebrow over number. Every column gets the same
  * width and every label is free to wrap, so at a large font scale a long label
  * ("WORKING SETS") breaks onto two lines instead of ellipsing or pushing its
- * neighbours — house rule 7. Values align on the bottom so wrapped and unwrapped
+ * neighbours. Values align on the bottom so wrapped and unwrapped
  * labels still put their numbers on one line.
  */
 @Composable

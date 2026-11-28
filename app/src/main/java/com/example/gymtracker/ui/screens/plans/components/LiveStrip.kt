@@ -25,7 +25,7 @@ import com.example.gymtracker.ui.theme.Spacing
 import kotlinx.coroutines.delay
 
 /**
- * Live strip — design-plan §3 `LiveStrip` (S5-d), was the Resume banner. No card: a
+ * Live strip, was the Resume banner. No card: a
  * `LIVE · PUSH A` eyebrow in primary with the elapsed clock ticking every second, a `bodyS` line
  * of sets done and rest state, then a full-width Resume button.
  */

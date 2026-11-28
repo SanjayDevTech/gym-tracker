@@ -65,7 +65,7 @@ import com.example.gymtracker.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
 /**
- * Plan templates (§4.20) — reached from New plan's "Start from a template" and Plans & backup,
+ * Plan templates — reached from New plan's "Start from a template" and Plans & backup,
  * never prompted. One white card of rows — pastel disc, name, summary, chevron; a row opens the
  * template's detail.
  */

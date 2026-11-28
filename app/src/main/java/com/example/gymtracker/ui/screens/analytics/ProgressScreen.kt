@@ -109,7 +109,7 @@ private const val TOP_MUSCLES = 6
 private const val MAX_NEGLECTED = 5
 
 /**
- * Progress (§4.12; was Analytics) — bar destination 3. The range selector and period pager are
+ * Progress (was Analytics). The range selector and period pager are
  * pinned and drive every section. A bar screen: its Scaffold adds no bar height or nav inset (the
  * NavHost consumed them) and there is no FAB.
  */
@@ -267,7 +267,7 @@ private fun ProgressTiles(s: ProgressState, unit: WeightUnit, modifier: Modifier
     }
 }
 
-/** The 12-week calendar (decision 7) in its own card. */
+/** The 12-week calendar in its own card. */
 @Composable
 private fun CalendarSection(s: ProgressState, modifier: Modifier = Modifier) {
     val c = s.consistency
@@ -377,7 +377,7 @@ private fun MusclesSection(
 
         val week = s.selection.window == AnalyticsWindow.Week
         val top = m.ranked.firstOrNull()?.second ?: 0f
-        // In WEEK the scale reaches past the band so both ticks always fit (decision 11).
+        // In WEEK the scale reaches past the band so both ticks always fit.
         val scale = if (week) maxOf(top, MuscleVolume.GUIDELINE_HIGH_SETS * 1.25f) else top.coerceAtLeast(1f)
         val band = if (week) (MuscleVolume.GUIDELINE_LOW_SETS / scale)..(MuscleVolume.GUIDELINE_HIGH_SETS / scale) else null
         var expanded by rememberSaveable { mutableStateOf(false) }

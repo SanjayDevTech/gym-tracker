@@ -86,13 +86,13 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-/** Cap on the Muscles figure pair (§4.11): about half a phone screen, labels included. A size. */
+/** Cap on the Muscles figure pair: about half a phone screen, labels included. A size. */
 private val DiagramMaxHeight = 360.dp
 
 /** Width of the RECENT date column, so the set lists align. A size. */
 private val RecentDateWidth = 64.dp
 
-/** Chart range selector (§4.11, S6-b). */
+/** Chart range selector. */
 private enum class ChartRange(val label: String, val days: Long?) {
     OneMonth("1M", 30), ThreeMonths("3M", 90), OneYear("1Y", 365), All("All", null),
 }
@@ -100,8 +100,8 @@ private enum class ChartRange(val label: String, val days: Long?) {
 /**
  * Exercise detail — the e1RM hero on a soft gradient, a dated chart card between its two
  * selectors, records with dates, recent sets grouped by session, the muscles on the body diagram, cues. A leaf page: its
- * Scaffold applies the system insets once. Custom exercises get a ⋮ with Edit (§4.19) and Delete
- * (soft delete behind a [ConfirmSheet]; history keeps the name) — phase 9.
+ * Scaffold applies the system insets once. Custom exercises get a ⋮ with Edit and Delete
+ * (soft delete behind a [ConfirmSheet]; history keeps the name).
  */
 @Composable
 fun ExerciseDetailScreen(
@@ -138,7 +138,7 @@ fun ExerciseDetailScreen(
         containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier.fillMaxSize(),
     ) { padding ->
-        val s = state ?: return@Scaffold // Loading: top bar only (house rule 8).
+        val s = state ?: return@Scaffold // Loading: top bar only.
         val ex = exercise ?: return@Scaffold
         Column(
             Modifier
@@ -377,7 +377,7 @@ private fun RecordsSection(s: ExerciseDetailState, ex: ExerciseEntity, unit: Wei
     }
 }
 
-/** RECENT: one line per session — date, then `60×10 · 62.5×9`; set types coloured (§1). */
+/** RECENT: one line per session — date, then `60×10 · 62.5×9`; set types coloured. */
 @Composable
 private fun RecentSection(s: ExerciseDetailState, ex: ExerciseEntity, unit: WeightUnit) {
     if (s.recent.isEmpty()) return
@@ -474,14 +474,14 @@ private fun recordLabel(metric: ProgressMetric, type: MovementType): String = wh
     ProgressMetric.Reps -> if (isLifting(type)) "Max reps" else "Longest"
 }
 
-/** The number alone, in the user's unit (house rule 9). */
+/** The number alone, in the user's unit. */
 private fun metricNumber(metric: ProgressMetric, value: Float, unit: WeightUnit): String = when (metric) {
     ProgressMetric.OneRepMax, ProgressMetric.Heaviest -> formatWeightNumber(value, unit)
     ProgressMetric.Volume -> formatVolumeNumber(value.toDouble(), unit)
     ProgressMetric.Reps -> value.roundToInt().toString()
 }
 
-/** Weight metrics in kg/lb; reps in reps, cardio in min, mobility in sec (issue 24). */
+/** Weight metrics in kg/lb; reps in reps, cardio in min, mobility in sec. */
 private fun metricUnit(metric: ProgressMetric, type: MovementType, unit: WeightUnit): String = when (metric) {
     ProgressMetric.Reps -> type.repUnit
     else -> unit.label

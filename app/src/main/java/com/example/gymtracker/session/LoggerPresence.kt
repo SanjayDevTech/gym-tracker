@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Whether the Session logger is on screen and resumed — the one fact [SessionTrackingService]
- * needs to decide if the Rest timer notification should vibrate (§4.18: only when the logger is
+ * needs to decide if the Rest timer notification should vibrate: only when the logger is
  * not in the foreground; in the logger the dock's own haptic covers it).
  *
  * Process-wide and in-memory: it resets to false with the process, which is the right answer

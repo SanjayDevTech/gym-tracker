@@ -12,12 +12,12 @@ import com.example.gymtracker.R
 import com.example.gymtracker.ui.format.formatClock
 
 /**
- * The two notifications a running workout owns — §4.18.
+ * The two notifications a running workout owns.
  *
  * - **Session in progress** (ongoing, silent): `Push A · 7 of 18 sets`; while resting the text is
  *   `Rest · target 1:30` and the chronometer counts up from the last completed set, otherwise it
  *   counts the session's elapsed time.
- * - **Rest timer** (decision 5): one post when rest reaches its target while the logger is not in
+ * - **Rest timer**: one post when rest reaches its target while the logger is not in
  *   the foreground. High importance so it vibrates; no sound, no actions.
  */
 object SessionNotification {

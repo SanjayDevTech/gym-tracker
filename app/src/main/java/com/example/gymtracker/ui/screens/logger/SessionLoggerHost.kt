@@ -41,7 +41,7 @@ import kotlinx.coroutines.launch
  *
  * System back minimises exactly like the ↓ button, so the caller's minimise handling (Train's
  * "still running" snackbar) sees both. On the first workout ever it also asks for the
- * notification permission (§6.1 step 3) — here, with a reason, rather than at launch.
+ * notification permission — here, with a reason, rather than at launch.
  */
 @Composable
 fun SessionLoggerHost(

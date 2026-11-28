@@ -31,16 +31,16 @@ import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Sizes
 import com.example.gymtracker.ui.theme.Spacing
 
-/** Meter thickness (§3: 2dp). A size. */
+/** Meter thickness: 2dp. A size. */
 private val MeterHeight = 8.dp
 
 /** The meter's box, tall enough for the band ticks to read. A size. */
 private val MeterBox = 8.dp
 
 /**
- * §3 `MuscleRankRow`: muscle name · 2dp heat meter · value. [fraction] is the bar's length on a
+ * Muscle rank row: muscle name · 2dp heat meter · value. [fraction] is the bar's length on a
  * shared scale; its colour follows the heat ramp. [band] (two fractions on the same scale) draws
- * the decision-11 guideline as two `tertiary` ticks — pass it only in the WEEK range — and the
+ * the 10–20 sets guideline as two `tertiary` ticks — pass it only in the WEEK range — and the
  * caller colours [valueColor] by where the value sits against it.
  */
 @Composable

@@ -12,7 +12,7 @@ import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Spacing
 
 /**
- * Whole-object deletion confirm — design-plan §2 `ConfirmSheet`, house rule 10.
+ * Whole-object deletion confirm: deleting a plan or session is always confirmed.
  * Title, one-line consequence, destructive [AppButton] in `error`, quiet
  * [AppTextButton] cancel. Sits in [AppSheet].
  */

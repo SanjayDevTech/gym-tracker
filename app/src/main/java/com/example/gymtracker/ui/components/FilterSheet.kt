@@ -61,7 +61,7 @@ import com.example.gymtracker.ui.theme.Radius
 import com.example.gymtracker.ui.theme.Spacing
 
 /**
- * The three exercise filters (§3 `FilterSheet` + `ActiveFilterLine`). Multi-select within a
+ * The three exercise filters. Multi-select within a
  * section (any of the chosen types, any of the chosen equipment, …); empty = any.
  */
 @Immutable

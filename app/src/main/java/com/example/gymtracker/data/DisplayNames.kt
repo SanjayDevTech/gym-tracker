@@ -1,8 +1,8 @@
 package com.example.gymtracker.data
 
 /**
- * Human names for the enums the UI shows — design-plan §2, house rule 9 ("names,
- * not enums"). `FrontDelts` → "Front delts", `UpperBack` → "Upper back". Every
+ * Human names for the enums the UI shows: names, not enums. `FrontDelts` →
+ * "Front delts", `UpperBack` → "Upper back". Every
  * enum that reaches a screen goes through one of these, never `.name`.
  */
 
