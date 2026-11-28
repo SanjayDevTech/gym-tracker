@@ -128,6 +128,8 @@ data class SessionLoggerState(
     val lastSetCompletedAtMillis: Long = 0L,
     /** This workout's rest target (§6.3). */
     val restTargetSeconds: Int = DEFAULT_REST_SECONDS,
+    /** Wall-clock the workout was paused at; 0 = running. While paused both clocks stand still. */
+    val pausedAtMillis: Long = 0L,
     val groups: List<ExerciseGroup> = emptyList(),
     val saving: Boolean = false,
     /** Set once the session is committed; the UI navigates to its summary. */
@@ -243,6 +245,7 @@ class SessionLoggerViewModel(
                 startedAtMillis = draft.startedAtMillis,
                 lastSetCompletedAtMillis = payload.lastSetCompletedAtMillis,
                 restTargetSeconds = payload.restTargetSeconds,
+                pausedAtMillis = payload.pausedAtMillis,
                 groups = groups,
                 weightUnit = unit,
                 initialized = true,
@@ -256,6 +259,7 @@ class SessionLoggerViewModel(
             dateEpochDay = snapshot.dateEpochDay,
             lastSetCompletedAtMillis = snapshot.lastSetCompletedAtMillis,
             restTargetSeconds = snapshot.restTargetSeconds,
+            pausedAtMillis = snapshot.pausedAtMillis,
             groups = snapshot.groups.map { g ->
                 SessionDraftGroup(
                     exerciseId = g.exerciseId,
@@ -465,14 +469,19 @@ class SessionLoggerViewModel(
         return outcome
     }
 
-    /** Swap in [updated]; a set that just became completed is the moment it's logged — restart rest. */
+    /**
+     * Swap in [updated]; a set that just became completed is the moment it's logged — restart
+     * rest (and end a pause: ticking a set means you're training again).
+     */
     private fun SessionLoggerState.withGroup(groupIndex: Int, updated: ExerciseGroup): SessionLoggerState {
         val previous = groups[groupIndex]
         val newGroups = groups.toMutableList().also { it[groupIndex] = updated }
-        return copy(
+        val now = System.currentTimeMillis()
+        val completedNow = updated.doneCount > previous.doneCount
+        val base = if (completedNow) resumeClocks(this, now) else this
+        return base.copy(
             groups = newGroups,
-            lastSetCompletedAtMillis =
-                if (updated.doneCount > previous.doneCount) System.currentTimeMillis() else lastSetCompletedAtMillis,
+            lastSetCompletedAtMillis = if (completedNow) now else base.lastSetCompletedAtMillis,
         )
     }
 
@@ -515,8 +524,19 @@ class SessionLoggerViewModel(
     /** Clear rest until the next completed set (dock shows "—"). */
     fun skipRest() = _draft.update { it.copy(lastSetCompletedAtMillis = 0L) }
 
-    /** Rest sheet's "Restart now". */
-    fun restartRest() = _draft.update { it.copy(lastSetCompletedAtMillis = System.currentTimeMillis()) }
+    /** Start a rest now (the dock's ring, the Rest sheet's "Restart now"); ends a pause. */
+    fun restartRest() {
+        val now = System.currentTimeMillis()
+        _draft.update { resumeClocks(it, now).copy(lastSetCompletedAtMillis = now) }
+    }
+
+    // ---- Pause ------------------------------------------------------------
+
+    /** Pause or resume the workout: both the workout clock and the rest timer. */
+    fun togglePause() {
+        val now = System.currentTimeMillis()
+        _draft.update { if (it.pausedAtMillis > 0L) resumeClocks(it, now) else it.copy(pausedAtMillis = now) }
+    }
 
     fun saveRestTargetAsDefault() {
         val seconds = _draft.value.restTargetSeconds
@@ -547,6 +567,8 @@ class SessionLoggerViewModel(
 
     fun confirmFinish(updatePlan: Boolean) {
         val prompt = _draft.value.finish ?: return
+        // Finishing while paused: the pause doesn't count toward the session's duration.
+        _draft.update { resumeClocks(it, System.currentTimeMillis()) }
         commitSave(updatePlan = updatePlan && prompt.planChanges.isNotEmpty())
     }
 
@@ -671,4 +693,18 @@ fun sessionPrKeys(
         Records.forSession(baseline, samples).prSets.keys.forEach { idx -> keys.add("${group.uid}#$idx") }
     }
     return keys
+}
+
+/**
+ * Resume [state] at [now]: slide the workout start and the rest base forward by the length of the
+ * pause, so paused time counts toward neither clock. A running state is returned unchanged.
+ */
+internal fun resumeClocks(state: SessionLoggerState, now: Long): SessionLoggerState {
+    if (state.pausedAtMillis <= 0L) return state
+    val paused = (now - state.pausedAtMillis).coerceAtLeast(0L)
+    return state.copy(
+        startedAtMillis = if (state.startedAtMillis > 0L) state.startedAtMillis + paused else 0L,
+        lastSetCompletedAtMillis = if (state.lastSetCompletedAtMillis > 0L) state.lastSetCompletedAtMillis + paused else 0L,
+        pausedAtMillis = 0L,
+    )
 }

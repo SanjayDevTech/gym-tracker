@@ -3,11 +3,8 @@ package com.example.gymtracker.ui.theme
 import androidx.compose.ui.unit.dp
 
 /**
- * Layout tokens — design-plan §1 spacing, radii, sizes and elevation.
- *
- * Replaces `Dimens`. If a value isn't here, the answer is one of these, not a
- * new one. Raw `.dp` is allowed only for sizes (icons, charts, row minimums),
- * never for gaps (house rule 5).
+ * Layout tokens — Foodprint's scale, so both apps share one rhythm. If a value isn't here, the
+ * answer is one of these, not a new one. Raw `.dp` is for sizes, never for gaps.
  */
 
 /** `4 · 8 · 12 · 16 · 20 · 24 · 32`. Nothing else. */
@@ -23,39 +20,42 @@ object Spacing {
     /** Screen gutter. */
     val gutter = 16.dp
 
-    /** Gap between sections — the rule under each head does the separating. */
-    val section = 24.dp
+    /** Card interior padding. */
+    val cardPadding = 16.dp
+
+    /** Gap between cards on a page. */
+    val section = 12.dp
 }
 
-/** Four radii plus the pill. */
+/** Soft, generous corners — the pastel-card look. */
 object Radius {
-    /** Badges, status cells, the set badge. */
-    val sm = 8.dp
+    /** Badges, meter caps, status cells. */
+    val sm = 10.dp
 
-    /** Input underlays, snackbar, menus. */
-    val md = 14.dp
+    /** Inner rows, stat tiles, list rows, inputs. */
+    val md = 16.dp
 
-    /** Genuine cards only (expected: none on pages). */
-    val lg = 20.dp
+    /** Cards. */
+    val lg = 24.dp
 
     /** Bottom sheets — top corners only. */
-    val sheet = 24.dp
+    val sheet = 28.dp
 
-    /** FAB and primary buttons only. */
+    /** Chips, buttons, segmented controls, the bar. */
     val pill = 999.dp
 }
 
 /**
- * Size minimums. Used with `heightIn(min = …)` / `sizeIn(min…)`, never as fixed
- * heights (house rule 7): the label grows with font scale and the box must too.
+ * Size minimums. Used with `heightIn(min = …)`, never as fixed heights: the label grows with font
+ * scale and the box must too.
  */
 object Sizes {
-    val button = 48.dp
+    val button = 52.dp
     val iconButton = 48.dp
     val touchTarget = 48.dp
 
     /** Icons inside a control. */
-    val icon = 24.dp
+    val icon = 20.dp
 
     /** Bottom list inset that keeps the last row clear of an extended FAB. */
     val fabClearance = 96.dp
@@ -64,10 +64,7 @@ object Sizes {
     val transportButton = 56.dp
 }
 
-/**
- * Zero elevation anywhere. Structure is a 1dp `outlineVariant` hairline.
- * Kept as named tokens so the rule is greppable rather than folklore.
- */
+/** Flat by default; cards separate from the canvas by fill, not shadow. */
 object Elevation {
     val none = 0.dp
     val hairline = 1.dp

@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 
 /**
- * Sparkline — design-plan §2 (S2-a). 96×28dp, 2dp `primary` stroke, the last point a 3dp dot;
+ * Sparkline — 96×28dp, 2dp ink stroke, the last point a 3dp accent dot;
  * no axes, no wash. Plan rows only. Draws nothing for fewer than two points (§4.1: a plan with
  * fewer than 2 sessions shows no sparkline). A flat series sits on the vertical centre.
  */
@@ -23,7 +23,8 @@ fun Sparkline(
     modifier: Modifier = Modifier,
 ) {
     if (values.size < 2) return
-    val color = MaterialTheme.colorScheme.primary
+    val color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
+    val accent = MaterialTheme.colorScheme.tertiary
     Canvas(modifier.size(width = 96.dp, height = 28.dp)) {
         val dot = 3.dp.toPx()
         val stroke = 2.dp.toPx()
@@ -46,6 +47,6 @@ fun Sparkline(
             if (i == 0) path.moveTo(p.x, p.y) else path.lineTo(p.x, p.y)
         }
         drawPath(path, color, style = Stroke(width = stroke, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        drawCircle(color, radius = dot, center = point(values.lastIndex))
+        drawCircle(accent, radius = dot, center = point(values.lastIndex))
     }
 }

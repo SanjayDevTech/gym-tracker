@@ -1,5 +1,26 @@
 package com.example.gymtracker.ui.screens.library
 
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.IntrinsicSize
+import com.example.gymtracker.ui.theme.Rich
+import com.example.gymtracker.ui.components.atoms.SectionHead
+import com.example.gymtracker.ui.components.StatTile
+import com.composables.icons.lucide.Repeat
+import com.composables.icons.lucide.Layers
+import com.composables.icons.lucide.Weight
+import com.composables.icons.lucide.Trophy
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.TrendingUp
+import com.example.gymtracker.ui.components.atoms.AppCard
+import com.example.gymtracker.ui.components.atoms.PastelIcon
+import com.example.gymtracker.ui.components.atoms.cardColor
+import com.example.gymtracker.ui.theme.Pastel
+import com.example.gymtracker.ui.theme.Radius
+import com.example.gymtracker.ui.theme.dotTexture
+import com.example.gymtracker.ui.theme.meshGradient
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -49,8 +70,7 @@ import com.example.gymtracker.ui.components.atoms.AppTopBar
 import com.example.gymtracker.ui.components.atoms.ConfirmSheet
 import com.example.gymtracker.ui.components.atoms.Eyebrow
 import com.example.gymtracker.ui.components.atoms.Section
-import com.example.gymtracker.ui.components.atoms.StatRow
-import com.example.gymtracker.ui.components.atoms.UnderlineSelector
+import com.example.gymtracker.ui.components.ExclusiveButtonGroup
 import com.example.gymtracker.ui.components.atoms.ValueText
 import com.example.gymtracker.ui.format.EM_DASH
 import com.example.gymtracker.ui.format.formatVolumeNumber
@@ -58,6 +78,8 @@ import com.example.gymtracker.ui.format.formatWeightNumber
 import com.example.gymtracker.ui.format.plural
 import com.example.gymtracker.ui.theme.AppText
 import com.example.gymtracker.ui.theme.Effort
+import com.example.gymtracker.ui.components.atoms.heatRamp
+import com.example.gymtracker.ui.components.BodyMap
 import com.example.gymtracker.ui.theme.Spacing
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -76,8 +98,8 @@ private enum class ChartRange(val label: String, val days: Long?) {
 }
 
 /**
- * Exercise detail (§4.11) — e1RM hero, a dated chart between its two selectors, records with
- * dates, recent sets grouped by session, the muscles on the body diagram, cues. A leaf page: its
+ * Exercise detail — the e1RM hero on a soft gradient, a dated chart card between its two
+ * selectors, records with dates, recent sets grouped by session, the muscles on the body diagram, cues. A leaf page: its
  * Scaffold applies the system insets once. Custom exercises get a ⋮ with Edit (§4.19) and Delete
  * (soft delete behind a [ConfirmSheet]; history keeps the name) — phase 9.
  */
@@ -113,6 +135,7 @@ fun ExerciseDetailScreen(
                 },
             )
         },
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier.fillMaxSize(),
     ) { padding ->
         val s = state ?: return@Scaffold // Loading: top bar only (house rule 8).
@@ -164,20 +187,23 @@ internal fun deleteMessage(planCount: Int): String = buildString {
 
 @Composable
 private fun ReadyBlock() {
-    Column {
-        Eyebrow("Ready to progress", color = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.height(Spacing.xs))
-        Text(
-            "Top of the range two sessions running. Add weight next time.",
-            style = AppText.body,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Spacer(Modifier.height(Spacing.l))
-        AppDivider()
+    AppCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PastelIcon(Lucide.TrendingUp, Pastel.Mint)
+            Spacer(Modifier.width(Spacing.m))
+            Column(Modifier.weight(1f)) {
+                Text("Ready to progress", style = AppText.titleM, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    "Top of the range two sessions running. Add weight next time.",
+                    style = AppText.bodyS,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 
-/** Hero (S4-b) · rule · metric selector · chart · range selector. */
+/** The hero on the soft mesh gradient, then the chart card between its two selectors. */
 @Composable
 private fun ProgressBlock(s: ExerciseDetailState, ex: ExerciseEntity, unit: WeightUnit) {
     val type = ex.movementType
@@ -189,72 +215,76 @@ private fun ProgressBlock(s: ExerciseDetailState, ex: ExerciseEntity, unit: Weig
     val heroMetric = metrics.first()
     val heroPoints = s.series[heroMetric].orEmpty()
     val today = DateUtil.todayEpochDay()
+    val scheme = MaterialTheme.colorScheme
 
-    Column {
-        // Hero left, reference right.
+    // Hero: the latest figure as the one big number, the best and the 3-month change as pills.
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Radius.lg + 4.dp))
+            .meshGradient(animate = false)
+            .dotTexture(color = scheme.onSurface.copy(alpha = 0.10f))
+            .padding(20.dp),
+    ) {
+        Text(heroLabel(heroMetric, type), style = AppText.eyebrow, color = scheme.onSurfaceVariant)
+        Spacer(Modifier.height(Spacing.xs))
+        val last = heroPoints.lastOrNull()
         Row(verticalAlignment = Alignment.Bottom) {
-            Column(Modifier.weight(1f)) {
-                Eyebrow(heroLabel(heroMetric, type))
-                val last = heroPoints.lastOrNull()
-                ValueText(
-                    value = last?.let { metricNumber(heroMetric, it.value, unit) } ?: EM_DASH,
-                    unit = last?.let { metricUnit(heroMetric, type, unit) },
-                    style = AppText.numberXXL,
+            Text(
+                last?.let { metricNumber(heroMetric, it.value, unit) } ?: EM_DASH,
+                style = AppText.numberXXL,
+                color = scheme.onSurface,
+            )
+            if (last != null) {
+                Text(
+                    " " + metricUnit(heroMetric, type, unit),
+                    style = AppText.titleM,
+                    color = scheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp),
                 )
             }
-            val best = s.records[heroMetric]
-            if (best != null) {
-                Spacer(Modifier.width(Spacing.m))
-                Column(horizontalAlignment = Alignment.End) {
-                    Eyebrow("Best")
-                    ValueText(
-                        value = metricNumber(heroMetric, best.value, unit),
-                        unit = metricUnit(heroMetric, type, unit),
-                        style = AppText.numberM,
+        }
+        val best = s.records[heroMetric]
+        if (best != null) {
+            Spacer(Modifier.height(Spacing.m))
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                HeroPill("Best ${metricNumber(heroMetric, best.value, unit)} ${metricUnit(heroMetric, type, unit)}", scheme.onSurface)
+                threeMonthDelta(heroPoints)?.let { delta ->
+                    val sign = if (delta > 0f) "+" else if (delta < 0f) "−" else "±"
+                    HeroPill(
+                        "$sign${metricNumber(heroMetric, abs(delta), unit)} in 3M",
+                        when {
+                            delta > 0f -> scheme.secondary
+                            delta < 0f -> Effort
+                            else -> scheme.onSurfaceVariant
+                        },
                     )
-                    threeMonthDelta(heroPoints)?.let { delta ->
-                        val sign = if (delta > 0f) "+" else if (delta < 0f) "−" else "±"
-                        Eyebrow(
-                            "$sign${metricNumber(heroMetric, abs(delta), unit)} in 3M",
-                            color = when {
-                                delta > 0f -> MaterialTheme.colorScheme.primary
-                                delta < 0f -> Effort
-                                else -> MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                        )
-                    }
                 }
             }
         }
-        Spacer(Modifier.height(Spacing.l))
-        AppDivider()
-
         if (!s.hasHistory) {
-            Text(
-                "Log this exercise to see progress",
-                style = AppText.body,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = Spacing.xxl),
-            )
-            return@Column
+            Spacer(Modifier.height(Spacing.m))
+            Text("Log this exercise to see progress", style = AppText.body, color = scheme.onSurfaceVariant)
         }
+    }
+    if (!s.hasHistory) return
 
-        var chosen by rememberSaveable(ex.id) { mutableStateOf(heroMetric) }
-        val metric = chosen.takeIf { it in metrics } ?: heroMetric
-        val defaultRange = remember(ex.id) {
-            if (heroPoints.count { today - it.dateEpochDay < 90 } >= 2) ChartRange.ThreeMonths else ChartRange.All
-        }
-        var range by rememberSaveable(ex.id) { mutableStateOf(defaultRange) }
+    var chosen by rememberSaveable(ex.id) { mutableStateOf(heroMetric) }
+    val metric = chosen.takeIf { it in metrics } ?: heroMetric
+    val defaultRange = remember(ex.id) {
+        if (heroPoints.count { today - it.dateEpochDay < 90 } >= 2) ChartRange.ThreeMonths else ChartRange.All
+    }
+    var range by rememberSaveable(ex.id) { mutableStateOf(defaultRange) }
 
+    Section(title = "Progress") {
         if (metrics.size > 1) {
-            UnderlineSelector(
+            ExclusiveButtonGroup(
                 options = metrics,
                 selected = metric,
                 onSelect = { chosen = it },
+                modifier = Modifier.fillMaxWidth(),
                 label = { metricTab(it, type) },
             )
-        } else {
-            Spacer(Modifier.height(Spacing.l))
         }
         val all = s.series[metric].orEmpty()
         val points = range.days?.let { d -> all.filter { today - it.dateEpochDay < d } } ?: all
@@ -262,7 +292,7 @@ private fun ProgressBlock(s: ExerciseDetailState, ex: ExerciseEntity, unit: Weig
             Text(
                 "Nothing logged in this range",
                 style = AppText.body,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = scheme.onSurfaceVariant,
                 modifier = Modifier.heightIn(min = 120.dp).padding(vertical = Spacing.xxl),
             )
         } else {
@@ -275,41 +305,74 @@ private fun ProgressBlock(s: ExerciseDetailState, ex: ExerciseEntity, unit: Weig
                 bandCaption = target?.let { "Target ${it.first}–${it.last}" },
                 description = "${metricTab(metric, type)} over ${points.size} sessions, latest " +
                     "${metricNumber(metric, points.last().value, unit)} ${metricUnit(metric, type, unit)}",
-                modifier = Modifier.padding(top = Spacing.s),
+                modifier = Modifier.padding(top = Spacing.m),
             )
         }
-        UnderlineSelector(
+        Spacer(Modifier.height(Spacing.m))
+        ExclusiveButtonGroup(
             options = ChartRange.entries.toList(),
             selected = range,
             onSelect = { range = it },
+            modifier = Modifier.fillMaxWidth(),
             label = { it.label },
         )
     }
 }
 
+/** A frosted pill on the hero gradient. */
+@Composable
+private fun HeroPill(text: String, color: Color) {
+    Text(
+        text,
+        style = AppText.label,
+        color = color,
+        modifier = Modifier
+            .clip(RoundedCornerShape(Radius.pill))
+            .background(cardColor().copy(alpha = 0.75f))
+            .padding(horizontal = Spacing.m, vertical = 6.dp),
+    )
+}
+
+/** RECORDS: one bento tile per record — hue and icon per kind, the date as its caption. */
 @Composable
 private fun RecordsSection(s: ExerciseDetailState, ex: ExerciseEntity, unit: WeightUnit) {
     val type = ex.movementType
-    Section(title = "Records", trailing = {
-        Text(
-            "${s.sessionCount} ${plural(s.sessionCount, "session")}",
-            style = AppText.bodyS,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }) {
-        val kinds = if (s.weighted) {
-            listOf(ProgressMetric.OneRepMax, ProgressMetric.Heaviest, ProgressMetric.Volume, ProgressMetric.Reps)
-        } else {
-            listOf(ProgressMetric.Reps)
-        }
-        kinds.forEach { m ->
-            val r = s.records[m] ?: return@forEach
-            StatRow(
-                label = recordLabel(m, type),
-                value = metricNumber(m, r.value, unit),
-                unit = metricUnit(m, type, unit),
-                caption = shortDate(r.dateEpochDay),
+    val kinds = if (s.weighted) {
+        listOf(ProgressMetric.OneRepMax, ProgressMetric.Heaviest, ProgressMetric.Volume, ProgressMetric.Reps)
+    } else {
+        listOf(ProgressMetric.Reps)
+    }.filter { s.records[it] != null }
+    if (kinds.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.section)) {
+        SectionHead(title = "Records", trailing = {
+            Text(
+                "${s.sessionCount} ${plural(s.sessionCount, "session")}",
+                style = AppText.bodyS,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        })
+        kinds.chunked(2).forEach { pair ->
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(Spacing.section)) {
+                pair.forEach { m ->
+                    val r = s.records.getValue(m)
+                    val (rich, icon) = when (m) {
+                        ProgressMetric.OneRepMax -> Rich.Records to Lucide.Trophy
+                        ProgressMetric.Heaviest -> Rich.Volume to Lucide.Weight
+                        ProgressMetric.Volume -> Rich.Sets to Lucide.Layers
+                        ProgressMetric.Reps -> Rich.Duration to Lucide.Repeat
+                    }
+                    StatTile(
+                        rich = rich,
+                        icon = icon,
+                        label = recordLabel(m, type),
+                        value = metricNumber(m, r.value, unit),
+                        unit = metricUnit(m, type, unit),
+                        caption = shortDate(r.dateEpochDay),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                    )
+                }
+                if (pair.size == 1) Spacer(Modifier.weight(1f))
+            }
         }
     }
 }
@@ -321,8 +384,9 @@ private fun RecentSection(s: ExerciseDetailState, ex: ExerciseEntity, unit: Weig
     val scheme = MaterialTheme.colorScheme
     val lifting = ex.movementType == MovementType.Compound || ex.movementType == MovementType.Isolation
     Section(title = "Recent") {
-        s.recent.forEach { session ->
-            Row(Modifier.fillMaxWidth().padding(vertical = Spacing.xs)) {
+        s.recent.forEachIndexed { i, session ->
+            if (i > 0) AppDivider()
+            Row(Modifier.fillMaxWidth().padding(vertical = Spacing.m)) {
                 Text(
                     shortDate(session.dateEpochDay),
                     style = AppText.bodyS,
@@ -355,32 +419,16 @@ private fun RecentSection(s: ExerciseDetailState, ex: ExerciseEntity, unit: Weig
     }
 }
 
-/** Front and back diagrams: primary muscles in `primary`, secondary in `inversePrimary`. */
+/** Front and back diagrams: primary muscles at the top of the ramp, secondary midway. */
 @Composable
 private fun MusclesSection(ex: ExerciseEntity) {
     if (ex.primaryMuscles.isEmpty() && ex.secondaryMuscles.isEmpty()) return
     val scheme = MaterialTheme.colorScheme
-    val fills = ex.secondaryMuscles.associateWith { scheme.inversePrimary } +
-        ex.primaryMuscles.associateWith { scheme.primary }
+    val ramp = heatRamp()
+    val fills = ex.secondaryMuscles.associateWith { ramp[2] } +
+        ex.primaryMuscles.associateWith { ramp.last() }
     Section(title = "Muscles") {
-        // Near full content width, front and back side by side; each figure keeps the viewbox's
-        // aspect ratio, capped so the pair never outgrows a phone screen.
-        Row(
-            Modifier.fillMaxWidth().heightIn(max = DiagramMaxHeight),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.m),
-        ) {
-            listOf(BodyView.Front to "Front", BodyView.Back to "Back").forEach { (view, label) ->
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Eyebrow(label)
-                    Spacer(Modifier.height(Spacing.xs))
-                    BodyDiagram(
-                        view = view,
-                        fills = fills,
-                        modifier = Modifier.aspectRatio(100f / 220f),
-                    )
-                }
-            }
-        }
+        BodyMap(fills = fills, modifier = Modifier.heightIn(max = DiagramMaxHeight))
         Spacer(Modifier.height(Spacing.m))
         Text(
             buildAnnotatedString {

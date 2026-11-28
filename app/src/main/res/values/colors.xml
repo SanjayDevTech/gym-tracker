@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Adaptive launcher + splash background: OLED black (the orange brand is retired, decision 6). -->
-    <color name="ic_launcher_background">#000000</color>
-    <!-- Launcher foreground (loaded barbell): volt, the "work done" accent. Keep in sync with ui/theme/Color.kt. -->
-    <color name="ic_launcher_foreground">#FFC5EA6A</color>
+    <!-- Launcher icon: a diagonal white dumbbell on Foodprint's ink tile. -->
+    <color name="ic_launcher_background">#FF121214</color>
+
+    <!-- Window background: the canvas colour (night override in values-night).
+         The splash stays light in both themes, as in Foodprint. -->
+    <color name="launcher_background">#FFF4F4F7</color>
+    <color name="splash_background">#FFF4F4F7</color>
 </resources>

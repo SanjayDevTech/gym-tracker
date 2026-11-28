@@ -87,9 +87,11 @@ class SessionTrackingService : Service() {
         val sets = payload?.groups?.flatMap { it.sets }.orEmpty()
         val title = SessionNotification.title(payload?.planName, sets.count { it.isCompleted }, sets.size)
         val restBase = payload?.lastSetCompletedAtMillis?.takeIf { it > 0L }
-        // Resting: count up from the last completed set; otherwise the session clock. Either way
-        // the system ticks the chronometer, so this re-posts only when the draft changes.
-        val notification = if (payload != null && restBase != null) {
+        // Paused: no ticking clock. Resting: count up from the last completed set; otherwise the
+        // session clock. The system ticks the chronometer, so this re-posts only on draft changes.
+        val notification = if (payload != null && payload.pausedAtMillis > 0L) {
+            SessionNotification.build(this, title, "Paused")
+        } else if (payload != null && restBase != null) {
             SessionNotification.build(this, title, SessionNotification.restText(payload.restTargetSeconds), restBase)
         } else {
             SessionNotification.build(this, title, "Workout in progress", draft.startedAtMillis)
@@ -105,7 +107,10 @@ class SessionTrackingService : Service() {
      * scheduled (service restart, target shortened below the elapsed rest) never fires.
      */
     private fun scheduleRestAlert(payload: SessionDraftPayload?) {
-        val base = payload?.lastSetCompletedAtMillis ?: 0L
+        // A paused workout has no rest running: withdraw the alert until it resumes (the resumed
+        // base is shifted by the pause, so it re-keys and reschedules).
+        val paused = (payload?.pausedAtMillis ?: 0L) > 0L
+        val base = if (paused) 0L else payload?.lastSetCompletedAtMillis ?: 0L
         val target = payload?.restTargetSeconds ?: 0
         val key = base to target
         if (key == restKey) return

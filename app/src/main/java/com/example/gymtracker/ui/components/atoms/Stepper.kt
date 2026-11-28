@@ -1,16 +1,18 @@
 package com.example.gymtracker.ui.components.atoms
 
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Minus
+import com.composables.icons.lucide.Plus
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedIconButton
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,8 +26,8 @@ import com.example.gymtracker.ui.theme.Sizes
 import com.example.gymtracker.ui.theme.Spacing
 
 /**
- * `[−] value [+]` — design-plan §2 `Stepper`. 48dp outlined circular buttons,
- * value in [AppText.numberL]. Replaces both private `StepperRow`s (and the unused
+ * `[−] value [+]` — Foodprint's stepper: two 40dp soft round keys flanking the value in
+ * [AppText.numberM]. Replaces both private `StepperRow`s (and the unused
  * `NumberStepper`). [format] renders the value (e.g. `90 s`); [step] is the
  * increment. Each change ticks a light haptic; ends of [range] disable the button.
  */
@@ -41,39 +43,47 @@ fun Stepper(
     incrementLabel: String = "Increase",
 ) {
     val haptics = rememberAppHaptics()
-    val border = BorderStroke(Elevation.hairline, MaterialTheme.colorScheme.outline)
+    val scheme = MaterialTheme.colorScheme
+    val colors = IconButtonDefaults.filledIconButtonColors(
+        containerColor = softFill(),
+        contentColor = scheme.onSurface,
+        disabledContainerColor = softFill().copy(alpha = 0.5f),
+        disabledContentColor = scheme.onSurfaceVariant.copy(alpha = 0.38f),
+    )
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.l),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
     ) {
-        OutlinedIconButton(
+        FilledIconButton(
             onClick = {
                 haptics.light()
                 onValueChange((value - step).coerceAtLeast(range.first))
             },
             enabled = value > range.first,
-            border = border,
-            modifier = Modifier.size(Sizes.iconButton),
-        ) { Icon(Icons.Outlined.Remove, contentDescription = decrementLabel) }
+            colors = colors,
+            shape = CircleShape,
+            modifier = Modifier.size(40.dp),
+        ) { Icon(Lucide.Minus, contentDescription = decrementLabel, modifier = Modifier.size(18.dp)) }
 
         Text(
             format(value),
-            style = AppText.numberL,
+            style = AppText.numberM,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
             // Wide enough for "999" at 28sp so the buttons don't shift as it changes.
             modifier = Modifier.widthIn(min = 64.dp),
         )
 
-        OutlinedIconButton(
+        FilledIconButton(
             onClick = {
                 haptics.light()
                 onValueChange((value + step).coerceAtMost(range.last))
             },
             enabled = value < range.last,
-            border = border,
-            modifier = Modifier.size(Sizes.iconButton),
-        ) { Icon(Icons.Outlined.Add, contentDescription = incrementLabel) }
+            colors = colors,
+            shape = CircleShape,
+            modifier = Modifier.size(40.dp),
+        ) { Icon(Lucide.Plus, contentDescription = incrementLabel, modifier = Modifier.size(18.dp)) }
     }
 }

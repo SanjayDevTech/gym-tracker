@@ -37,11 +37,11 @@ fun RecordRow(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            Text(value, style = AppText.numberM, color = scheme.primary)
+            Text(value, style = AppText.numberM, color = scheme.onSurface)
         }
         Row {
             Text(kind, style = AppText.bodyS, color = scheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-            Text(delta ?: "First log", style = AppText.bodyS, color = if (delta != null) scheme.primary else scheme.onSurfaceVariant)
+            Text(delta ?: "First log", style = AppText.bodyS, color = if (delta != null) scheme.secondary else scheme.onSurfaceVariant)
         }
     }
 }

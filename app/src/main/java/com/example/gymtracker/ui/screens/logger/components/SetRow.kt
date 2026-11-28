@@ -1,5 +1,12 @@
 package com.example.gymtracker.ui.screens.logger.components
 
+import com.example.gymtracker.ui.components.atoms.cardColor
+import com.example.gymtracker.ui.components.atoms.LocalBehind
+import androidx.compose.runtime.CompositionLocalProvider
+import com.composables.icons.lucide.Check
+import com.example.gymtracker.ui.components.atoms.softFill
+import com.composables.icons.lucide.CircleCheck
+import com.composables.icons.lucide.Lucide
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.animateColorAsState
@@ -18,9 +25,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -54,17 +58,19 @@ import com.example.gymtracker.ui.components.atoms.NumberField
 import com.example.gymtracker.ui.format.trimDecimal
 import com.example.gymtracker.ui.screens.logger.SetDraft
 import com.example.gymtracker.ui.theme.AppText
-import com.example.gymtracker.ui.theme.DoneRow
+import com.example.gymtracker.ui.theme.AppTheme
 import com.example.gymtracker.ui.theme.Effort
 import com.example.gymtracker.ui.theme.Elevation
 import com.example.gymtracker.ui.theme.Radius
 import com.example.gymtracker.ui.theme.Sizes
 import com.example.gymtracker.ui.theme.Spacing
 
-/** The check's nudge (§6.2): slow accent rings rippling out from the grey circle's border until it is ticked. */
+/** The check's nudge (§6.2): slow rings rippling out from the empty disc's edge until it is ticked. */
 private const val PULSE_WAVE_MILLIS = 1400
-/** The ring's start radius as a fraction of the icon box: RadioButtonUnchecked's circle is r=10 of 24. */
-private const val PULSE_RING_START = 10f / 24f
+/** The ring starts on the disc's edge: half its size. */
+private const val PULSE_RING_START = 0.5f
+/** The check disc inside its 48dp touch target. */
+private val CheckDisc = 30.dp
 private val PulseRingGrow = 8.dp
 private val PulseRingStroke = 2.dp
 
@@ -77,14 +83,14 @@ internal object SetTable {
 /**
  * One set — §3 `SetRow`, §4.3.
  *
- * Badge (set number, `W` muted, `F` in [Effort]; tap → type menu + Delete set) · weight
- * [NumberField] · reps [NumberField] · 48dp check. Weight first: "62.5 × 9". A done row carries
- * the full-bleed [DoneRow] tint (house rule 3's gym exception) that fades in over 150ms, and its
- * numerals tween from `onSurfaceVariant` to `onSurface`. A PR turns the numerals `primary` and
- * adds a `PR` badge. The row draws its own gutter so the tint can run edge to edge.
+ * Badge (set number, `W` muted, `F` in [Effort]; tap → type menu + Delete set) · weight and reps
+ * [NumberField]s (soft filled boxes) · a 48dp check (a soft disc, a green disc with a tick once done).
+ * Weight first: "62.5 × 9". A done row carries the full-bleed `doneRow` tint that fades in over
+ * 150ms, and its numerals tween from `onSurfaceVariant` to `onSurface`. A PR turns the numerals
+ * the accent and adds a `PR` badge. The row draws its own inset so the tint can run edge to edge.
  *
- * [pulse] nudges the empty check — slow `primary` rings rippling out from its border until ticked — when typing has filled the set that
- * would complete its exercise, which is left for the user to tick (§6.2).
+ * [pulse] nudges the empty check — slow green rings rippling out from its edge until ticked — when
+ * typing has filled the set that would complete its exercise, which is left for the user to tick (§6.2).
  */
 @Composable
 fun SetRow(
@@ -118,19 +124,24 @@ fun SetRow(
         }
     }
     LaunchedEffect(done) { if (done && pulse) endPulse() }
+    val checkFill by animateColorAsState(
+        if (done) scheme.secondary else softFill(),
+        animationSpec = tween(300),
+        label = "checkFill",
+    )
     val checkTint by animateColorAsState(
-        if (done) scheme.primary else scheme.outline,
+        if (done) scheme.onSecondary else Color.Transparent,
         animationSpec = tween(300),
         label = "checkTint",
     )
     val tint by animateColorAsState(
-        if (done) DoneRow else Color.Transparent,
+        if (done) AppTheme.extras.doneRow else Color.Transparent,
         animationSpec = tween(150),
         label = "doneTint",
     )
     val numeral by animateColorAsState(
         when {
-            isPr -> scheme.primary
+            isPr -> scheme.tertiary
             done -> scheme.onSurface
             else -> scheme.onSurfaceVariant
         },
@@ -139,71 +150,87 @@ fun SetRow(
     )
     val firstField = Modifier.then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(tint)
-            .heightIn(min = SetTable.rowMinHeight)
-            .padding(horizontal = Spacing.gutter),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.m),
-    ) {
-        SetBadge(
-            index = index,
-            setType = set.setType,
-            canDelete = canDelete,
-            onSetTypeChange = onSetTypeChange,
-            onDelete = onDelete,
-        )
-        if (showWeight) {
-            NumberField(
-                value = set.weightInput,
-                onValueChange = onWeightChange,
-                hint = set.hintWeightKg?.let { trimDecimal(it.kgToDisplay(unit)) },
-                decimal = true,
-                color = numeral,
-                modifier = Modifier.weight(1f).then(firstField),
-            )
-        }
+    // On a done row the inputs sit on the green tint, so their soft fill should read as white.
+    CompositionLocalProvider(LocalBehind provides if (done) AppTheme.extras.doneRow else cardColor()) {
         Row(
-            modifier = Modifier.weight(1f).then(if (showWeight) Modifier else firstField),
+            modifier = modifier
+                .fillMaxWidth()
+                .background(tint)
+                .heightIn(min = SetTable.rowMinHeight)
+                .padding(start = Spacing.cardPadding, end = Spacing.s),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
-            NumberField(
-                value = set.repsInput,
-                onValueChange = onRepsChange,
-                hint = set.hintReps?.toString(),
-                maxLength = 3,
-                color = numeral,
-                modifier = Modifier.weight(1f),
+            SetBadge(
+                index = index,
+                setType = set.setType,
+                canDelete = canDelete,
+                onSetTypeChange = onSetTypeChange,
+                onDelete = onDelete,
             )
-            AnimatedVisibility(
-                visible = isPr,
-                enter = fadeIn(tween(200)) + scaleIn(tween(200), initialScale = 0.9f),
-                exit = fadeOut(tween(200)),
-            ) {
-                AppBadge("PR", modifier = Modifier.padding(start = Spacing.s))
+            if (showWeight) {
+                NumberField(
+                    value = set.weightInput,
+                    onValueChange = onWeightChange,
+                    hint = set.hintWeightKg?.let { trimDecimal(it.kgToDisplay(unit)) },
+                    decimal = true,
+                    color = numeral,
+                    modifier = Modifier.weight(1f).then(firstField),
+                )
             }
-        }
-        IconButton(
-            onClick = { onCompletedChange(!done) },
-            modifier = Modifier.size(Sizes.touchTarget),
-        ) {
-            Icon(
-                if (done) Icons.Filled.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
-                contentDescription = if (done) "Mark set ${index + 1} not done" else "Mark set ${index + 1} done",
-                tint = checkTint,
-                modifier = Modifier.drawBehind {
-                    val p = pulseLevel.value
-                    if (pulsing && p > 0f && p < 1f) {
-                        drawCircle(
-                            color = scheme.primary.copy(alpha = 0.7f * (1f - p)),
-                            radius = size.minDimension * PULSE_RING_START + PulseRingGrow.toPx() * p,
-                            style = Stroke(width = PulseRingStroke.toPx()),
-                        )
-                    }
-                },
-            )
+            Row(
+                modifier = Modifier.weight(1f).then(if (showWeight) Modifier else firstField),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                NumberField(
+                    value = set.repsInput,
+                    onValueChange = onRepsChange,
+                    hint = set.hintReps?.toString(),
+                    maxLength = 3,
+                    color = numeral,
+                    modifier = Modifier.weight(1f),
+                )
+                AnimatedVisibility(
+                    visible = isPr,
+                    enter = fadeIn(tween(200)) + scaleIn(tween(200), initialScale = 0.9f),
+                    exit = fadeOut(tween(200)),
+                ) {
+                    AppBadge(
+                        "PR",
+                        container = scheme.tertiaryContainer,
+                        content = scheme.onTertiaryContainer,
+                        modifier = Modifier.padding(start = Spacing.s),
+                    )
+                }
+            }
+            IconButton(
+                onClick = { onCompletedChange(!done) },
+                modifier = Modifier.size(Sizes.touchTarget),
+            ) {
+                Box(
+                    Modifier
+                        .size(CheckDisc)
+                        .drawBehind {
+                            val p = pulseLevel.value
+                            if (pulsing && p > 0f && p < 1f) {
+                                drawCircle(
+                                    color = scheme.secondary.copy(alpha = 0.7f * (1f - p)),
+                                    radius = size.minDimension * PULSE_RING_START + PulseRingGrow.toPx() * p,
+                                    style = Stroke(width = PulseRingStroke.toPx()),
+                                )
+                            }
+                            drawCircle(checkFill)
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Lucide.Check,
+                        contentDescription = if (done) "Mark set ${index + 1} not done" else "Mark set ${index + 1} done",
+                        tint = checkTint,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
         }
     }
 }
@@ -253,7 +280,7 @@ private fun SetBadge(
                         )
                     },
                     trailingIcon = if (type == setType) {
-                        { Icon(Icons.Filled.CheckCircle, contentDescription = "Selected", tint = scheme.onSurface) }
+                        { Icon(Lucide.CircleCheck, contentDescription = "Selected", tint = scheme.onSurface) }
                     } else null,
                     onClick = {
                         open = false

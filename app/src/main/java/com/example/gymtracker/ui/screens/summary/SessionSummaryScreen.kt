@@ -1,5 +1,35 @@
 package com.example.gymtracker.ui.screens.summary
 
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Dumbbell
+import com.composables.icons.lucide.Layers
+import com.composables.icons.lucide.Timer
+import com.composables.icons.lucide.Trophy
+import com.composables.icons.lucide.Weight
+import com.example.gymtracker.ui.components.StatTile
+import com.example.gymtracker.ui.components.icon
+import com.example.gymtracker.ui.components.atoms.PastelIcon
+import com.example.gymtracker.ui.theme.Pastel
+import com.composables.icons.lucide.X
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import com.example.gymtracker.ui.components.atoms.RoundIconButton
+import com.example.gymtracker.ui.components.atoms.cardColor
+import com.example.gymtracker.ui.components.atoms.softFill
+import com.example.gymtracker.ui.components.atoms.staggerIn
+import com.example.gymtracker.ui.theme.Radius
+import com.example.gymtracker.ui.theme.Rich
+import com.example.gymtracker.ui.theme.dotTexture
+import com.example.gymtracker.ui.theme.meshGradient
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,10 +45,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -45,10 +72,7 @@ import com.example.gymtracker.ui.components.RecordRow
 import com.example.gymtracker.ui.components.atoms.AppButton
 import com.example.gymtracker.ui.components.atoms.AppDivider
 import com.example.gymtracker.ui.components.atoms.AppTopBar
-import com.example.gymtracker.ui.components.atoms.Eyebrow
 import com.example.gymtracker.ui.components.atoms.Section
-import com.example.gymtracker.ui.components.atoms.StatColumns
-import com.example.gymtracker.ui.components.atoms.StatItem
 import com.example.gymtracker.ui.format.EM_DASH
 import com.example.gymtracker.ui.format.NBSP
 import com.example.gymtracker.ui.format.formatClock
@@ -98,10 +122,12 @@ fun SessionSummaryScreen(
             AppTopBar(
                 title = "",
                 actions = {
-                    IconButton(onClick = close) { Icon(Icons.Outlined.Close, contentDescription = "Done") }
+                    RoundIconButton(icon = Lucide.X, contentDescription = "Done", onClick = close)
+                    Spacer(Modifier.width(Spacing.s))
                 },
             )
         },
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxSize(),
     ) { padding ->
         val s = state ?: return@Scaffold
@@ -116,40 +142,33 @@ fun SessionSummaryScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = Spacing.gutter)
                 .padding(bottom = Spacing.l),
+            verticalArrangement = Arrangement.spacedBy(Spacing.section),
         ) {
-            Eyebrow("Workout complete", color = scheme.primary)
-            Text(s.planName ?: "Quick log", style = AppText.titleL, color = scheme.onSurface)
-            Text(
-                LocalDate.ofEpochDay(s.dateEpochDay).format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault())),
-                style = AppText.bodyS,
-                color = scheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(Spacing.xxl))
-            Text(
-                s.durationMillis?.let { formatClock(it) } ?: EM_DASH,
-                style = AppText.numberXXL,
-                color = scheme.onSurface,
-            )
-            Eyebrow("Duration")
-            Spacer(Modifier.height(Spacing.xxl))
-            StatColumns(
-                items = listOf(
-                    StatItem("Sets", "${s.doneSets}"),
-                    StatItem("Volume", formatVolumeNumber(s.volumeKg, s.unit), s.unit.label),
-                    StatItem("Exercises", "${s.exerciseCount}"),
-                ),
-                valueStyle = AppText.numberL,
-            )
+            SummaryHero(s, Modifier.staggerIn(0))
 
-            Spacer(Modifier.height(Spacing.section))
+            Column(Modifier.staggerIn(1), verticalArrangement = Arrangement.spacedBy(Spacing.section)) {
+                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(Spacing.section)) {
+                    StatTile(Rich.Sets, Lucide.Layers, "Sets", "${s.doneSets}", Modifier.weight(1f).fillMaxHeight(), unit = plural(s.doneSets, "set"))
+                    StatTile(Rich.Volume, Lucide.Weight, "Volume", formatVolumeNumber(s.volumeKg, s.unit), Modifier.weight(1f).fillMaxHeight(), unit = s.unit.label)
+                }
+                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(Spacing.section)) {
+                    StatTile(Rich.Body, Lucide.Dumbbell, "Exercises", "${s.exerciseCount}", Modifier.weight(1f).fillMaxHeight())
+                    StatTile(
+                        Rich.Records, Lucide.Trophy, "Records", "${s.records.size}", Modifier.weight(1f).fillMaxHeight(),
+                        unit = plural(s.records.size, "PR"),
+                    )
+                }
+            }
+
             Section(
                 title = "Records",
+                modifier = Modifier.staggerIn(2),
                 trailing = if (s.records.isEmpty()) null else {
                     {
                         Text(
                             "${s.records.size} ${plural(s.records.size, "PR")}",
-                            style = AppText.bodyS,
-                            color = scheme.primary,
+                            style = AppText.label,
+                            color = Rich.Records.ink,
                         )
                     }
                 },
@@ -159,48 +178,57 @@ fun SessionSummaryScreen(
                 } else {
                     s.records.forEachIndexed { i, r ->
                         if (i > 0) AppDivider()
-                        RecordRow(
-                            exercise = r.exerciseName,
-                            kind = r.type.summaryLabel,
-                            value = r.valueText(s.unit),
-                            delta = r.deltaText(s.unit),
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(Spacing.section))
-            Section(title = "Exercises") {
-                s.exercises.forEachIndexed { i, e ->
-                    if (i > 0) AppDivider()
-                    Column(Modifier.fillMaxWidth().padding(vertical = Spacing.m)) {
-                        Row {
-                            Text(
-                                e.name,
-                                style = AppText.titleM,
-                                color = scheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                Modifier.size(36.dp).clip(CircleShape).background(Rich.Records.brush),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(Lucide.Trophy, contentDescription = null, tint = Rich.Records.ink, modifier = Modifier.size(16.dp))
+                            }
+                            Spacer(Modifier.width(Spacing.m))
+                            RecordRow(
+                                exercise = r.exerciseName,
+                                kind = r.type.summaryLabel,
+                                value = r.valueText(s.unit),
+                                delta = r.deltaText(s.unit),
                                 modifier = Modifier.weight(1f),
                             )
-                            Text(e.lineText(s.unit), style = AppText.bodyS, color = scheme.onSurfaceVariant)
-                        }
-                        if (e.skippedSets > 0) {
-                            Text("${e.skippedSets} skipped", style = AppText.bodyS, color = scheme.onSurfaceVariant)
                         }
                     }
                 }
             }
 
-            Spacer(Modifier.height(Spacing.section))
-            Section(title = "Note") {
+            Section(title = "Exercises", modifier = Modifier.staggerIn(3)) {
+                s.exercises.forEach { e ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
+                        PastelIcon(e.movementType.icon, if (e.doneSets > 0) Pastel.Peach else Pastel.Sand, size = 36.dp)
+                        Spacer(Modifier.width(Spacing.m))
+                        Column(Modifier.weight(1f)) {
+                            Text(e.name, style = AppText.titleM, color = scheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                e.lineText(s.unit) + if (e.skippedSets > 0) " · ${e.skippedSets} skipped" else "",
+                                style = AppText.bodyS,
+                                color = scheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
+            }
+
+            Section(title = "Note", modifier = Modifier.staggerIn(4)) {
                 BasicTextField(
                     value = note.orEmpty(),
                     onValueChange = { note = it },
                     textStyle = AppText.body.copy(color = scheme.onSurface),
                     cursorBrush = SolidColor(scheme.primary),
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(Radius.md))
+                        .background(softFill())
+                        .padding(Spacing.m),
                     decorationBox = { inner ->
                         Box {
                             if (note.isNullOrEmpty()) Text("Add a note…", style = AppText.body, color = scheme.onSurfaceVariant)
@@ -210,8 +238,59 @@ fun SessionSummaryScreen(
                 )
             }
 
-            Spacer(Modifier.height(Spacing.section))
             AppButton(text = "Done", onClick = close, modifier = Modifier.fillMaxWidth())
+        }
+    }
+}
+
+/**
+ * The finished workout on Foodprint's soft mesh gradient: title and date, and the duration as the
+ * one hero number. The other figures sit in the bento tiles under it.
+ */
+@Composable
+private fun SummaryHero(s: SessionSummaryState, modifier: Modifier = Modifier) {
+    val scheme = MaterialTheme.colorScheme
+    Column(
+        modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Radius.lg + 4.dp))
+            .meshGradient(animate = false)
+            .dotTexture(color = scheme.onSurface.copy(alpha = 0.10f))
+            .padding(20.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Workout complete", style = AppText.eyebrow, color = scheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+            if (s.records.isNotEmpty()) {
+                Row(
+                    Modifier
+                        .clip(RoundedCornerShape(Radius.pill))
+                        .background(cardColor().copy(alpha = 0.75f))
+                        .padding(horizontal = Spacing.m, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Lucide.Trophy, contentDescription = null, tint = Rich.Records.ink, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(Spacing.xs))
+                    Text("${s.records.size} ${plural(s.records.size, "PR")}", style = AppText.label, color = scheme.onSurface)
+                }
+            }
+        }
+        Spacer(Modifier.height(Spacing.xs))
+        Text(s.planName ?: "Quick log", style = AppText.titleL, color = scheme.onSurface)
+        Text(
+            LocalDate.ofEpochDay(s.dateEpochDay).format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault())),
+            style = AppText.bodyS,
+            color = scheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(Spacing.l))
+        Text(
+            s.durationMillis?.let { formatClock(it) } ?: EM_DASH,
+            style = AppText.numberXXL,
+            color = scheme.onSurface,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Lucide.Timer, contentDescription = null, tint = scheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(Spacing.xs))
+            Text("Duration", style = AppText.eyebrow, color = scheme.onSurfaceVariant)
         }
     }
 }

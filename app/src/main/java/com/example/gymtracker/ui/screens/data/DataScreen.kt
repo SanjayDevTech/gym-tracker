@@ -1,5 +1,17 @@
 package com.example.gymtracker.ui.screens.data
 
+import com.example.gymtracker.ui.theme.Pastel
+import com.example.gymtracker.ui.components.atoms.PastelIcon
+import com.example.gymtracker.ui.components.atoms.AppOutlinedButton
+import com.example.gymtracker.ui.components.atoms.AppCard
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.LayoutTemplate
+import com.composables.icons.lucide.FileJson
+import com.composables.icons.lucide.Database
+import com.composables.icons.lucide.ClipboardList
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.RowScope
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -150,17 +162,20 @@ fun DataScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.gutter, vertical = Spacing.l),
+                .padding(horizontal = Spacing.gutter, vertical = Spacing.s),
             verticalArrangement = Arrangement.spacedBy(Spacing.section),
         ) {
             DataSection(
                 title = "Import a plan",
+                icon = Lucide.FileJson,
+                pastel = Pastel.Sky,
                 description = "Review one plan from a JSON file, matching its exercises to your " +
                     "library, before it's added. Always creates a new plan.",
                 running = false,
             ) {
-                AppTextButton(
+                AppOutlinedButton(
                     text = "Choose file…",
+                    modifier = Modifier.weight(1f),
                     onClick = { haptics.light(); onImportPlan() },
                     enabled = idle,
                 )
@@ -168,12 +183,15 @@ fun DataScreen(
 
             DataSection(
                 title = "Plan templates",
+                icon = Lucide.LayoutTemplate,
+                pastel = Pastel.Rose,
                 description = "Ready-made splits such as Push / Pull / Legs and Upper / Lower. " +
                     "Adding one creates new plans; your own plans aren't changed.",
                 running = false,
             ) {
-                AppTextButton(
+                AppOutlinedButton(
                     text = "Browse",
+                    modifier = Modifier.weight(1f),
                     onClick = { haptics.light(); onOpenTemplates() },
                     enabled = idle,
                 )
@@ -181,20 +199,24 @@ fun DataScreen(
 
             DataSection(
                 title = "All plans",
+                icon = Lucide.ClipboardList,
+                pastel = Pastel.Lavender,
                 description = "Every plan in one JSON file — plans only, no history or settings. " +
                     "Importing updates plans with the same name and adds the rest.",
                 running = busy == DataOp.PlansExport || busy == DataOp.PlansImport,
             ) {
-                AppTextButton(
+                AppOutlinedButton(
                     text = "Export",
+                    modifier = Modifier.weight(1f),
                     onClick = {
                         haptics.light()
                         plansExportLauncher.launch(PlansTransferManager.suggestedFileName())
                     },
                     enabled = idle,
                 )
-                AppTextButton(
+                AppOutlinedButton(
                     text = "Import",
+                    modifier = Modifier.weight(1f),
                     onClick = { haptics.light(); confirm = DataConfirm.PlansImport },
                     enabled = idle,
                 )
@@ -202,19 +224,23 @@ fun DataScreen(
 
             DataSection(
                 title = "Full backup",
+                icon = Lucide.Database,
+                pastel = Pastel.Mint,
                 description = "A JSON snapshot of your plans, history, custom exercises and settings.",
                 running = busy == DataOp.BackupExport || busy == DataOp.BackupRestore,
             ) {
-                AppTextButton(
+                AppOutlinedButton(
                     text = "Export",
+                    modifier = Modifier.weight(1f),
                     onClick = {
                         haptics.light()
                         backupExportLauncher.launch(BackupManager.suggestedFileName())
                     },
                     enabled = idle,
                 )
-                AppTextButton(
+                AppOutlinedButton(
                     text = "Restore",
+                    modifier = Modifier.weight(1f),
                     onClick = { haptics.light(); confirm = DataConfirm.BackupRestore },
                     enabled = idle,
                 )
@@ -278,21 +304,31 @@ fun DataScreen(
 @Composable
 private fun DataSection(
     title: String,
+    icon: ImageVector,
+    pastel: Pastel,
     description: String,
     running: Boolean,
-    actions: @Composable () -> Unit,
+    actions: @Composable RowScope.() -> Unit,
 ) {
-    Section(title) {
-        Text(description, style = AppText.bodyS, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(Spacing.s))
+    AppCard {
+        Row(verticalAlignment = Alignment.Top) {
+            PastelIcon(icon, pastel)
+            Spacer(Modifier.width(Spacing.m))
+            Column(Modifier.weight(1f)) {
+                Text(title, style = AppText.titleM, color = MaterialTheme.colorScheme.onSurface)
+                Text(description, style = AppText.bodyS, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (running) {
+                Spacer(Modifier.width(Spacing.s))
+                Spinner()
+            }
+        }
+        Spacer(Modifier.height(Spacing.m))
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.s),
-        ) {
-            actions()
-            Spacer(Modifier.weight(1f))
-            if (running) Spinner()
-        }
+            content = actions,
+        )
     }
 }

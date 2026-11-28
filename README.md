@@ -1,17 +1,63 @@
-# Gym Tracker
+<p align="center">
+  <img src="docs/screenshots/banner.png" alt="Lift Up: a private training log that shows every muscle" width="100%">
+</p>
 
-An offline Android workout logger. Build plans, log sets, and see which muscles you are
-actually training.
+<h1 align="center">Lift Up</h1>
+
+<p align="center">
+  <b>Train well. See it clearly.</b><br>
+  An offline Android workout logger. Build plans, log sets, and see which muscles you are
+  actually training.<br>
+  A body map, streaks and records. No account, no ads, no tracking.
+</p>
+
+<p align="center">
+  <a href="#install">Install</a> ·
+  <a href="#what-it-does">Features</a> ·
+  <a href="#build">Build</a> ·
+  <a href="docs/ui-house-rules.md">Design system</a>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/01-welcome.png" width="24%" alt="Train well. See it clearly.">
+  <img src="docs/screenshots/02-home.png" width="24%" alt="Your week at a glance">
+  <img src="docs/screenshots/03-muscles.png" width="24%" alt="See every muscle">
+  <img src="docs/screenshots/04-log.png" width="24%" alt="Log a set in a tap">
+</p>
+<p align="center">
+  <img src="docs/screenshots/05-rest.png" width="24%" alt="Rest that runs itself">
+  <img src="docs/screenshots/06-habit.png" width="24%" alt="Build the habit">
+  <img src="docs/screenshots/07-progress.png" width="24%" alt="See where you're headed">
+  <img src="docs/screenshots/08-exercise.png" width="24%" alt="Every lift, charted">
+</p>
+<p align="center">
+  <img src="docs/screenshots/09-dark.png" width="24%" alt="Easy on the eyes">
+  <img src="docs/screenshots/10-privacy.png" width="24%" alt="Private by design">
+  <img src="docs/screenshots/11-session.png" width="24%" alt="Every session, remembered">
+  <img src="docs/screenshots/12-you.png" width="24%" alt="All your training">
+</p>
+
+Lift Up is the training half of a pair: it shares its design system with
+[Foodprint](../food-tracker), the food diary, and a **Lift | Food** switch on Home jumps
+between the two.
 
 Your data never leaves the phone. There is no account, no analytics and no ads, and the app
 does not request the internet permission at all — it cannot make a network call.
 
 ## What it does
 
+- **Home at a glance:** the week against your target and sets per day, a **body map** (front
+  and back, hands and feet) lit by this week's volume per muscle, your plans with a one-tap
+  Start, a streak of weeks on target, an 18-week rhythm heatmap, and the last few sessions.
+  The round **+** beside the tab bar starts a workout from anywhere.
+- **A short first run:** what the app does, how it treats your data, then your name and
+  units, your weekly target and rest, and an optional ready-made split to start from.
 - **Plans** with target sets and a rep range per exercise, built in the editor or imported
   from JSON. Export them the same way to share or move them.
 - **Session logger:** reps and weight per set, with last session's numbers alongside as a
-  hint. Mark sets as warm-up, working or failure.
+  hint. Mark sets as warm-up, working or failure. A dock at the bottom holds everything
+  else within a thumb's reach: the rest ring with −15 / +15 and Skip, Pause, and Finish or
+  Discard, confirmed in place. Tap the ring for a full-screen rest timer with the next set.
   - A **rest timer** that alerts you when rest is up, even with the app in the background;
     an ongoing notification keeps the session alive while the phone is in your pocket.
   - **Personal records** flagged live as you log: estimated 1RM, heaviest weight, best set
@@ -20,12 +66,14 @@ does not request the internet permission at all — it cannot make a network cal
   its rep range without grinding to failure, the app tells you it is time to add weight.
 - **Exercise library:** 176 built-in exercises (75 compound, 85 isolation, 9 mobility,
   7 cardio), each tagged with primary and secondary muscles across 18 regions. Add your own.
-- **Analytics:** a body diagram shaded by training volume per muscle, counted in sets or
-  tonnage; per-exercise progress charts; and a training calendar.
+- **Progress:** the body map shaded by training volume per muscle, counted in sets or
+  tonnage, over any week, month or year; per-exercise progress charts; and a training
+  calendar.
 - **A weekly target** instead of a daily streak — "3 of 4 this week" — so a rest day is not
   a broken chain.
 - **kg or lb**, switchable at any time; weights are stored in kg and converted for display.
 - **Backup and restore** of everything, or just your plans, to a file you choose.
+- **Light, dark or match system**, light by default.
 
 ## Install
 
@@ -54,8 +102,10 @@ publishes a release only if the build passed.
 
 ## Stack
 
-Kotlin · Jetpack Compose (Material 3, OLED dark-only) · Room · DataStore ·
-kotlinx.serialization
+Kotlin · Jetpack Compose (Material 3, light and dark) · Room · DataStore ·
+kotlinx.serialization · Lucide icons · Haze (frosted tab bar) · Manrope and Inter as
+downloadable Google Fonts (fetched by Play Services, so the app still needs no internet
+permission)
 
 Single module, MVVM:
 - `data/`: the Room database, the seeded exercise library, preferences, backup and plan
@@ -64,10 +114,12 @@ Single module, MVVM:
 - `session/`: the foreground service and notification that carry a session in the background.
 - `ui/`: shared components in `components/`, one package per screen under `screens/`.
 
-The interface was rebuilt from a written plan, and the code cites it throughout — a comment
-saying "§6.5" or "decision 7" points into
-[docs/design-plan.md](docs/design-plan.md). Read the relevant section before changing a
-screen.
+The look follows Foodprint's design system, written up in
+[docs/ui-house-rules.md](docs/ui-house-rules.md): cards on a calm canvas, ink actions, soft
+pastel gradients behind the one number a screen is about. Home is the reference screen.
+Older comments that cite "§6.5" or "decision 7" point into
+[docs/design-plan.md](docs/design-plan.md), the plan behind the previous interface; its
+behaviour rules still hold, its visual rules are retired.
 
 ## How it was made
 

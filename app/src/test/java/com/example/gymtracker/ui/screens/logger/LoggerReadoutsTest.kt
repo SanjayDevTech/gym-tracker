@@ -1,5 +1,7 @@
 package com.example.gymtracker.ui.screens.logger
 
+import com.example.gymtracker.data.MovementType
+import com.example.gymtracker.data.WeightUnit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -34,5 +36,31 @@ class LoggerReadoutsTest {
         val byGroup = prSetIndexesByGroup(setOf("a-1#0", "a-1#2", "b-2#1"))
         assertEquals(mapOf("a-1" to setOf(0, 2), "b-2" to setOf(1)), byGroup)
         assertTrue(prSetIndexesByGroup(emptySet()).isEmpty())
+    }
+
+    @Test fun restClockCountsDownThenOver() {
+        assertEquals("1:30", restClockLabel(restElapsedMillis = null, targetSeconds = 90))
+        assertEquals("1:30", restClockLabel(restElapsedMillis = 0L, targetSeconds = 90))
+        assertEquals("0:01", restClockLabel(restElapsedMillis = 89_500L, targetSeconds = 90))
+        assertEquals("+0:00", restClockLabel(restElapsedMillis = 90_000L, targetSeconds = 90))
+        assertEquals("+0:12", restClockLabel(restElapsedMillis = 102_000L, targetSeconds = 90))
+        assertEquals(0.5f, restRemainingFraction(restElapsedMillis = 45_000L, targetSeconds = 90), 0.001f)
+        assertEquals(0f, restRemainingFraction(restElapsedMillis = 120_000L, targetSeconds = 90), 0.001f)
+        assertEquals(0f, restRemainingFraction(restElapsedMillis = null, targetSeconds = 90), 0.001f)
+    }
+
+    @Test fun nextSetIsTheFirstUntickedSetWithTypedOrHintedLoad() {
+        fun group(name: String, type: MovementType, sets: List<SetDraft>, skipped: Boolean = false) =
+            ExerciseGroup(uid = name, exerciseId = 1, exerciseName = name, movementType = type,
+                targetSets = sets.size, targetRepsLow = 8, targetRepsHigh = 12, sets = sets, skipped = skipped)
+        val groups = listOf(
+            group("Squat", MovementType.Compound, listOf(SetDraft(isCompleted = true), SetDraft(isCompleted = true))),
+            group("Curl", MovementType.Isolation, listOf(SetDraft()), skipped = true),
+            group("Bench", MovementType.Compound, listOf(SetDraft(isCompleted = true), SetDraft(weightInput = "60", hintReps = 8))),
+        )
+        assertEquals("Bench · set 2 · 60 kg × 8 reps", nextSetLabel(groups, WeightUnit.Kg))
+        val plank = listOf(group("Plank", MovementType.Mobility, listOf(SetDraft(repsInput = "45"))))
+        assertEquals("Plank · set 1 · 45 sec", nextSetLabel(plank, WeightUnit.Kg))
+        assertEquals(null, nextSetLabel(groups.take(2), WeightUnit.Kg))
     }
 }

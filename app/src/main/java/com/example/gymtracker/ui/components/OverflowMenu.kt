@@ -1,15 +1,17 @@
 package com.example.gymtracker.ui.components
 
+import com.composables.icons.lucide.EllipsisVertical
+import com.composables.icons.lucide.Lucide
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,7 +44,7 @@ fun OverflowMenu(
     val scheme = MaterialTheme.colorScheme
     Box(modifier) {
         IconButton(onClick = { open = true }) {
-            Icon(Icons.Outlined.MoreVert, contentDescription = contentDescription, tint = scheme.onSurfaceVariant)
+            Icon(Lucide.EllipsisVertical, contentDescription = contentDescription, tint = scheme.onSurface, modifier = Modifier.size(20.dp))
         }
         DropdownMenu(
             expanded = open,

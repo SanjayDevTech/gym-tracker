@@ -1,5 +1,32 @@
 package com.example.gymtracker.ui.screens.plans
 
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.gymtracker.ui.theme.Rich
+import com.composables.icons.lucide.Timer
+import com.composables.icons.lucide.Layers
+import com.composables.icons.lucide.Dumbbell
+import com.composables.icons.lucide.GripVertical
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Play
+import com.composables.icons.lucide.Plus
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import com.composables.icons.lucide.ListPlus
+import com.example.gymtracker.data.MuscleGroup
+import com.example.gymtracker.data.toMuscleGroups
+import com.example.gymtracker.ui.components.ExerciseIcon
+import com.example.gymtracker.ui.components.cardRow
+import com.example.gymtracker.ui.components.atoms.AppOutlinedButton
+import com.example.gymtracker.ui.components.atoms.cardColor
+import com.example.gymtracker.ui.format.formatDuration
+import com.example.gymtracker.ui.theme.Radius
+import com.example.gymtracker.ui.theme.dotTexture
+import com.example.gymtracker.ui.theme.meshGradient
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -22,10 +49,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.DragHandle
-import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -86,16 +109,15 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 private const val UNDO_MILLIS = 5_000L
 
-/** The index column fits two digits at any font scale; a size, not a gap. */
-private val IndexColumn = 28.dp
+/** Dividers start after the icon disc, aligned with the text. */
+private val RowDividerInset = Spacing.l + 40.dp + Spacing.m
 
 private enum class EditorSheet { Rename, Note, Delete }
 
 /**
- * Plan editor — design-plan §4.2. Name (tap → rename), a meta line with the typical duration
- * (decision 4), the plan note (tap → edit), then the exercises as text on hairlines: index,
- * name, `Chest · Barbell`, the target in tertiary, and a drag handle that is the only drag zone
- * (issue 8). Row tap → the shared [TargetSheet] with View progress and Remove (undoable). ⋮ holds
+ * Plan editor. A gradient summary card (name → rename, note → edit, muscle groups, exercises,
+ * sets and typical length), then the exercises as one white card of rows: pastel disc, name,
+ * `Chest · Barbell`, the target, and a drag handle that is the only drag zone. Row tap → the shared [TargetSheet] with View progress and Remove (undoable). ⋮ holds
  * Rename, Export and Delete plan; Start workout is pinned above the navigation inset.
  */
 @Composable
@@ -221,9 +243,11 @@ fun PlanEditorScreen(
             }
         },
         snackbarHost = { AppSnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxSize(),
     ) { padding ->
         if (plan == null) return@Scaffold
+        val cardFill = cardColor()
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize().padding(padding),
@@ -234,26 +258,23 @@ fun PlanEditorScreen(
             ),
         ) {
             item(key = "header") {
-                Column(Modifier.fillMaxWidth()) {
-                    Text(
-                        plan.name,
-                        style = AppText.titleL,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(onClickLabel = "Rename plan") { sheet = EditorSheet.Rename },
-                    )
-                    Text(
-                        PlanStats.metaLine(planned.size, typicalDuration, sets = totalSets),
-                        style = AppText.bodyS,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    NoteLine(note = plan.notes, onClick = { sheet = EditorSheet.Note })
-                    Spacer(Modifier.height(Spacing.l))
-                }
+                PlanSummary(
+                    name = plan.name,
+                    notes = plan.notes,
+                    exercises = planned.size,
+                    sets = totalSets,
+                    typicalDuration = typicalDuration,
+                    groups = planned.flatMap { it.exercise.primaryMuscles }.toMuscleGroups(),
+                    onRename = { sheet = EditorSheet.Rename },
+                    onNote = { sheet = EditorSheet.Note },
+                    modifier = Modifier.padding(top = Spacing.s),
+                )
             }
             item(key = "exercises-head") {
-                SectionHead(title = "Exercises") {
+                SectionHead(
+                    title = "Exercises",
+                    modifier = Modifier.padding(top = Spacing.xl, bottom = Spacing.s),
+                ) {
                     if (totalSets > 0) {
                         Text(
                             "$totalSets ${plural(totalSets, "set")}",
@@ -262,15 +283,14 @@ fun PlanEditorScreen(
                         )
                     }
                 }
-                Spacer(Modifier.height(Spacing.s))
-                AppDivider()
             }
             if (localOrder.isEmpty()) {
                 item(key = "empty") {
                     EmptyState(
                         title = "No exercises yet",
                         message = "Add the first one.",
-                        actionLabel = "Add exercise",
+                        icon = Lucide.ListPlus,
+                        actionLabel = "Add exercises",
                         onAction = onAddExercises,
                     )
                 }
@@ -282,11 +302,19 @@ fun PlanEditorScreen(
                             .zIndex(if (dragging) 1f else 0f)
                             .then(if (dragging) Modifier else Modifier.animateItem())
                             .graphicsLayer { translationY = if (dragging) dragDeltaY else 0f }
-                            .background(
-                                if (dragging) MaterialTheme.colorScheme.surfaceContainerHigh
-                                else MaterialTheme.colorScheme.background,
+                            // The dragged row lifts off the card as its own rounded tile.
+                            .then(
+                                if (dragging) {
+                                    Modifier
+                                        .shadow(12.dp, RoundedCornerShape(Radius.md))
+                                        .clip(RoundedCornerShape(Radius.md))
+                                        .background(cardFill)
+                                } else {
+                                    Modifier.cardRow(index, localOrder.size, cardFill)
+                                },
                             ),
                     ) {
+                        if (index > 0 && !dragging) AppDivider(Modifier.padding(start = RowDividerInset))
                         PlannedRow(
                             index = index,
                             planned = row.planned,
@@ -340,11 +368,15 @@ fun PlanEditorScreen(
                                 )
                             },
                         )
-                        AppDivider()
                     }
                 }
                 item(key = "add") {
-                    AppTextButton(text = "Add exercise", onClick = onAddExercises, icon = Icons.Outlined.Add)
+                    AppOutlinedButton(
+                        text = "Add exercises",
+                        onClick = onAddExercises,
+                        icon = Lucide.Plus,
+                        modifier = Modifier.fillMaxWidth().padding(top = Spacing.m),
+                    )
                 }
             }
         }
@@ -427,7 +459,7 @@ fun PlanEditorScreen(
 }
 
 /**
- * §3 `PlannedRow`: index `numberM` · name `titleM` over `Chest · Barbell` · target in tertiary ·
+ * One planned exercise: its pastel disc, name `titleM` over `Chest · Barbell · 3 × 8–12`, and a
  * drag handle. Only [handleModifier]'s 48dp target starts a drag; the rest of the row is a tap.
  */
 @Composable
@@ -447,35 +479,100 @@ private fun PlannedRow(
         Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .heightIn(min = Sizes.touchTarget)
-            .padding(vertical = Spacing.s),
+            .heightIn(min = 64.dp)
+            .padding(start = Spacing.l, top = Spacing.m, bottom = Spacing.m),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            "${index + 1}",
-            style = AppText.numberM,
-            color = scheme.onSurfaceVariant,
-            modifier = Modifier.widthIn(min = IndexColumn),
-        )
-        Spacer(Modifier.width(Spacing.s))
+        ExerciseIcon(exercise)
+        Spacer(Modifier.width(Spacing.m))
         Column(Modifier.weight(1f)) {
             Text(exercise.name, style = AppText.titleM, color = scheme.onSurface)
             Text(caption, style = AppText.bodyS, color = scheme.onSurfaceVariant)
+            Text(
+                formatTarget(planned.targetSets, planned.targetRepsLow, planned.targetRepsHigh, exercise.movementType),
+                style = AppText.label,
+                color = scheme.onSurface,
+                modifier = Modifier.padding(top = Spacing.xs),
+            )
         }
-        Spacer(Modifier.width(Spacing.m))
-        Text(
-            formatTarget(planned.targetSets, planned.targetRepsLow, planned.targetRepsHigh, exercise.movementType),
-            style = AppText.bodyS,
-            color = scheme.tertiary,
-        )
         Box(
             handleModifier
                 .size(Sizes.touchTarget)
                 .semantics { contentDescription = "Drag to reorder ${exercise.name}" },
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Outlined.DragHandle, contentDescription = null, tint = scheme.onSurfaceVariant)
+            Icon(Lucide.GripVertical, contentDescription = null, tint = scheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
         }
+    }
+}
+
+/**
+ * The plan at a glance on the soft mesh gradient: name (tap to rename), the note (tap to edit),
+ * the muscle groups it works, and three frosted figures — exercises, sets, typical length.
+ */
+@Composable
+private fun PlanSummary(
+    name: String,
+    notes: String,
+    exercises: Int,
+    sets: Int,
+    typicalDuration: Long?,
+    groups: List<MuscleGroup>,
+    onRename: () -> Unit,
+    onNote: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Column(
+        modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Radius.lg + 4.dp))
+            .meshGradient(animate = false)
+            .dotTexture(color = scheme.onSurface.copy(alpha = 0.08f))
+            .padding(20.dp),
+    ) {
+        Text(
+            name,
+            style = AppText.headline,
+            color = scheme.onSurface,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClickLabel = "Rename plan", onClick = onRename),
+        )
+        if (groups.isNotEmpty()) {
+            Text(
+                groups.joinToString(" · ") { it.label },
+                style = AppText.bodyS,
+                color = scheme.onSurfaceVariant,
+            )
+        }
+        NoteLine(note = notes, onClick = onNote)
+        Spacer(Modifier.height(Spacing.s))
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            GlassStat(Lucide.Dumbbell, Rich.Body, "Exercises", "$exercises", Modifier.weight(1f).fillMaxHeight())
+            GlassStat(Lucide.Layers, Rich.Sets, "Sets", "$sets", Modifier.weight(1f).fillMaxHeight())
+            GlassStat(Lucide.Timer, Rich.Duration, "Typical", formatDuration(typicalDuration), Modifier.weight(1f).fillMaxHeight())
+        }
+    }
+}
+
+/** A frosted tile on the summary gradient: an icon disc in [rich]'s hue, the figure, its label. */
+@Composable
+private fun GlassStat(icon: ImageVector, rich: Rich, label: String, value: String, modifier: Modifier = Modifier) {
+    val scheme = MaterialTheme.colorScheme
+    Column(
+        modifier
+            .clip(RoundedCornerShape(Radius.md))
+            .background(cardColor().copy(alpha = 0.62f))
+            .padding(horizontal = Spacing.m, vertical = Spacing.s + 2.dp),
+    ) {
+        Box(
+            Modifier.size(26.dp).clip(CircleShape).background(rich.ink.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) { Icon(icon, contentDescription = null, tint = rich.ink, modifier = Modifier.size(14.dp)) }
+        Spacer(Modifier.height(Spacing.s))
+        Text(value, style = AppText.numberM, color = scheme.onSurface, maxLines = 1)
+        Text(label, style = AppText.eyebrow, color = scheme.onSurfaceVariant, maxLines = 1)
     }
 }
 
@@ -487,15 +584,13 @@ private fun StartBar(enabled: Boolean, onStart: () -> Unit) {
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
             .navigationBarsPadding()
-            .padding(horizontal = Spacing.gutter, vertical = Spacing.s),
+            .padding(horizontal = Spacing.gutter, vertical = Spacing.m),
     ) {
-        AppDivider()
-        Spacer(Modifier.height(Spacing.s))
         AppButton(
             text = "Start workout",
             onClick = onStart,
             enabled = enabled,
-            icon = Icons.Outlined.PlayArrow,
+            icon = Lucide.Play,
             modifier = Modifier.fillMaxWidth(),
         )
         if (!enabled) {

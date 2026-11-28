@@ -71,5 +71,25 @@ object WeeklyTarget {
     }
 }
 
+/**
+ * Weeks in a row on target, ending with the last completed week — or with this week once it has
+ * met the target, so the run never drops to zero just because a new week began.
+ */
+fun WeeklyTarget.currentRunOfWeeks(
+    sessionDays: Collection<Long>,
+    target: Int,
+    today: Long = DateUtil.todayEpochDay(),
+): Int {
+    val met = weeksMeetingTarget(sessionDays, target)
+    var week = weekStart(today)
+    if (week !in met) week -= 7
+    var run = 0
+    while (week in met) {
+        run++
+        week -= 7
+    }
+    return run
+}
+
 /** [met] of the last [of] completed weeks reached the target. [of] = 0 means "not enough history". */
 data class WeeksOnTarget(val met: Int, val of: Int)

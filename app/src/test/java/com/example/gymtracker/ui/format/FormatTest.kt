@@ -7,11 +7,11 @@ import org.junit.Test
 class FormatTest {
     private val n = NBSP
 
-    @Test fun groupsThousandsWithNbsp() {
-        assertEquals("12${n}400", grouped(12_400))
+    @Test fun groupsThousandsWithCommas() {
+        assertEquals("12,400", grouped(12_400))
         assertEquals("999", grouped(999))
-        assertEquals("1${n}000${n}000", grouped(1_000_000.4))
-        assertEquals("-2${n}500", grouped(-2_500))
+        assertEquals("1,000,000", grouped(1_000_000.4))
+        assertEquals("-2,500", grouped(-2_500))
     }
 
     @Test fun weightDropsTrailingZeroAndUsesUnit() {
@@ -22,8 +22,8 @@ class FormatTest {
     }
 
     @Test fun volumeIsInPreferredUnit() {
-        assertEquals("12${n}400${n}kg", formatVolume(12_400.0, WeightUnit.Kg))
-        assertEquals("27${n}337${n}lb", formatVolume(12_400.0, WeightUnit.Lb))
+        assertEquals("12,400${n}kg", formatVolume(12_400.0, WeightUnit.Kg))
+        assertEquals("27,337${n}lb", formatVolume(12_400.0, WeightUnit.Lb))
     }
 
     @Test fun clockAndDuration() {

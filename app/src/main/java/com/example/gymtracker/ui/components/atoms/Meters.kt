@@ -20,7 +20,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.gymtracker.ui.theme.HeatRamp
+import com.example.gymtracker.ui.theme.AppTheme
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.animation.core.FastOutSlowInEasing
 
 /**
  * Progress primitives — design-plan §2 `Meter` and `StatusCell`.
@@ -29,29 +31,29 @@ import com.example.gymtracker.ui.theme.HeatRamp
  * numbers beside them carry `tnum` so they don't jitter while it runs.
  */
 
-private const val ANIM_MS = 450
+private const val ANIM_MS = 600
 
 /**
- * Linear meter: 2–3dp, rounded, `outlineVariant` track. [target] draws a 2dp
- * tick at that fraction in `tertiary` (the family's goal colour).
+ * Linear meter: a soft rounded bar on a `surfaceContainerHigh` track, never thinner than 5dp so
+ * it reads at a glance. [target] draws a tick at that fraction.
  */
 @Composable
 fun Meter(
     fraction: Float,
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.primary,
-    height: Dp = 3.dp,
+    height: Dp = 6.dp,
     target: Float? = null,
     animate: Boolean = true,
 ) {
     val value by animateFloatAsState(
         targetValue = fraction.coerceIn(0f, 1f),
-        animationSpec = tween(if (animate) ANIM_MS else 0),
+        animationSpec = tween(if (animate) ANIM_MS else 0, easing = FastOutSlowInEasing),
         label = "meter",
     )
-    val track = MaterialTheme.colorScheme.outlineVariant
-    val tick = MaterialTheme.colorScheme.tertiary
-    Canvas(modifier = modifier.fillMaxWidth().height(height)) {
+    val track = MaterialTheme.colorScheme.surfaceContainerHigh
+    val tick = MaterialTheme.colorScheme.outline
+    Canvas(modifier = modifier.fillMaxWidth().height(height.coerceAtLeast(5.dp))) {
         val r = size.height / 2f
         drawRoundRect(color = track, size = size, cornerRadius = CornerRadius(r, r))
         if (value > 0f) {
@@ -70,14 +72,16 @@ fun Meter(
     }
 }
 
-/**
- * Heat-ramp colour for a 0..1 volume level (§1 data palette): interpolated
- * between the five stops `outlineVariant → … → primary`.
- */
-fun heatColor(level: Float): Color {
-    val v = level.coerceIn(0f, 1f) * (HeatRamp.size - 1)
-    val i = v.toInt().coerceAtMost(HeatRamp.size - 2)
-    return lerp(HeatRamp[i], HeatRamp[i + 1], v - i)
+/** The theme's training-volume ramp, untrained → most. */
+@Composable
+@ReadOnlyComposable
+fun heatRamp(): List<Color> = AppTheme.extras.heat
+
+/** Colour for a 0..1 volume level, interpolated along [ramp] (from [heatRamp]). */
+fun heatColor(level: Float, ramp: List<Color>): Color {
+    val v = level.coerceIn(0f, 1f) * (ramp.size - 1)
+    val i = v.toInt().coerceAtMost(ramp.size - 2)
+    return lerp(ramp[i], ramp[i + 1], v - i)
 }
 
 /**

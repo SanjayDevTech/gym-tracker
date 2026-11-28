@@ -11,7 +11,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.core.content.IntentCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.core.view.WindowCompat
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.gymtracker.data.ThemeMode
 import com.example.gymtracker.session.SessionNotification
 import com.example.gymtracker.ui.LocalAppContainer
 import com.example.gymtracker.ui.navigation.AppNav
@@ -24,18 +28,28 @@ class MainActivity : ComponentActivity() {
         // Must run BEFORE super.onCreate so the splash window installs correctly.
         installSplashScreen()
         super.onCreate(savedInstanceState)
-        // Dark-only app: system bar icons are always light, whatever the system theme.
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(AndroidColor.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(AndroidColor.TRANSPARENT),
-        )
-        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
+        enableEdgeToEdge()
         val container = (application as GymTrackerApp).container
         handleResumeIntent(intent)
         handleImportIntent(intent)
         setContent {
+            val themeMode by container.prefs.themeMode.collectAsStateWithLifecycle(initialValue = null)
+            // Nothing until the preference is read (a few ms, under the splash), so a dark-mode
+            // user never sees a light frame.
+            val mode = themeMode ?: return@setContent
+            val dark = when (mode) {
+                ThemeMode.System -> isSystemInDarkTheme()
+                ThemeMode.Light -> false
+                ThemeMode.Dark -> true
+            }
+            // Status/navigation bar icons follow the app's choice, not the system's.
+            DisposableEffect(dark) {
+                val style = SystemBarStyle.auto(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT) { dark }
+                enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+                onDispose {}
+            }
             CompositionLocalProvider(LocalAppContainer provides container) {
-                GymTrackerTheme {
+                GymTrackerTheme(dark = dark) {
                     AppNav()
                 }
             }

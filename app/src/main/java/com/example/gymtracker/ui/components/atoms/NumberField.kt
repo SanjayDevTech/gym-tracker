@@ -1,6 +1,12 @@
 package com.example.gymtracker.ui.components.atoms
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.layout.padding
+import com.example.gymtracker.ui.theme.Radius
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
@@ -29,13 +35,12 @@ import com.example.gymtracker.ui.theme.Elevation
 import com.example.gymtracker.ui.theme.Spacing
 
 /**
- * Borderless numeral input — design-plan §2 `NumberField`. Replaces the
- * `OutlinedTextField`s in `SetRow`.
+ * Numeral input — Foodprint's soft field: a [softFill] box with [Radius.md] corners and an ink
+ * ring on focus, like [AppTextField].
  *
- * The value is [AppText.numberL] (28sp, legible from a bench); the [hint] — last
- * session's value — renders at the same size in `onSurfaceVariant`, so a filled
- * field and a hinted one occupy the same space. A 1dp `outlineVariant` rule sits
- * beneath; focused, it becomes a 2dp `primary` rule. No box, no fill.
+ * The value is [AppText.numberL] (legible from a bench); the [hint] — last session's value —
+ * renders at the same size in `onSurfaceVariant`, so a filled field and a hinted one occupy the
+ * same space.
  *
  * Filtering lives here: digits only, plus one `.` when [decimal]; [onValueChange]
  * receives the filtered string, truncated to [maxLength].
@@ -60,46 +65,40 @@ fun NumberField(
     val scheme = MaterialTheme.colorScheme
     val style = textStyle.copy(color = color, textAlign = textAlign)
 
-    Column(modifier) {
-        BasicTextField(
-            value = value,
-            onValueChange = { raw -> onValueChange(filter(raw, decimal).take(maxLength)) },
-            enabled = enabled,
-            singleLine = true,
-            textStyle = style,
-            cursorBrush = SolidColor(scheme.primary),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = if (decimal) KeyboardType.Decimal else KeyboardType.Number,
-                imeAction = imeAction,
-            ),
-            keyboardActions = keyboardActions,
-            interactionSource = interaction,
-            modifier = Modifier.fillMaxWidth(),
-            decorationBox = { inner ->
-                Box {
-                    if (value.isEmpty() && hint != null) {
-                        Text(
-                            hint,
-                            style = style.copy(color = scheme.onSurfaceVariant),
-                            maxLines = 1,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                    inner()
+    val ring by animateColorAsState(if (focused) scheme.primary else Color.Transparent, label = "numRing")
+    val shape = RoundedCornerShape(Radius.md)
+    BasicTextField(
+        value = value,
+        onValueChange = { raw -> onValueChange(filter(raw, decimal).take(maxLength)) },
+        enabled = enabled,
+        singleLine = true,
+        textStyle = style,
+        cursorBrush = SolidColor(scheme.primary),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = if (decimal) KeyboardType.Decimal else KeyboardType.Number,
+            imeAction = imeAction,
+        ),
+        keyboardActions = keyboardActions,
+        interactionSource = interaction,
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(softFill())
+            .border(1.5.dp, ring, shape),
+        decorationBox = { inner ->
+            Box(Modifier.fillMaxWidth().padding(horizontal = Spacing.m, vertical = Spacing.s)) {
+                if (value.isEmpty() && hint != null) {
+                    Text(
+                        hint,
+                        style = style.copy(color = scheme.onSurfaceVariant),
+                        maxLines = 1,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
-            },
-        )
-        Spacer(Modifier.height(Spacing.xs))
-        // The rule's thickness grows on focus; reserve the 2dp so nothing shifts.
-        Box(Modifier.fillMaxWidth().height(2.dp)) {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(if (focused) 2.dp else Elevation.hairline)
-                    .background(if (focused) scheme.primary else scheme.outlineVariant),
-            )
-        }
-    }
+                inner()
+            }
+        },
+    )
 }
 
 private fun filter(raw: String, decimal: Boolean): String {

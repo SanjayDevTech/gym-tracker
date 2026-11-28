@@ -1,3 +1,8 @@
+> **Visuals superseded (2026-11-27).** The app now uses Foodprint's design system — see
+> [ui-house-rules.md](ui-house-rules.md). The behaviour this plan specifies (logger, session
+> guard, back stack, data rules) still stands; its visual rules (black canvas, hairlines only,
+> volt accent, uppercase eyebrows) are retired. Where the two disagree, the house rules win.
+
 # Design plan — Gym Tracker UI/UX rewrite
 
 > **Status: proposal, 2026-11-23. Nothing here is implemented.** Written in two passes: a complete

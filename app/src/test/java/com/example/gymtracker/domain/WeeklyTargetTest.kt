@@ -72,4 +72,15 @@ class WeeklyTargetTest {
         val newYear = LocalDate.of(2026, 12, 28).toEpochDay() // Monday
         assertEquals(3, WeeklyTarget.bestRunOfWeeks(listOf(newYear - 7, newYear + 3, newYear + 7), 1))
     }
+
+    @Test
+    fun currentRunCountsBackFromLastWeekAndJoinsThisWeekOnceMet() {
+        // Met two and one weeks ago, missed three weeks ago; this week not met yet.
+        val days = listOf(weeksAgo(1), weeksAgo(1, 2), weeksAgo(2), weeksAgo(2, 1), weeksAgo(3), monday)
+        assertEquals(2, WeeklyTarget.currentRunOfWeeks(days, target = 2, today = monday + 1))
+        // This week reaches the target: it joins the run.
+        assertEquals(3, WeeklyTarget.currentRunOfWeeks(days + (monday + 1), target = 2, today = monday + 1))
+        // Last week missed: the run is broken.
+        assertEquals(0, WeeklyTarget.currentRunOfWeeks(listOf(weeksAgo(2), weeksAgo(2, 1)), target = 2, today = monday))
+    }
 }
