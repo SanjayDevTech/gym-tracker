@@ -18,10 +18,6 @@ runs:
 
     # Signed with the public github-public-release key committed in the repo, and the app
     # uses no API keys, so this needs no secrets.
-    # chmod first: the executable bit is lost when files reach GitHub through an
-    # upload or a copy rather than a git push.
     - name: Build release APK
       shell: bash
-      run: |
-        chmod +x gradlew
-        ./gradlew :app:assembleRelease --stacktrace
+      run: ./gradlew :app:assembleRelease --stacktrace
